@@ -1,0 +1,12 @@
+# system ad env files
+.DS_Store
+.env
+
+# node
+node_modules
+npm-debug.log*
+
+# build & docs artifacts
+build
+docs/.artifacts
+.artifacts

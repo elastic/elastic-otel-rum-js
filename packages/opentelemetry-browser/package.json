@@ -1,0 +1,55 @@
+{
+  "name": "@etel/opentelemetry-browser",
+  "version": "1.0.0",
+  "type": "module",
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "keywords": [
+    "opentelemetry",
+    "telemetry",
+    "apm",
+    "tracing",
+    "metrics",
+    "logs",
+    "rum",
+    "browser"
+  ],
+  "files": [
+    "lib",
+    "types"
+  ],
+  "main": "./lib/index.js",
+  "types": "./types/index.d.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "clean": "rm -rf dist",
+    "watch": "node ../../scripts/watch.mjs ./lib npm run build",
+    "build": "esbuild ./lib/bundle.js --bundle --minify --sourcemap --platform=browser --target=es2022 --outfile=build/elastic-otel-browser.min.js",
+    "postbuild": "cp build/* ../../examples/public"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@opentelemetry/api": "^1.9.0",
+    "@opentelemetry/api-logs": "^0.208.0",
+    "@opentelemetry/exporter-logs-otlp-http": "^0.208.0",
+    "@opentelemetry/exporter-metrics-otlp-http": "^0.208.0",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.208.0",
+    "@opentelemetry/instrumentation": "^0.208.0",
+    "@opentelemetry/instrumentation-document-load": "^0.54.0",
+    "@opentelemetry/instrumentation-fetch": "^0.208.0",
+    "@opentelemetry/instrumentation-long-task": "^0.53.0",
+    "@opentelemetry/instrumentation-user-interaction": "^0.53.0",
+    "@opentelemetry/instrumentation-xml-http-request": "^0.208.0",
+    "@opentelemetry/resources": "^2.2.0",
+    "@opentelemetry/sdk-logs": "^0.208.0",
+    "@opentelemetry/sdk-metrics": "^2.2.0",
+    "@opentelemetry/sdk-trace-web": "^2.2.0"
+  },
+  "devDependencies": {
+    "esbuild": "0.27.1"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "name": "elastic-otel-rum-js",
+  "version": "0.1.0",
+  "description": "",
+  "license": "Apache-2.0",
+  "private": true,
+  "scripts": {
+    "ci-all": "node ./scripts/oneach.mjs npm ci"
+  },
+  "devDependencies": {
+    "typescript": "5.0.4"
+  }
+}

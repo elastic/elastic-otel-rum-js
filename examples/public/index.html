@@ -1,0 +1,38 @@
+<!doctype html>
+<html>
+  <head>
+    <title>EDOT Browser Example</title>
+    <script>
+      // Same pattern as https://www.elastic.co/docs/reference/apm/agents/rum-js/install-agent#_asynchronous_non_blocking_pattern
+      ;(function(d, s, c) {
+        var j = d.createElement(s),
+          t = d.getElementsByTagName(s)[0]
+
+        j.src = './elastic-otel-browser.min.js'
+        j.onload = function() {startBrowserSdk(c)}
+        t.parentNode.insertBefore(j, t)
+      })(document, 'script', {
+        logLevel: 'verbose',
+        serviceName: 'otel-browser-example-app',
+        serviceVersion: '0.0.1',
+        otlpEndpoint: `${location.protocol}//${location.host}`,
+      })
+    </script>
+  </head>
+  <body>
+    <p id="title">EDOT Browser Example</p>
+    <p id="description">
+      This is a small web page the which shows what the EDOT Browser can do.
+    </p>
+    <p id="navigation">
+      You're in the main page.
+    </p>
+    <script>
+      // TODO: add here code to 
+      // - send a fetch request
+      // - send a XMLHttpRequest request
+      // - do a soft navigation (pushState or use navigaiton API)
+      // - do a long task (script that takes too long ot execute)
+    </script>
+  </body>
+</html>

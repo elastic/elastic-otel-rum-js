@@ -1,0 +1,12 @@
+{
+  "name": "elastic-otel-rum-js-examples",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "server.js",
+  "license": "Apache-2.0",
+  "private": true,
+  "scripts": {
+    "//start:todo": "instrument the server?",
+    "start": "node ./server.js"
+  }
+}
