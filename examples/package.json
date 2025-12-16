@@ -8,5 +8,8 @@
   "scripts": {
     "//start:todo": "instrument the server?",
     "start": "node ./server.js"
+  },
+  "dependencies": {
+    "mime": "^4.1.0"
   }
 }
