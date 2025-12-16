@@ -6,6 +6,7 @@
     "target": "ESNext",
     "resolveJsonModule": true,
     "moduleResolution": "node",
+    "module": "es2022",
     "allowSyntheticDefaultImports": true,
     "lib": ["ES2022", "DOM"]
   },

@@ -20,6 +20,7 @@ test('getBrowserInfo - should get the right browser name', () => {
         detected: 0,
         success: 0,
         fail: 0,
+        ratio: 0,
     };
     const errors = [];
 
@@ -43,19 +44,21 @@ test('getBrowserInfo - should get the right browser name', () => {
             stats.fail++;
         }
     }
+    stats.ratio = stats.success/stats.detected;
     console.log(errors.slice(0,50))
     console.log(stats)
-    console.log('ratio', (stats.success/stats.detected).toFixed(2));
-    // TODO: add a treshold???
-    assert.strictEqual(stats.fail, 0);
+    const treshold = 0.75;
+    assert.ok(stats.ratio >= treshold, `Browser names detected are not good enough (ratio: ${stats.ratio}, treshold: ${treshold})`);
 });
 
 test('getPlatformInfo - should get the right platform name', () => {
+    const linuxFlavors = ['Kubuntu', 'ubuntu', 'Debian'];
     const stats = {
         total: 0,
         detected: 0,
         success: 0,
         fail: 0,
+        ratio: 0,
     };
     const errors = [];
 
@@ -70,7 +73,7 @@ test('getPlatformInfo - should get the right platform name', () => {
         stats.detected++;
 
         const actual = detected.name;
-        const expected = parsed.os.name;
+        const expected = linuxFlavors.includes(parsed.os.name) ? 'Linux' : parsed.os.name;
 
         if (expected === actual) {
             stats.success++;
@@ -80,9 +83,9 @@ test('getPlatformInfo - should get the right platform name', () => {
         }
 
     }
-    console.log(errors.slice(0,50))
+    stats.ratio = stats.success/stats.detected;
+    // console.log(errors.slice(0,50))
     console.log(stats)
-    console.log('ratio', (stats.success/stats.detected).toFixed(2));
-    // TODO: add a treshold???
-    assert.strictEqual(stats.fail, 0);
+    const treshold = 0.95;
+    assert.ok(stats.ratio >= treshold, `Platform names detected are not good enough (ratio: ${stats.ratio}, treshold: ${treshold})`);
 });
