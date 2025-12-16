@@ -3,6 +3,8 @@
   "compilerOptions": {
     "allowJs": true,
     "checkJs": true,
+    "declaration": true,
+    "emitDeclarationOnly": true,
     "target": "ESNext",
     "resolveJsonModule": true,
     "moduleResolution": "node",
