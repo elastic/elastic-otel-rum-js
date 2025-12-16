@@ -1,5 +1,5 @@
 {
-  "name": "@etel/opentelemetry-browser",
+  "name": "@elastic/opentelemetry-browser",
   "version": "1.0.0",
   "type": "module",
   "publishConfig": {
@@ -23,8 +23,9 @@
   "main": "./lib/index.js",
   "types": "./types/index.d.ts",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "clean": "rm -rf dist",
+    "test:smoke": "echo \"Error: no test specified\" && exit 1",
+    "test:unit": "node --test",
+    "clean": "rm -rf build",
     "watch": "node ../../scripts/watch.mjs ./lib npm run build",
     "build": "esbuild ./lib/bundle.js --bundle --minify --sourcemap --platform=browser --target=es2022 --outfile=build/elastic-otel-browser.min.js",
     "postbuild": "cp build/* ../../examples/public"
@@ -50,6 +51,7 @@
     "@opentelemetry/sdk-trace-web": "^2.2.0"
   },
   "devDependencies": {
-    "esbuild": "0.27.1"
+    "esbuild": "0.27.1",
+    "ua-parser-js": "^2.0.7"
   }
 }

@@ -63,18 +63,17 @@ export function detectResource(attribs, serviceName, serviceVersion) {
     return resourceFromAttributes(attribs);
 }
 
-// We can always pull something like
-// https://www.npmjs.com/package/ua-parser-js
-// Table to lookup an maybe test
-// https://github.com/EngineeringSample/UserAgentsDatabase/blob/main/BreadcrumbsUserAgentsDatabase.txt
 /**
- * To get the following some use `ua-parser-js` but is quite a big chunk of code
+ * We can always pull something like https://www.npmjs.com/package/ua-parser-js
+ * but not for now.
  * @param {string} userAgent
  * @returns {{name: string; version: string} | undefined}
  */
-function getPlatformInfo(userAgent) {
+export function getPlatformInfo(userAgent) {
     const platforms = [
+        { name: 'Windows Phone', test: /Windows Phone (\d+\.\d+)/i},
         { name: 'Windows', test: /Windows (\d+)/i},
+        { name: 'Windows RT', test: /Windows NT (\d+\.\d+).+ARM;/i},
         { name: 'Windows', test: /Windows NT (\d+\.\d+)/i},
         { name: 'iOS', test: /iPhone OS (\d+_\d+_\d+)/i},
         { name: 'macOS', test: /Mac OS (\d+_\d+_\d+)/i},
@@ -97,14 +96,22 @@ function getPlatformInfo(userAgent) {
  * @param {string} userAgent
  * @returns {{name: string; version: string} | undefined}
  */
-function getBrowserInfo(userAgent) {
+export function getBrowserInfo(userAgent) {
     // note: only get the major version
     const browsers = [
+        // From tests (keep them?)
+        { name: 'Coc Coc', test: /coc_coc_browser\/(\d+)/i},
+
+        // The usual suspects
         { name: 'Edge', test: /Edg\/(\d+)/i},
         { name: 'Edge', test: /Edge\/(\d+)/i},
+        { name: 'Opera', test: /OPR\/(\d+)/i},
+        { name: 'Chromium', test: /Chromium\/(\d+)/i},
         { name: 'Chrome', test: /Chrome\/(\d+)/i},
-        { name: 'Safari', test: /Safari\/(\d+)/i},
+        { name: 'Chrome', test: /CriOS\/(\d+)/i},
+        { name: 'Android Browser', test: /Android \d.+Safari\/(\d+)/i},
         { name: 'Firefox', test: /Firefox\/(\d+)/i},
+        { name: 'Safari', test: /Safari\/(\d+)/i},
     ];
     
     for (const b of browsers) {
