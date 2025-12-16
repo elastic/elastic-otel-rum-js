@@ -18,6 +18,7 @@
   ],
   "files": [
     "lib",
+    "build",
     "types"
   ],
   "main": "./lib/index.js",
@@ -28,7 +29,8 @@
     "clean": "rm -rf build",
     "watch": "node ../../scripts/watch.mjs ./lib npm run build",
     "build": "esbuild ./lib/bundle.js --bundle --minify --sourcemap --platform=browser --target=es2022 --outfile=build/elastic-otel-browser.min.js",
-    "postbuild": "cp build/* ../../examples/public"
+    "postbuild": "cp build/* ../../examples/public",
+    "gen:types": "rm -rf types && tsc # TODO: would be nice to tree-shake the *.d.ts files"
   },
   "author": "",
   "license": "ISC",

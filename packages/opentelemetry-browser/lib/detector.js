@@ -99,7 +99,7 @@ export function getPlatformInfo(userAgent) {
 export function getBrowserInfo(userAgent) {
     // note: only get the major version
     const browsers = [
-        // From tests (keep them?)
+        // Special names (keep them?)
         { name: 'Coc Coc', test: /coc_coc_browser\/(\d+)/i},
 
         // The usual suspects

@@ -2,7 +2,10 @@
   "extends": "../../tsconfig.json",
   "compilerOptions": {
     "rootDir": "lib",
-    "outDir": "types"
+    "outDir": "types",
+    // node types leak here and raises errors
+    // deps: @opentelemetry/exporter-*-otlp-http -> @opentelemetry/otlp-transformer -> @opentelemetry/protobufjs -> @types/node
+    "skipLibCheck": true
   },
   "include": ["lib"],
 }
