@@ -8,19 +8,33 @@
     <link rel="stylesheet" href="./pure-min.css">
     <link rel="stylesheet" href="./styles.css">
     <script>
+        // To be replaced by the .env data. DO NOT TOUCH
+        globalThis.otelEnv = {};
+    </script>
+    <script>
         // Same pattern as https://www.elastic.co/docs/reference/apm/agents/rum-js/install-agent#_asynchronous_non_blocking_pattern
         ;(function(d, s, c) {
             var j = d.createElement(s),
                 t = d.getElementsByTagName(s)[0]
 
             j.src = './elastic-otel-browser.min.js'
-            j.onload = function() {startBrowserSdk(c)}
+            j.onload = function() {
+                startBrowserSdk(c);
+                // We want page load traces. Reload after 1st export is done
+                // in 5secs aprox
+                // setTimeout(() => location.reload(), 7000);
+            }
             t.parentNode.insertBefore(j, t)
         })(document, 'script', {
             logLevel: 'debug',
             serviceName: 'otel-browser-example-app',
             serviceVersion: '0.0.1',
-            otlpEndpoint: `${location.protocol}//${location.host}`,
+            otlpEndpoint: otelEnv.otlpEndpoint || `${location.protocol}//${location.host}`,
+            exportHeaders: otelEnv.exportHeaders || {},
+            // otlpEndpoint: 'https://motlp-rum-776a1e.ingest.eu-west-1.aws.elastic-cloud.com',
+            // exportHeaders: {
+            //     Authorization: 'ApiKey TEhMbDM1b0JrV3hwZFJHeVpJNTE6eXpnSG9Dek5tZWktdkFsN053OHdVQQ==',
+            // },
         })
     </script>
 </head>
