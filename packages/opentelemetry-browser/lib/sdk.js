@@ -19,6 +19,7 @@ import { FetchInstrumentation } from '@opentelemetry/instrumentation-fetch';
 import { LongTaskInstrumentation } from '@opentelemetry/instrumentation-long-task';
 import { UserInteractionInstrumentation } from '@opentelemetry/instrumentation-user-interaction';
 import { XMLHttpRequestInstrumentation } from '@opentelemetry/instrumentation-xml-http-request';
+import { ExceptionInstrumentation } from '@opentelemetry/instrumentation-web-exception';
 
 import { createLogger } from './logging.js';
 import { detectResource } from './detector.js';
@@ -137,6 +138,7 @@ export function startBrowserSdk(cfg = {}) {
             new LongTaskInstrumentation(),
             new UserInteractionInstrumentation(),
             new XMLHttpRequestInstrumentation(),
+            new ExceptionInstrumentation(),
         ]
     });
 }
