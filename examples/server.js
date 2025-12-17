@@ -1,6 +1,7 @@
 import { createReadStream, existsSync, readFileSync } from 'fs';
 import { createServer } from 'http';
 
+import 'dotenv/config';
 import mime from 'mime';
 
 const otlpEndpoint = process.env.OTEL_EXPORTER_OTLP_ENDPOINT;

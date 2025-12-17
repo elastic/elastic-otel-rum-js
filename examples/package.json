@@ -10,6 +10,7 @@
     "start": "node ./server.js"
   },
   "dependencies": {
+    "dotenv": "^17.2.3",
     "mime": "^4.1.0"
   }
 }
