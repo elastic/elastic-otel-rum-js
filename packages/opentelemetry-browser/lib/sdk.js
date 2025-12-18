@@ -31,7 +31,7 @@ import { detectResource } from './detector.js';
  * @property {string} [serviceVersion]
  * @property {string} [logLevel] // defaults to 'info'
  * @property {number} [sampleRate] // defaults to 1
- * @property {Record<string, import('@opentelemetry/api').AttributeValue>} [resourceAttributes]
+ * @property {Record<string, import('./detector.js').AttributeValue>} [resourceAttributes]
  * @property {string} [otlpEndpoint] // defaults to 'http://localhost:4318'
  * @property {Record<string, string>} [exportHeaders] // defaults to {}
  * 
@@ -74,7 +74,7 @@ export function startBrowserSdk(cfg = {}) {
     const resource = detectResource(config.resourceAttributes, serviceName, serviceVersion);
 
     // NOTE: export payloads can be seen in DevTools network tab in JSON format
-    // so IMHO it would be redundand to use console exporters
+    // so IMHO it would be redundant to use console exporters
 
     // traces signal configuration
     const tracesEndpoint = `${config.otlpEndpoint}/v1/traces`;

@@ -10524,7 +10524,8 @@
       { name: "Windows RT", test: /Windows NT (\d+\.\d+).+ARM;/i },
       { name: "Windows", test: /Windows NT (\d+\.\d+)/i },
       { name: "iOS", test: /iPhone OS (\d+_\d+_\d+)/i },
-      { name: "macOS", test: /Mac OS (\d+_\d+_\d+)/i },
+      { name: "macOS", test: /Mac OS (\d+(_\d+)*)/i },
+      { name: "macOS", test: /Mac OS X (\d+(\.\d+)*)/i },
       { name: "Android", test: /Android (\d+)/i },
       { name: "Linux", test: /Linux (\d+)/i }
     ];

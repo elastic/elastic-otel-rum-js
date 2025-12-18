@@ -9,7 +9,7 @@ export type BrowserSdkConfiguration = {
     serviceVersion?: string;
     logLevel?: string;
     sampleRate?: number;
-    resourceAttributes?: Record<string, import('@opentelemetry/api').AttributeValue>;
+    resourceAttributes?: Record<string, import('./detector.js').AttributeValue>;
     otlpEndpoint?: string;
     /**
      * // other options

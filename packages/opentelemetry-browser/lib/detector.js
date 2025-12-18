@@ -14,12 +14,22 @@ import { ATTR_BROWSER_BRANDS, ATTR_BROWSER_LANGUAGE, ATTR_BROWSER_MOBILE, ATTR_B
  */
 
 /**
- * @param {Record<string, import('@opentelemetry/api').AttributeValue>} attribs
+ * @template T
+ * @typedef {T | Array<T | undefined | null>} MaybeArray<T>
+ */
+/**
+ * @typedef {MaybeArray<number> | MaybeArray<boolean> | MaybeArray<string>} AttributeValue
+ */
+
+
+/**
+ * @param {Record<string, AttributeValue>} attribs
  * @param {string | undefined} serviceName
  * @param {string | undefined} serviceVersion
  * @returns {import('@opentelemetry/resources').Resource}
  */
 export function detectResource(attribs, serviceName, serviceVersion) {
+    /** @type {MaybeArray<number>} */
     if (typeof serviceName === 'string' && serviceName) {
         attribs['service.name'] = serviceName;
     }
@@ -72,13 +82,14 @@ export function detectResource(attribs, serviceName, serviceVersion) {
  */
 export function getPlatformInfo(userAgent) {
     const platforms = [
-        { name: 'Windows Phone', test: /Windows Phone (\d+\.\d+)/i },
+        { name: 'Windows Phone', test: /Windows Phone (\d+(\.\d+)*)/i },
         { name: 'Windows', test: /Windows (\d+)/i },
-        { name: 'Windows RT', test: /Windows NT (\d+\.\d+).+ARM;/i },
+        { name: 'Windows RT', test: /Windows NT (\d+(\.\d+)*).+ARM;/i },
         { name: 'Windows', test: /Windows NT (\d+\.\d+)/i },
-        { name: 'iOS', test: /iPhone OS (\d+_\d+_\d+)/i },
-        { name: 'macOS', test: /Mac OS (\d+_\d+_\d+)/i },
-        { name: 'Android', test: /Android (\d+)/i },
+        { name: 'iOS', test: /iPhone OS (\d+(_\d+)*)/i },
+        { name: 'macOS', test: /Mac OS (\d+(_\d+)*)/i },
+        { name: 'macOS', test: /Mac OS X (\d+(\.\d+)*)/i },
+        { name: 'Android', test: /Android (\d+(\.\d+)*)/i },
         { name: 'Linux', test: /Linux (\d+)/i },
     ];
 
@@ -102,11 +113,16 @@ export function getBrowserInfo(userAgent) {
     const browsers = [
         // Special names (keep them?)
         { name: 'Coc Coc', test: /coc_coc_browser\/(\d+)/i },
+        { name: 'Baidu', test: /bdbrowser\/(\d+(\.\d+)*)/i },
+        { name: 'GSA', test: /GSA\/(\d+(\.\d+)*)/i },
+        { name: 'Silk', test: /Silk\/(\d+(\.\d+)*)/i },
+        { name: 'Yandex', test: /YaBrowser\/(\d+(\.\d+)*)/i },
 
         // The usual suspects
         { name: 'Edge', test: /Edg\/(\d+)/i },
         { name: 'Edge', test: /Edge\/(\d+)/i },
-        { name: 'Opera', test: /OPR\/(\d+)/i },
+        { name: 'Opera', test: /OPR\/(\d+(\.\d+)*)/i },
+        { name: 'Opera', test: /Opera\/(\d+(\.\d+)*)/i },
         { name: 'Chromium', test: /Chromium\/(\d+)/i },
         { name: 'Chrome', test: /Chrome\/(\d+)/i },
         { name: 'Chrome', test: /CriOS\/(\d+)/i },
