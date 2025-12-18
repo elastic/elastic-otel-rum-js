@@ -4,6 +4,7 @@
  */
 
 import { resourceFromAttributes } from '@opentelemetry/resources';
+import { SDK_INFO } from '@opentelemetry/core';
 import { ATTR_BROWSER_BRANDS, ATTR_BROWSER_LANGUAGE, ATTR_BROWSER_MOBILE, ATTR_BROWSER_PLATFORM, ATTR_USER_AGENT_ORIGINAL } from './semconv.js';
 
 /**
@@ -27,7 +28,7 @@ export function detectResource(attribs, serviceName, serviceVersion) {
     }
 
     /** @type {Navigator & { userAgentData?: UserAgentData }} */
-    const {userAgent, userAgentData} = navigator;
+    const { userAgent, userAgentData } = navigator;
     const browserInfo = getBrowserInfo(userAgent);
     let platform;
 
@@ -50,7 +51,7 @@ export function detectResource(attribs, serviceName, serviceVersion) {
     attribs[ATTR_BROWSER_LANGUAGE] = navigator.language;
     attribs[ATTR_USER_AGENT_ORIGINAL] = userAgent;
     attribs['telemetry.distro.name'] = 'elastic';
-    // TODO: check how to keep this up to date
+    // TODO: check how to keep versions up to date
     attribs['telemetry.distro.version'] = '0.1.0';
 
     // This might be usefull info
@@ -60,7 +61,7 @@ export function detectResource(attribs, serviceName, serviceVersion) {
     // ['screen.height']: window.screen.height,
     // ['screen.size']: computeScreenSize(window.screen.width),
 
-    return resourceFromAttributes(attribs);
+    return resourceFromAttributes({ ...attribs, ...SDK_INFO });
 }
 
 /**
@@ -71,16 +72,16 @@ export function detectResource(attribs, serviceName, serviceVersion) {
  */
 export function getPlatformInfo(userAgent) {
     const platforms = [
-        { name: 'Windows Phone', test: /Windows Phone (\d+\.\d+)/i},
-        { name: 'Windows', test: /Windows (\d+)/i},
-        { name: 'Windows RT', test: /Windows NT (\d+\.\d+).+ARM;/i},
-        { name: 'Windows', test: /Windows NT (\d+\.\d+)/i},
-        { name: 'iOS', test: /iPhone OS (\d+_\d+_\d+)/i},
-        { name: 'macOS', test: /Mac OS (\d+_\d+_\d+)/i},
+        { name: 'Windows Phone', test: /Windows Phone (\d+\.\d+)/i },
+        { name: 'Windows', test: /Windows (\d+)/i },
+        { name: 'Windows RT', test: /Windows NT (\d+\.\d+).+ARM;/i },
+        { name: 'Windows', test: /Windows NT (\d+\.\d+)/i },
+        { name: 'iOS', test: /iPhone OS (\d+_\d+_\d+)/i },
+        { name: 'macOS', test: /Mac OS (\d+_\d+_\d+)/i },
         { name: 'Android', test: /Android (\d+)/i },
         { name: 'Linux', test: /Linux (\d+)/i },
     ];
-    
+
     for (const p of platforms) {
         const match = p.test.exec(userAgent);
         if (match) {
@@ -100,20 +101,20 @@ export function getBrowserInfo(userAgent) {
     // note: only get the major version
     const browsers = [
         // Special names (keep them?)
-        { name: 'Coc Coc', test: /coc_coc_browser\/(\d+)/i},
+        { name: 'Coc Coc', test: /coc_coc_browser\/(\d+)/i },
 
         // The usual suspects
-        { name: 'Edge', test: /Edg\/(\d+)/i},
-        { name: 'Edge', test: /Edge\/(\d+)/i},
-        { name: 'Opera', test: /OPR\/(\d+)/i},
-        { name: 'Chromium', test: /Chromium\/(\d+)/i},
-        { name: 'Chrome', test: /Chrome\/(\d+)/i},
-        { name: 'Chrome', test: /CriOS\/(\d+)/i},
-        { name: 'Android Browser', test: /Android \d.+Safari\/(\d+)/i},
-        { name: 'Firefox', test: /Firefox\/(\d+)/i},
-        { name: 'Safari', test: /Safari\/(\d+)/i},
+        { name: 'Edge', test: /Edg\/(\d+)/i },
+        { name: 'Edge', test: /Edge\/(\d+)/i },
+        { name: 'Opera', test: /OPR\/(\d+)/i },
+        { name: 'Chromium', test: /Chromium\/(\d+)/i },
+        { name: 'Chrome', test: /Chrome\/(\d+)/i },
+        { name: 'Chrome', test: /CriOS\/(\d+)/i },
+        { name: 'Android Browser', test: /Android \d.+Safari\/(\d+)/i },
+        { name: 'Firefox', test: /Firefox\/(\d+)/i },
+        { name: 'Safari', test: /Safari\/(\d+)/i },
     ];
-    
+
     for (const b of browsers) {
         const match = b.test.exec(userAgent);
         if (match) {

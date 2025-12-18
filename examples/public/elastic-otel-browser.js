@@ -10515,7 +10515,7 @@
     attribs[ATTR_USER_AGENT_ORIGINAL2] = userAgent;
     attribs["telemetry.distro.name"] = "elastic";
     attribs["telemetry.distro.version"] = "0.1.0";
-    return resourceFromAttributes(attribs);
+    return resourceFromAttributes({ ...attribs, ...SDK_INFO });
   }
   function getPlatformInfo(userAgent) {
     const platforms = [
