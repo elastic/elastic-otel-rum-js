@@ -10519,14 +10519,14 @@
   }
   function getPlatformInfo(userAgent) {
     const platforms = [
-      { name: "Windows Phone", test: /Windows Phone (\d+\.\d+)/i },
+      { name: "Windows Phone", test: /Windows Phone (\d+(\.\d+)*)/i },
       { name: "Windows", test: /Windows (\d+)/i },
-      { name: "Windows RT", test: /Windows NT (\d+\.\d+).+ARM;/i },
+      { name: "Windows RT", test: /Windows NT (\d+(\.\d+)*).+ARM;/i },
       { name: "Windows", test: /Windows NT (\d+\.\d+)/i },
-      { name: "iOS", test: /iPhone OS (\d+_\d+_\d+)/i },
+      { name: "iOS", test: /iPhone OS (\d+(_\d+)*)/i },
       { name: "macOS", test: /Mac OS (\d+(_\d+)*)/i },
       { name: "macOS", test: /Mac OS X (\d+(\.\d+)*)/i },
-      { name: "Android", test: /Android (\d+)/i },
+      { name: "Android", test: /Android (\d+(\.\d+)*)/i },
       { name: "Linux", test: /Linux (\d+)/i }
     ];
     for (const p of platforms) {
@@ -10542,10 +10542,15 @@
     const browsers = [
       // Special names (keep them?)
       { name: "Coc Coc", test: /coc_coc_browser\/(\d+)/i },
+      { name: "Baidu", test: /bdbrowser\/(\d+(\.\d+)*)/i },
+      { name: "GSA", test: /GSA\/(\d+(\.\d+)*)/i },
+      { name: "Silk", test: /Silk\/(\d+(\.\d+)*)/i },
+      { name: "Yandex", test: /YaBrowser\/(\d+(\.\d+)*)/i },
       // The usual suspects
       { name: "Edge", test: /Edg\/(\d+)/i },
       { name: "Edge", test: /Edge\/(\d+)/i },
-      { name: "Opera", test: /OPR\/(\d+)/i },
+      { name: "Opera", test: /OPR\/(\d+(\.\d+)*)/i },
+      { name: "Opera", test: /Opera\/(\d+(\.\d+)*)/i },
       { name: "Chromium", test: /Chromium\/(\d+)/i },
       { name: "Chrome", test: /Chrome\/(\d+)/i },
       { name: "Chrome", test: /CriOS\/(\d+)/i },
