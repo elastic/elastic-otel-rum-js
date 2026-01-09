@@ -10400,7 +10400,6 @@
   var ExceptionInstrumentation = class extends InstrumentationBase {
     constructor(config = {}) {
       super(PACKAGE_NAME4, PACKAGE_VERSION4, config);
-      this.onError = this.onError.bind(this);
     }
     init() {
     }
@@ -10433,10 +10432,19 @@
       logger2.emit(errorLog);
     }
     disable() {
+      if (!this._enabled) {
+        return;
+      }
+      this._enabled = false;
       window.removeEventListener("error", this.onError);
       window.removeEventListener("unhandledrejection", this.onError);
     }
     enable() {
+      if (this._enabled) {
+        return;
+      }
+      this._enabled = true;
+      this.onError = this.onError.bind(this);
       window.addEventListener("error", this.onError);
       window.addEventListener("unhandledrejection", this.onError);
     }
