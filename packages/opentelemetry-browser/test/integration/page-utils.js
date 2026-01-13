@@ -38,7 +38,7 @@ export function mockServerFor(page) {
      * @returns {Promise<any[]>}
      */
     const waitForData = (signal) => new Promise((res) => {
-        // TODO: flush data
+        // TODO: tell EDOT to flush data
         const intervalId = setInterval(() => {
             if (raw[signal].length > 0) {
                 clearInterval(intervalId);
@@ -63,9 +63,6 @@ export function mockServerFor(page) {
                     });
                 });
             });
-            console.log('spans')
-            console.dir(spans, {depth: 9});
-            
             // TODO: sort spans?
             return spans;
         },
