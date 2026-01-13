@@ -39,9 +39,14 @@ export function mockServerFor(page) {
      * @returns {Promise<any[]>}
      */
     const waitForData = (signal) => new Promise((res) => {
+        // We know is enough but we need to configure this to speped up tests
+        const timeout = 7_000;
+        const start = Date.now();
         // TODO: tell EDOT to flush data
         const intervalId = setInterval(() => {
-            if (raw[signal].length > 0) {
+            const hasSpans = raw[signal].length > 0;
+            const timedOut = Date.now() - start > timeout;
+            if (hasSpans || timedOut) {
                 clearInterval(intervalId);
                 res(raw[signal]);
             }

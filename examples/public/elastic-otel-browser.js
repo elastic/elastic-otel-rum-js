@@ -10587,7 +10587,7 @@
     exportHeaders: {}
   };
   function startBrowserSdk(cfg = {}) {
-    if (sdkStarted) {
+    if (sdkStarted || cfg.disabled) {
       return;
     }
     sdkStarted = true;

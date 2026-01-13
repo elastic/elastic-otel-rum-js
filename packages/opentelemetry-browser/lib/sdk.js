@@ -57,7 +57,7 @@ const defaultConfig = {
  * @param {BrowserSdkConfiguration} cfg 
  */
 export function startBrowserSdk(cfg = {}) {
-    if (sdkStarted) {
+    if (sdkStarted || cfg.disabled) {
         return;
     }
     sdkStarted = true;
