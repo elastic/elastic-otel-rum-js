@@ -13,7 +13,7 @@
 
 /**
  * @param {import('@playwright/test').Page} page
- * @returns {MockServer} 
+ * @returns {MockServer}
  */
 export function mockServerFor(page) {
     const raw = {
@@ -25,7 +25,8 @@ export function mockServerFor(page) {
     page.route(/\/v1\/(traces|metrics|logs)$/, async (route, req) => {
         const url = route.request().url();
         const signal = url.split('/').pop();
-        raw[signal].push(JSON.parse(req.postData()));
+        const data = JSON.parse(req.postData())
+        raw[signal].push(data);
         await route.fulfill({
             status: 200,
             contentType: 'application/json',
