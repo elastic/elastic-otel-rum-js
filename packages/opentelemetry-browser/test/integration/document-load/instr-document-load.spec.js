@@ -1,12 +1,10 @@
 import { test, expect } from '@playwright/test';
+import { mockServerFor } from '../page-utils';
 
-test('has title', async ({ page }) => {
+test('should export spans when page is loaded', async ({ page }) => {
+  const collector = mockServerFor(page);
   await page.goto('/document-load/use-document-load.html');
 
-  const content = await page.content();
-
-  console.log(content);
-
-  // Expect a title "to contain" a substring.
-  await expect(page).toHaveTitle(/Playwright/);
+  const spans = await collector.getSpans();
+  expect(spans.length).toBeGreaterThan(0);
 });

@@ -32,10 +32,10 @@ const server = createServer((req, res) => {
         // Assets are meant to be only HTML pages but we could allow others
         if (fileUrl.pathname.endsWith('.html')) {
             const origHtml = readFileSync(fileUrl, { encoding: 'utf-8' });
-            const config = url.searchParams.get('config') || 'null';
+            const config = url.searchParams.get('config') || '{}';
 
             // inject the EDOT with config
-            res.end(injectSdk(origHtml, JSON.parse(decodeURIComponent(config))))
+            res.end(injectSdk(origHtml, JSON.parse(decodeURIComponent(config))));
             return;
         }
 
@@ -65,10 +65,10 @@ function injectSdk(html, config) {
         ;(function(d, s, c) {
             var j = d.createElement(s),
                 t = d.getElementsByTagName(s)[0];
-            j.src = './assets/elastic-otel-browser.min.js';
+            j.src = '/assets/elastic-otel-browser.min.js';
             j.onload = function() { startBrowserSdk(c); };
             t.parentNode.insertBefore(j, t);
-        })(document, 'script', ${config})
+        })(document, 'script', ${JSON.stringify(config)})
         </script>
     `;
 
