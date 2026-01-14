@@ -59,6 +59,7 @@ console.log(`server listening to http://localhost:${server.address().port}`)
 // -- helper functions
 
 function injectSdk(html, config) {
+    const placeholder = '<!-- EDOT_PLACEHOLDER (DO NOT REMOVE)-->';
     const code = `
         <script>
         // Same pattern as https://www.elastic.co/docs/reference/apm/agents/rum-js/install-agent#_asynchronous_non_blocking_pattern
@@ -72,5 +73,5 @@ function injectSdk(html, config) {
         </script>
     `;
 
-    return html.replace('<!-- EDOT_PLACEHOLDER -->', code);
+    return html.replace(placeholder, code);
 }
