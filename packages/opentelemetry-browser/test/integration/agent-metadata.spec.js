@@ -1,8 +1,8 @@
 import { test, expect } from '@playwright/test';
-import { mockServerFor } from './test-utils';
+import { createCollector } from './test-utils';
 
 test('should export agent metadata default case', async ({ page }) => {
-    const collector = mockServerFor(page);
+    const collector = createCollector(page);
     await page.goto('/fixtures/use-document-load.html');
 
     const spans = await collector.getSpans();

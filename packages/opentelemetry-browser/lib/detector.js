@@ -62,6 +62,7 @@ export function detectResource(attribs, serviceName, serviceVersion) {
     attribs[ATTR_USER_AGENT_ORIGINAL] = userAgent;
     attribs['telemetry.distro.name'] = 'elastic';
     // TODO: check how to keep versions up to date
+    // [trent] create a lint rule to check if this is in sync with package.json
     attribs['telemetry.distro.version'] = '0.1.0';
 
     // This might be usefull info

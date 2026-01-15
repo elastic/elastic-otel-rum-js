@@ -50,6 +50,7 @@ const defaultConfig = {
     resourceAttributes: {},
     otlpEndpoint: 'http://localhost:4318',
     exportHeaders: {},
+    //TODO: instrumentation configurations
 };
 
 /**

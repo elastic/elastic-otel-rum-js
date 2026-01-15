@@ -1,8 +1,8 @@
 import { test, expect } from '@playwright/test';
-import { mockServerFor } from './test-utils';
+import { createCollector } from './test-utils';
 
 test('should export fetch related spans', async ({ page }) => {
-    const collector = mockServerFor(page);
+    const collector = createCollector(page);
     const sameOriginHeaders = {};
     const otherOriginHeaders = {};
     page.route('api/method', (route, req) => {
@@ -14,7 +14,6 @@ test('should export fetch related spans', async ({ page }) => {
         });
     });
     page.route('http://www.example.com', (route, req) => {
-        console.log('intercepted', req.headers())
         Object.assign(otherOriginHeaders, req.headers());
         route.fulfill({
             status: 200,

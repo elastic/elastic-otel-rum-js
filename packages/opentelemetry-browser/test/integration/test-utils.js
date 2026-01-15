@@ -8,14 +8,14 @@
  *  getSpans: () => Promise<any[]>;
  *  getMetrics: () => Promise<any[]>;
  *  getLogs: () => Promise<any[]>;
- * }} MockServer
+ * }} Collector
  */
 
 /**
  * @param {import('@playwright/test').Page} page
- * @returns {MockServer}
+ * @returns {Collector}
  */
-export function mockServerFor(page) {
+export function createCollector(page) {
     const raw = {
         traces: [],
         metrics:[],
