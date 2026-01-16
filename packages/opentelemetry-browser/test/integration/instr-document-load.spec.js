@@ -24,7 +24,5 @@ test('should export document load related spans with timing events', async ({ pa
         if (name === 'documentLoad') {
             expect(span.traceId).toStrictEqual(traceId);
         }
-
-        // TODO: inspect events payload?
     }
 });
