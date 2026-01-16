@@ -16,4 +16,3 @@ test('should export agent metadata default case', async ({ page }) => {
     expect(attribs['telemetry.distro.name']).toStrictEqual('elastic');
     expect(attribs['telemetry.distro.version']).toBeDefined();
 });
-
