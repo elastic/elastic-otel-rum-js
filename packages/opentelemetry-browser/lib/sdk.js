@@ -61,7 +61,6 @@ export function startBrowserSdk(cfg = {}) {
     if (sdkStarted || cfg.disabled) {
         return;
     }
-    sdkStarted = true;
 
     const logLevel = cfg.logLevel ?? defaultConfig.logLevel
     diag.setLogger(
@@ -72,13 +71,25 @@ export function startBrowserSdk(cfg = {}) {
 
     const { serviceName, serviceVersion } = cfg;
     const config = { ...defaultConfig, ...cfg };
+
+    // Input validation
+    /** @type {URL} */
+    let endpointUrl
+    try {
+        endpointUrl = new URL(config.otlpEndpoint);
+    } catch (urlErr) {
+        diag.error(`The value "${config.otlpEndpoint}" for "otlpEndpoint" configuration is not an URL. SDK won't start.`);
+        return;
+    }
+
+    // Detect resource
     const resource = detectResource(config.resourceAttributes, serviceName, serviceVersion);
 
     // NOTE: export payloads can be seen in DevTools network tab in JSON format
     // so IMHO it would be redundant to use console exporters
 
     // traces signal configuration
-    const tracesEndpoint = `${config.otlpEndpoint}/v1/traces`;
+    const tracesEndpoint = `${endpointUrl.href}/v1/traces`;
     const tracerProvider = new WebTracerProvider({
         resource,
         sampler: new TraceIdRatioBasedSampler(config.sampleRate),
@@ -101,7 +112,7 @@ export function startBrowserSdk(cfg = {}) {
     // but there is no way to set propagators and context manager
 
     // metrics signal configuration
-    const metricsEndpoint = `${config.otlpEndpoint}/v1/metrics`;
+    const metricsEndpoint = `${endpointUrl.href}/v1/metrics`;
     const meterProvider = new MeterProvider({
         resource,
         readers: [
@@ -116,7 +127,7 @@ export function startBrowserSdk(cfg = {}) {
     metrics.setGlobalMeterProvider(meterProvider);
 
     // logs signal configuration
-    const logsEndpoint = `${config.otlpEndpoint}/v1/logs`;
+    const logsEndpoint = `${endpointUrl.href}/v1/logs`;
     const loggerProvider = new LoggerProvider({
         resource,
         processors: [
@@ -142,4 +153,9 @@ export function startBrowserSdk(cfg = {}) {
             new ExceptionInstrumentation(),
         ]
     });
+
+    // Flag as started
+    sdkStarted = true;
+
+    // TODO: return API??? flush???
 }

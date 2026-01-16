@@ -5,6 +5,7 @@
 
 /**
  * @typedef {{
+ *  getRequests: () => any[];
  *  getSpans: () => Promise<any[]>;
  *  getMetrics: () => Promise<any[]>;
  *  getLogs: () => Promise<any[]>;
@@ -17,16 +18,22 @@
  */
 export function createCollector(page) {
     const raw = {
+        requests: [],
         traces: [],
         metrics:[],
         logs: [],
     };
     // intercept EDOT exports
     page.route(/\/v1\/(traces|metrics|logs)$/, async (route, req) => {
-        const url = route.request().url();
+        const url = req.url();
         const signal = url.split('/').pop();
         const data = JSON.parse(req.postData())
         raw[signal].push(data);
+        raw.requests.push({
+            url,
+            data,
+            headers: req.headers()
+        })
         await route.fulfill({
             status: 200,
             contentType: 'application/json',
@@ -39,10 +46,14 @@ export function createCollector(page) {
      * @returns {Promise<any[]>}
      */
     const waitForData = (signal) => new Promise((res) => {
-        // We know is enough but we need to configure this to speped up tests
+        // TODO: The default export interval is 5secs. We wait for a little longer to
+        // give the EDOT time to export. IF we could configure the interval we
+        // could pass a lower value to speed up tests. But do we want this config to be public?
         const timeout = 7_000;
         const start = Date.now();
         // TODO: tell EDOT to flush data
+        // maybe if the `startBrowserSdk` returns an object we can expose a `flush` API and even
+        // a `shutdown` if it makes sense
         const intervalId = setInterval(() => {
             const hasSpans = raw[signal].length > 0;
             const timedOut = Date.now() - start > timeout;
@@ -53,6 +64,9 @@ export function createCollector(page) {
         }, 50);
     })
     return {
+        getRequests() {
+            return raw.requests;
+        },
         async getSpans() {
             const rawTraces = await waitForData('traces');
             const spans = []

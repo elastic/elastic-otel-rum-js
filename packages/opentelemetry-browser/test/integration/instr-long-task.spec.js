@@ -10,6 +10,6 @@ test('should export long task related spans', async ({ page }) => {
     const spans = await collector.getSpans();
     expect(spans.length).toBeGreaterThan(0);
 
-    const longTaskSpan = spans.find(s => s.name === 'longtask');
+    const longTaskSpan = spans.find(s => s.scope.name === '@opentelemetry/instrumentation-long-task');
     expect(longTaskSpan).toBeDefined();
 });
