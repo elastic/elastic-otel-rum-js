@@ -13,15 +13,13 @@ const licensePattern =
 
 export default [
   {
-    files: ['packages/**/*.{js,mjs}'],
-    ignores: ['packages/*/build/**/*.js'],
-    // ignores: ['**/*.test.ts', '**/*.spec.ts'],
+    ignores: ['examples','**/build/*.js', '**/assets/*.js']
+  },
+  {
+    files: ['/packages/**/*.js'],
     languageOptions: {
-      // parser: tseslint.parser,
-      // enables type-aware linting to detect instance method usage
-      parserOptions: {
-        projectService: true,
-      },
+      ecmaVersion: 2022,
+      sourceType: "module"
     },
     plugins: {
       'baseline-js': baselinePlugin,
