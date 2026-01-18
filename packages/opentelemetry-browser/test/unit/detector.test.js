@@ -1,3 +1,8 @@
+/*
+ * Copyright Elasticsearch B.V. and contributors
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 import assert from 'node:assert';
 import {readFileSync} from 'node:fs';
 import {join} from 'node:path';

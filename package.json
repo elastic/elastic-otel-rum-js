@@ -4,10 +4,16 @@
   "description": "",
   "license": "Apache-2.0",
   "private": true,
+  "type": "module",
   "scripts": {
-    "ci-all": "node ./scripts/oneach.mjs npm ci"
+    "ci-all": "node ./scripts/oneach.mjs npm ci",
+    "lint": "eslint",
+    "lint:fix": "eslint --fix"
   },
   "devDependencies": {
+    "eslint": "^9.39.2",
+    "eslint-plugin-baseline-js": "^0.4.2",
+    "eslint-plugin-yet-another-license-header": "^0.2.0",
     "typescript": "5.0.4"
   }
 }
