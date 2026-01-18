@@ -11,8 +11,8 @@
 // it's okay for now but wee need to add a 3-slash reference once this
 // transitive deps are resolved
 
-import { createReadStream, lstatSync, readFileSync } from 'fs';
-import { createServer } from 'http';
+import {createReadStream, lstatSync, readFileSync} from 'fs';
+import {createServer} from 'http';
 
 const server = createServer((req, res) => {
     // sanitize the path
@@ -25,17 +25,19 @@ const server = createServer((req, res) => {
         return;
     }
 
-    const fileUrl = new URL(`.${url.pathname}`, import.meta.url)
+    const fileUrl = new URL(`.${url.pathname}`, import.meta.url);
     const lstat = lstatSync(fileUrl, {throwIfNoEntry: false});
 
     if (lstat && lstat.isFile()) {
         // Assets are meant to be only HTML pages but we could allow others
         if (fileUrl.pathname.endsWith('.html')) {
-            const origHtml = readFileSync(fileUrl, { encoding: 'utf-8' });
+            const origHtml = readFileSync(fileUrl, {encoding: 'utf-8'});
             const config = url.searchParams.get('config') || '{}';
 
             // inject the EDOT with config
-            res.end(injectSdk(origHtml, JSON.parse(decodeURIComponent(config))));
+            res.end(
+                injectSdk(origHtml, JSON.parse(decodeURIComponent(config)))
+            );
             return;
         }
 
@@ -54,7 +56,7 @@ const server = createServer((req, res) => {
 });
 
 server.listen(3000);
-console.log(`server listening to http://localhost:${server.address().port}`)
+console.log(`server listening to http://localhost:${server.address().port}`);
 
 // -- helper functions
 

@@ -20,20 +20,20 @@ export function createCollector(page) {
     const raw = {
         requests: [],
         traces: [],
-        metrics:[],
+        metrics: [],
         logs: [],
     };
     // intercept EDOT exports
     page.route(/\/v1\/(traces|metrics|logs)$/, async (route, req) => {
         const url = req.url();
         const signal = url.split('/').pop();
-        const data = JSON.parse(req.postData())
+        const data = JSON.parse(req.postData());
         raw[signal].push(data);
         raw.requests.push({
             url,
             data,
-            headers: req.headers()
-        })
+            headers: req.headers(),
+        });
         await route.fulfill({
             status: 200,
             contentType: 'application/json',
@@ -41,40 +41,41 @@ export function createCollector(page) {
         });
     });
     /**
-     * 
-     * @param {'traces' | 'metrics' | 'logs'} signal 
+     *
+     * @param {'traces' | 'metrics' | 'logs'} signal
      * @returns {Promise<any[]>}
      */
-    const waitForData = (signal) => new Promise((res) => {
-        // TODO: The default export interval is 5secs. We wait for a little longer to
-        // give the EDOT time to export. IF we could configure the interval we
-        // could pass a lower value to speed up tests. But do we want this config to be public?
-        const timeout = 7_000;
-        const start = Date.now();
-        // TODO: tell EDOT to flush data
-        // maybe if the `startBrowserSdk` returns an object we can expose a `flush` API and even
-        // a `shutdown` if it makes sense
-        const intervalId = setInterval(() => {
-            const hasSpans = raw[signal].length > 0;
-            const timedOut = Date.now() - start > timeout;
-            if (hasSpans || timedOut) {
-                clearInterval(intervalId);
-                res(raw[signal]);
-            }
-        }, 50);
-    })
+    const waitForData = (signal) =>
+        new Promise((res) => {
+            // TODO: The default export interval is 5secs. We wait for a little longer to
+            // give the EDOT time to export. IF we could configure the interval we
+            // could pass a lower value to speed up tests. But do we want this config to be public?
+            const timeout = 7_000;
+            const start = Date.now();
+            // TODO: tell EDOT to flush data
+            // maybe if the `startBrowserSdk` returns an object we can expose a `flush` API and even
+            // a `shutdown` if it makes sense
+            const intervalId = setInterval(() => {
+                const hasSpans = raw[signal].length > 0;
+                const timedOut = Date.now() - start > timeout;
+                if (hasSpans || timedOut) {
+                    clearInterval(intervalId);
+                    res(raw[signal]);
+                }
+            }, 50);
+        });
     return {
         getRequests() {
             return raw.requests;
         },
         async getSpans() {
             const rawTraces = await waitForData('traces');
-            const spans = []
-            rawTraces.forEach(trace => {
-                trace.resourceSpans.forEach(resourceSpan => {
+            const spans = [];
+            rawTraces.forEach((trace) => {
+                trace.resourceSpans.forEach((resourceSpan) => {
                     normalizeAttributes(resourceSpan.resource);
-                    resourceSpan.scopeSpans.forEach(scopeSpan => {
-                        scopeSpan.spans.forEach(span => {
+                    resourceSpan.scopeSpans.forEach((scopeSpan) => {
+                        scopeSpan.spans.forEach((span) => {
                             normalizeSpan(span);
                             span.resource = resourceSpan.resource;
                             span.scope = scopeSpan.scope;
@@ -97,8 +98,8 @@ export function createCollector(page) {
             // TODO: normalize logs
             const logs = [];
             return logs;
-        }
-    }
+        },
+    };
 }
 
 // -- helper functions
@@ -114,10 +115,10 @@ const SpanKindMap = {
     3: 'SPAN_KIND_CLIENT',
     4: 'SPAN_KIND_PRODUCER',
     5: 'SPAN_KIND_CONSUMER',
-}
+};
 
 /**
- * @param {any} span 
+ * @param {any} span
  */
 function normalizeSpan(span) {
     // Set some properties from enum to a string
@@ -136,7 +137,7 @@ function normalizeSpan(span) {
 }
 
 /**
- * @param {any} obj 
+ * @param {any} obj
  */
 function normalizeAttributes(obj) {
     const {attributes} = obj;

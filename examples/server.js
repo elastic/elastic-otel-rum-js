@@ -1,5 +1,5 @@
-import { createReadStream, existsSync, readFileSync } from 'fs';
-import { createServer } from 'http';
+import {createReadStream, existsSync, readFileSync} from 'fs';
+import {createServer} from 'http';
 
 import 'dotenv/config';
 import mime from 'mime';
@@ -15,8 +15,9 @@ if (typeof otlpEndpoint === 'string' && otlpEndpoint) {
 }
 if (typeof exportHeaders === 'string' && exportHeaders) {
     shouldInjectEnv = true;
-    envToInject.exportHeaders = exportHeaders.split(',')
-        .map(h => h.trim())
+    envToInject.exportHeaders = exportHeaders
+        .split(',')
+        .map((h) => h.trim())
         .reduce((bag, h) => {
             const idx = h.indexOf('=');
             const k = h.slice(0, idx);
@@ -44,11 +45,11 @@ const server = createServer((req, res) => {
                 // TODO: offer summay option ???
                 // console.log(`Data in ${signal} => ${pretty}`)
             } catch (error) {
-                console.log(`Error in ${signal} => ${error}`)
+                console.log(`Error in ${signal} => ${error}`);
             }
         });
-        res.writeHead(200, 'OK', { 'content-type': 'application/json' });
-        res.end(JSON.stringify({ ok: 1 }));
+        res.writeHead(200, 'OK', {'content-type': 'application/json'});
+        res.end(JSON.stringify({ok: 1}));
         return;
     }
 
@@ -64,12 +65,14 @@ const server = createServer((req, res) => {
                 const json = JSON.parse(text);
                 const result = handleApiRequest(json, url);
 
-                res.writeHead(200, 'OK', { 'content-type': 'application/json' });
-                res.end(JSON.stringify(result ? result : { ok: 1 }));
+                res.writeHead(200, 'OK', {'content-type': 'application/json'});
+                res.end(JSON.stringify(result ? result : {ok: 1}));
             } catch (error) {
-                console.log(`Error in API => ${error}`)
-                res.writeHead(400, 'Bad Request', { 'content-type': 'application/json' });
-                res.end(JSON.stringify({ ok: 0, error: error.message }));
+                console.log(`Error in API => ${error}`);
+                res.writeHead(400, 'Bad Request', {
+                    'content-type': 'application/json',
+                });
+                res.end(JSON.stringify({ok: 0, error: error.message}));
             }
         });
         return;
@@ -80,14 +83,16 @@ const server = createServer((req, res) => {
     if (existsSync(filePath)) {
         // inject .env in index.html if available
         if (shouldInjectEnv && filePath.endsWith('public/index.html')) {
-            const origHtml = readFileSync(filePath, { encoding: 'utf-8' });
+            const origHtml = readFileSync(filePath, {encoding: 'utf-8'});
             const serailizedEnv = JSON.stringify(envToInject);
-            
+
             res.setHeader('content-type', mime.getType(filePath));
-            res.end(origHtml.replace(
-                'globalThis.otelEnv = {};',
-                `globalThis.otelEnv = ${serailizedEnv};`,
-            ));
+            res.end(
+                origHtml.replace(
+                    'globalThis.otelEnv = {};',
+                    `globalThis.otelEnv = ${serailizedEnv};`
+                )
+            );
             return;
         }
 
@@ -102,16 +107,16 @@ const server = createServer((req, res) => {
 });
 
 /**
- * 
- * @param {Record<string, any>} json 
- * @param {URL} url 
+ *
+ * @param {Record<string, any>} json
+ * @param {URL} url
  * @returns {Record<string, any> | undefined}
  */
 function handleApiRequest(json, url) {
     if (url.pathname === '/api/echo') {
-        return { ok: 1, result: `(ECHO) ${json.message}` };
+        return {ok: 1, result: `(ECHO) ${json.message}`};
     }
 }
 
 server.listen(3000);
-console.log(`server listening to http://localhost:${server.address().port}`)
+console.log(`server listening to http://localhost:${server.address().port}`);

@@ -9,32 +9,32 @@ const defaultLicense = `
 `;
 
 const licensePattern =
-  /^\/\*\n \* Copyright Elasticsearch B.V. and contributors(?:, [^\n]+)*\n(?: \* Copyright [^\n]+\n)*(?: \*\n)? \* SPDX-License-Identifier: Apache-2\.0\n \*\/$/;
+    /^\/\*\n \* Copyright Elasticsearch B.V. and contributors(?:, [^\n]+)*\n(?: \* Copyright [^\n]+\n)*(?: \*\n)? \* SPDX-License-Identifier: Apache-2\.0\n \*\/$/;
 
 export default [
-  {
-    ignores: ['examples','**/build/*.js', '**/assets/*.js']
-  },
-  {
-    files: ['/packages/**/*.js'],
-    languageOptions: {
-      ecmaVersion: 2022,
-      sourceType: "module"
+    {
+        ignores: ['examples', '**/build/*.js', '**/assets/*.js'],
     },
-    plugins: {
-      'baseline-js': baselinePlugin,
-      'yet-another-license-header': yalhPlugin,
-    },
-    rules: {
-      // Allow only "widely available" Baseline features
-      "baseline-js/use-baseline": ["error", { available: "widely" }],
-      'yet-another-license-header/header': [
-        'error',
-        {
-          header: defaultLicense,
-          allowedHeaderPatterns: [licensePattern],
+    {
+        files: ['/packages/**/*.js', '/scripts/*.{js,mjs}'],
+        languageOptions: {
+            ecmaVersion: 2022,
+            sourceType: 'module',
         },
-      ],
+        plugins: {
+            'baseline-js': baselinePlugin,
+            'yet-another-license-header': yalhPlugin,
+        },
+        rules: {
+            // Allow only "widely available" Baseline features
+            'baseline-js/use-baseline': ['error', {available: 'widely'}],
+            'yet-another-license-header/header': [
+                'error',
+                {
+                    header: defaultLicense,
+                    allowedHeaderPatterns: [licensePattern],
+                },
+            ],
+        },
     },
-  },
 ];

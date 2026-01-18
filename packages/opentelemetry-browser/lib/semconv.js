@@ -28,7 +28,6 @@ export const ATTR_BROWSER_BRANDS = 'browser.brands';
  */
 export const ATTR_BROWSER_LANGUAGE = 'browser.language';
 
-
 /**
  * A boolean that is true if the browser is running on a mobile device
  *

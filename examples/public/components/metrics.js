@@ -14,7 +14,7 @@ const template = `
 `;
 
 /**
- * @param {HTMLElement} target 
+ * @param {HTMLElement} target
  */
 export function Component(target) {
     // TODO: create the metrics here using the API

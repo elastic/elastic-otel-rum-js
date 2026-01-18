@@ -3,26 +3,32 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { diag, DiagLogLevel, metrics } from '@opentelemetry/api';
-import { logs } from '@opentelemetry/api-logs';
-import { OTLPLogExporter } from '@opentelemetry/exporter-logs-otlp-http';
-import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-http';
-import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
-import { BatchLogRecordProcessor, LoggerProvider } from '@opentelemetry/sdk-logs';
-import { MeterProvider, PeriodicExportingMetricReader } from '@opentelemetry/sdk-metrics';
-import { BatchSpanProcessor, TraceIdRatioBasedSampler } from '@opentelemetry/sdk-trace-base';
-import { WebTracerProvider } from '@opentelemetry/sdk-trace-web';
+import {diag, DiagLogLevel, metrics} from '@opentelemetry/api';
+import {logs} from '@opentelemetry/api-logs';
+import {OTLPLogExporter} from '@opentelemetry/exporter-logs-otlp-http';
+import {OTLPMetricExporter} from '@opentelemetry/exporter-metrics-otlp-http';
+import {OTLPTraceExporter} from '@opentelemetry/exporter-trace-otlp-http';
+import {BatchLogRecordProcessor, LoggerProvider} from '@opentelemetry/sdk-logs';
+import {
+    MeterProvider,
+    PeriodicExportingMetricReader,
+} from '@opentelemetry/sdk-metrics';
+import {
+    BatchSpanProcessor,
+    TraceIdRatioBasedSampler,
+} from '@opentelemetry/sdk-trace-base';
+import {WebTracerProvider} from '@opentelemetry/sdk-trace-web';
 
-import { registerInstrumentations } from '@opentelemetry/instrumentation';
-import { DocumentLoadInstrumentation } from '@opentelemetry/instrumentation-document-load';
-import { FetchInstrumentation } from '@opentelemetry/instrumentation-fetch';
-import { LongTaskInstrumentation } from '@opentelemetry/instrumentation-long-task';
-import { UserInteractionInstrumentation } from '@opentelemetry/instrumentation-user-interaction';
-import { XMLHttpRequestInstrumentation } from '@opentelemetry/instrumentation-xml-http-request';
-import { ExceptionInstrumentation } from '@opentelemetry/instrumentation-web-exception';
+import {registerInstrumentations} from '@opentelemetry/instrumentation';
+import {DocumentLoadInstrumentation} from '@opentelemetry/instrumentation-document-load';
+import {FetchInstrumentation} from '@opentelemetry/instrumentation-fetch';
+import {LongTaskInstrumentation} from '@opentelemetry/instrumentation-long-task';
+import {UserInteractionInstrumentation} from '@opentelemetry/instrumentation-user-interaction';
+import {XMLHttpRequestInstrumentation} from '@opentelemetry/instrumentation-xml-http-request';
+import {ExceptionInstrumentation} from '@opentelemetry/instrumentation-web-exception';
 
-import { createLogger } from './logging.js';
-import { detectResource } from './detector.js';
+import {createLogger} from './logging.js';
+import {detectResource} from './detector.js';
 
 /**
  * @typedef {Object} BrowserSdkConfiguration
@@ -34,7 +40,7 @@ import { detectResource } from './detector.js';
  * @property {Record<string, import('./detector.js').AttributeValue>} [resourceAttributes]
  * @property {string} [otlpEndpoint] // defaults to 'http://localhost:4318'
  * @property {Record<string, string>} [exportHeaders] // defaults to {}
- * 
+ *
  * // other options
  * @property {number} [samplingRate]
  */
@@ -54,36 +60,38 @@ const defaultConfig = {
 };
 
 /**
- * 
- * @param {BrowserSdkConfiguration} cfg 
+ * @param {BrowserSdkConfiguration} cfg
  */
 export function startBrowserSdk(cfg = {}) {
     if (sdkStarted || cfg.disabled) {
         return;
     }
 
-    const logLevel = cfg.logLevel ?? defaultConfig.logLevel
-    diag.setLogger(
-        createLogger({ logLevel }),
-        { logLevel: DiagLogLevel.ALL },
-    );
+    const logLevel = cfg.logLevel ?? defaultConfig.logLevel;
+    diag.setLogger(createLogger({logLevel}), {logLevel: DiagLogLevel.ALL});
     diag.debug(`Browser SDK intialization`, cfg);
 
-    const { serviceName, serviceVersion } = cfg;
-    const config = { ...defaultConfig, ...cfg };
+    const {serviceName, serviceVersion} = cfg;
+    const config = {...defaultConfig, ...cfg};
 
     // Input validation
     /** @type {URL} */
-    let endpointUrl
+    let endpointUrl;
     try {
         endpointUrl = new URL(config.otlpEndpoint);
     } catch (urlErr) {
-        diag.error(`The value "${config.otlpEndpoint}" for "otlpEndpoint" configuration is not an URL. SDK won't start.`);
+        diag.error(
+            `The value "${config.otlpEndpoint}" for "otlpEndpoint" configuration is not an URL. SDK won't start.`
+        );
         return;
     }
 
     // Detect resource
-    const resource = detectResource(config.resourceAttributes, serviceName, serviceVersion);
+    const resource = detectResource(
+        config.resourceAttributes,
+        serviceName,
+        serviceVersion
+    );
 
     // NOTE: export payloads can be seen in DevTools network tab in JSON format
     // so IMHO it would be redundant to use console exporters
@@ -98,7 +106,7 @@ export function startBrowserSdk(cfg = {}) {
                 new OTLPTraceExporter({
                     url: tracesEndpoint,
                     headers: config.exportHeaders,
-                }),
+                })
             ),
         ],
     });
@@ -136,8 +144,8 @@ export function startBrowserSdk(cfg = {}) {
                     url: logsEndpoint,
                     headers: config.exportHeaders,
                 })
-            )
-        ]
+            ),
+        ],
     });
     logs.setGlobalLoggerProvider(loggerProvider);
 
@@ -151,7 +159,7 @@ export function startBrowserSdk(cfg = {}) {
             new UserInteractionInstrumentation(),
             new XMLHttpRequestInstrumentation(),
             new ExceptionInstrumentation(),
-        ]
+        ],
     });
 
     // Flag as started

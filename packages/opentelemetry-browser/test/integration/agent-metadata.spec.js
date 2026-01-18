@@ -3,16 +3,16 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { test, expect } from '@playwright/test';
-import { createCollector } from './test-utils';
+import {test, expect} from '@playwright/test';
+import {createCollector} from './test-utils';
 
-test('should export agent metadata default case', async ({ page }) => {
+test('should export agent metadata default case', async ({page}) => {
     const collector = createCollector(page);
     await page.goto('/fixtures/use-document-load.html');
 
     const spans = await collector.getSpans();
     const attribs = spans[0].resource.attributes;
-    
+
     // Test OTel SDK add its metadata
     expect(attribs['telemetry.sdk.language']).toStrictEqual('webjs');
     expect(attribs['telemetry.sdk.name']).toStrictEqual('opentelemetry');

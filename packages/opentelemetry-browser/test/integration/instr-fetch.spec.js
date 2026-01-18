@@ -3,10 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { test, expect } from '@playwright/test';
-import { createCollector } from './test-utils';
+import {test, expect} from '@playwright/test';
+import {createCollector} from './test-utils';
 
-test('should export fetch related spans', async ({ page }) => {
+test('should export fetch related spans', async ({page}) => {
     const collector = createCollector(page);
     const sameOriginHeaders = {};
     const otherOriginHeaders = {};
@@ -15,7 +15,7 @@ test('should export fetch related spans', async ({ page }) => {
         route.fulfill({
             status: 200,
             contentType: 'text/plain',
-            body: 'Response for the same origin request'
+            body: 'Response for the same origin request',
         });
     });
     page.route('http://www.example.com', (route, req) => {
@@ -23,7 +23,7 @@ test('should export fetch related spans', async ({ page }) => {
         route.fulfill({
             status: 200,
             contentType: 'text/plain',
-            body: 'Response for the same origin request'
+            body: 'Response for the same origin request',
         });
     });
 
@@ -32,7 +32,9 @@ test('should export fetch related spans', async ({ page }) => {
     await page.click('#other-origin');
 
     const spans = await collector.getSpans();
-    const fetchSpans = spans.filter(s => s.scope.name === '@opentelemetry/instrumentation-fetch');
+    const fetchSpans = spans.filter(
+        (s) => s.scope.name === '@opentelemetry/instrumentation-fetch'
+    );
 
     // We got spans
     expect(spans.length).toBeGreaterThan(0);
@@ -40,9 +42,13 @@ test('should export fetch related spans', async ({ page }) => {
 
     // A span for each fetch request
     expect(fetchSpans[0].kind).toStrictEqual('SPAN_KIND_CLIENT');
-    expect(fetchSpans[0].attributes['http.url']).toStrictEqual('http://localhost:3000/api/method');
+    expect(fetchSpans[0].attributes['http.url']).toStrictEqual(
+        'http://localhost:3000/api/method'
+    );
     expect(fetchSpans[1].kind).toStrictEqual('SPAN_KIND_CLIENT');
-    expect(fetchSpans[1].attributes['http.url']).toStrictEqual('http://www.example.com/');
+    expect(fetchSpans[1].attributes['http.url']).toStrictEqual(
+        'http://www.example.com/'
+    );
 
     // Tracestate is propagated in same origin without removing curret headers
     expect(sameOriginHeaders['traceparent']).toBeDefined();

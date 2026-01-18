@@ -15,7 +15,7 @@ const template = `
 `;
 
 /**
- * @param {HTMLElement} target 
+ * @param {HTMLElement} target
  */
 export function Component(target) {
     // TODO: create a logger here using the API

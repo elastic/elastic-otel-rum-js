@@ -20,7 +20,7 @@ const template = `
 `;
 
 /**
- * @param {HTMLElement} target 
+ * @param {HTMLElement} target
  */
 export function Component(target) {
     // Render
@@ -34,10 +34,10 @@ export function Component(target) {
         const options = {
             method: 'POST',
             body: JSON.stringify({message: 'request made by fetch API'}),
-        }
+        };
         fetch('/api/echo', options)
-            .then(r => r.json())
-            .then(json => {
+            .then((r) => r.json())
+            .then((json) => {
                 fetchResultsElem.innerText = json.result;
             });
     });
@@ -46,14 +46,16 @@ export function Component(target) {
         xhr.open('POST', '/api/echo', true);
         xhr.setRequestHeader('Content-Type', 'application/json');
 
-        xhr.onreadystatechange = function() {
+        xhr.onreadystatechange = function () {
             if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
                 const json = JSON.parse(xhr.responseText);
                 fetchResultsElem.innerText = json.result;
             }
         };
 
-        const data = JSON.stringify({message: 'request made by XMLHttpRequest API'});
+        const data = JSON.stringify({
+            message: 'request made by XMLHttpRequest API',
+        });
         xhr.send(data);
     });
 }
