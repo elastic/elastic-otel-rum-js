@@ -45,7 +45,7 @@ export default defineConfig({
         },
         {
             name: 'firefox',
-            use: { ...devices['Desktop Firefox'] },
+            use: {...devices['Desktop Firefox']},
         },
 
         // TODO: test in macOS?
@@ -57,7 +57,7 @@ export default defineConfig({
         /* Test against mobile viewports. */
         {
             name: 'Mobile Chrome',
-            use: { ...devices['Pixel 5'] },
+            use: {...devices['Pixel 5']},
         },
         // Same here
         // {
@@ -72,7 +72,7 @@ export default defineConfig({
         // },
         {
             name: 'Google Chrome',
-            use: { ...devices['Desktop Chrome'], channel: 'chrome' },
+            use: {...devices['Desktop Chrome'], channel: 'chrome'},
         },
     ],
 
