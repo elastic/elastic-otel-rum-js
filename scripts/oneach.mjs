@@ -9,7 +9,9 @@
  *
  * This script runs the the given argv in each package dir in this repo.
  * Basically this is something of a replacement for `npm run --workspaces ...`
- * since this repo no longer uses npm workspaces.
+ * since this repo does not use npm workspaces.
+ * 
+ * It ends when all tasks are complete or when one task fails (failfast).
  *
  * Usage:
  *    node ./scripts/oneach.mjs COMMAND [ARGS...]
@@ -18,8 +20,9 @@
  */
 
 import {globSync} from 'node:fs';
-import {execSync} from 'node:child_process';
+import {exec} from 'node:child_process';
 
+const DEBUG = process.env.DEBUG;
 const TOP = process.cwd();
 const command = process.argv.slice(2).join(' ');
 const packages = globSync([
@@ -28,5 +31,19 @@ const packages = globSync([
 ]).map((p) => `${TOP}/${p.replace('/package.json', '')}`);
 
 for (const folder of packages) {
-    execSync(command, {cwd: folder, encoding: 'utf-8'});
+    if (DEBUG) {
+        console.log(`executing "${command}" on folder "${folder}"`);
+    }
+    exec(command, (err, stdout, stderr) => {
+        console.log(`Command ${err ? "FAILURE" : "SUCCESS"}`);
+        if (err) {
+            console.log(`Error(code: ${err.code || 'unset'}):: ${err.message}`);
+            console.log(`:::stdout:::\n${stdout}`);
+            console.log(`:::stderrr:::\n${stderr}`);
+            process.exit(err.code || -1);
+        }
+        if (DEBUG) {
+            console.log(`:::stdout:::\n${stdout}`);
+        }
+    });
 }

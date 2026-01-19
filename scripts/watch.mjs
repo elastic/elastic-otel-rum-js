@@ -20,17 +20,30 @@
 import {watch, lstatSync} from 'node:fs';
 import {execSync} from 'node:child_process';
 
+const DEBUG = process.env.DEBUG;
 const TOP = process.cwd();
 const file = process.argv[2];
 const command = process.argv.slice(3).join(' ');
 const fullPath = `${TOP}/${file}`;
 
-console.log('file', file);
-console.log('command', command);
 try {
     const stat = lstatSync(`${TOP}/${file}`, {throwIfNoEntry: true});
+    const isDir = stat.isDirectory();
+    if (DEBUG) {
+        console.log(`Watching ${isDir ? 'directory' : 'file'} ${file}`);
+    }
     watch(fullPath, {recursive: stat.isDirectory()}, () => {
-        execSync(command, {cwd: TOP});
+        if (DEBUG) {
+            console.log(`Change detected executing command "${command}"`);
+        }
+        try {
+            const output = execSync(command, {cwd: TOP});
+            if (DEBUG) {
+                console.log(`Success\n${output}`);
+            }
+        } catch (execErr) {
+            console.log(`Command error "${execErr.message}"`);
+        }
     });
 } catch (err) {
     console.log('Watch error', err);
