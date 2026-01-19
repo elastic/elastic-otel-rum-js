@@ -6,7 +6,11 @@
 import {test, expect} from '@playwright/test';
 import {createCollector} from './test-utils';
 
-test('should export long task related spans', async ({page}) => {
+test('should export long task related spans', async ({page, browserName}) => {
+    // FF does not have "longtask" as supported entry type yet
+    // ref: https://developer.mozilla.org/en-US/docs/Web/API/PerformanceLongTaskTiming
+    test.skip(browserName === 'firefox', 'Long Task API not supported');
+
     const collector = createCollector(page);
     await page.goto('/fixtures/use-long-task.html');
 
