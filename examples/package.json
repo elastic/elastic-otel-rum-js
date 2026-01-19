@@ -6,8 +6,9 @@
   "license": "Apache-2.0",
   "private": true,
   "scripts": {
+    "edot:update": "cd ../packages/opentelemetry-browser && npm run build:min && cp build/* ../../examples/public",
     "//start:todo": "instrument the server?",
-    "start": "node ./server.js"
+    "start": "npm run edot:update && node ./server.js"
   },
   "dependencies": {
     "dotenv": "^17.2.3",
