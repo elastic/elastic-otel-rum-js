@@ -53,7 +53,8 @@ test('getBrowserInfo - should get the right browser name', () => {
         }
     }
     stats.ratio = stats.success / stats.detected;
-    console.log(errors.slice(0, 50));
+    // Uncomment this log message to get a sample of the failing detections
+    // console.log(errors.slice(0, 50));
     console.log(stats);
     const treshold = 0.75;
     assert.ok(
@@ -96,6 +97,7 @@ test('getPlatformInfo - should get the right platform name', () => {
         }
     }
     stats.ratio = stats.success / stats.detected;
+    // Uncomment this log message to get a sample of the failing detections
     // console.log(errors.slice(0,50))
     console.log(stats);
     const treshold = 0.95;

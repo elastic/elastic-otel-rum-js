@@ -32,7 +32,7 @@
     "postbuild": "cp build/* ../../examples/public && cp build/* ./test/integration/assets",
     "gen:types": "rm -rf types && tsc # TODO: would be nice to tree-shake the *.d.ts files",
     "test:smoke": "playwright test",
-    "test:unit": "node --test test/unit/**/*.test.js # this command works in the shell but not by doing `npm run test:unit`"
+    "test:unit": "node --test test/unit/*.test.js"
   },
   "author": "",
   "license": "ISC",
