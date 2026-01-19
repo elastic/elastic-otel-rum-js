@@ -6,7 +6,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "ci-all": "node ./scripts/oneach.mjs npm ci",
+    "ci-all": "./scripts/oneach.sh npm ci",
     "lint": "npm run lint:eslint && npm run lint:prettier",
     "lint:eslint": "eslint .",
     "lint:prettier": "prettier --check .",
