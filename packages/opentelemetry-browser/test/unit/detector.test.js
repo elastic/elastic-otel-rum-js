@@ -13,10 +13,10 @@ import {getBrowserInfo, getPlatformInfo} from '../../lib/detector.js';
 
 // Check that our simpler version of parsing the user agent is good enough. We are comparing to a well
 // know solution https://www.npmjs.com/package/ua-parser-js and using a dataset from github
-// // https://github.com/EngineeringSample/UserAgentsDatabase/blob/main/BreadcrumbsUserAgentsDatabase.txt
+// https://github.com/EngineeringSample/UserAgentsDatabase/blob/main/BreadcrumbsUserAgentsDatabase.txt
 const fixturesPath = join(
     import.meta.dirname,
-    '../fixtures/BreadcrumbsUserAgentsDatabase.txt'
+    './fixtures/BreadcrumbsUserAgentsDatabase.txt'
 );
 const contents = readFileSync(fixturesPath, {encoding: 'utf-8'});
 const userAgentList = contents.split('\n');
