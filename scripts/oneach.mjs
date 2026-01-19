@@ -10,7 +10,7 @@
  * This script runs the the given argv in each package dir in this repo.
  * Basically this is something of a replacement for `npm run --workspaces ...`
  * since this repo does not use npm workspaces.
- * 
+ *
  * It ends when all tasks are complete or when one task fails (failfast).
  *
  * Usage:
@@ -35,7 +35,7 @@ for (const folder of packages) {
         console.log(`executing "${command}" on folder "${folder}"`);
     }
     exec(command, (err, stdout, stderr) => {
-        console.log(`Command ${err ? "FAILURE" : "SUCCESS"}`);
+        console.log(`Command ${err ? 'FAILURE' : 'SUCCESS'}`);
         if (err) {
             console.log(`Error(code: ${err.code || 'unset'}):: ${err.message}`);
             console.log(`:::stdout:::\n${stdout}`);
