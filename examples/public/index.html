@@ -17,12 +17,12 @@
             var j = d.createElement(s),
                 t = d.getElementsByTagName(s)[0]
 
-            j.src = './assets/elastic-otel-browser.min.js'
+            j.src = './assets/elastic-otel-browser.js'
             j.onload = function() {
                 startBrowserSdk(c);
                 // We want page load traces. Reload after 1st export is done
                 // in 5secs aprox
-                setTimeout(() => location.reload(), 9000);
+                // setTimeout(() => location.reload(), 9000);
                 // Throw some exceptions before we reload
                 setTimeout(() => {
                     const id = Math.floor(Math.random()*10)

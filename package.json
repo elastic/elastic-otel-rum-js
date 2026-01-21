@@ -16,7 +16,9 @@
     "eslint": "^9.39.2",
     "eslint-plugin-baseline-js": "^0.4.2",
     "eslint-plugin-yet-another-license-header": "^0.2.0",
+    "minimatch": "^10.1.1",
     "prettier": "^3.8.0",
+    "semver": "^7.7.3",
     "typescript": "5.0.4"
   }
 }
