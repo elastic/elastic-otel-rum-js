@@ -4,6 +4,7 @@ import {createServer} from 'http';
 import 'dotenv/config';
 import mime from 'mime';
 
+const serverPort = process.env.PORT || 3000;
 const otlpEndpoint = process.env.OTEL_EXPORTER_OTLP_ENDPOINT;
 const exportHeaders = process.env.OTEL_EXPORTER_OTLP_HEADERS;
 const envToInject = {};
@@ -118,5 +119,5 @@ function handleApiRequest(json, url) {
     }
 }
 
-server.listen(3000);
+server.listen(serverPort);
 console.log(`server listening to http://localhost:${server.address().port}`);

@@ -60,6 +60,17 @@ const defaultConfig = {
 };
 
 /**
+ * Returns a new URL with the path appended. Avoiding double slash
+ * @param {URL} url 
+ * @param {string} path 
+ */
+function appendPath(url, path) {
+    const result = new URL(url.href);
+    result.pathname = (result.pathname + path).replace('//', '/');
+    return result;
+}
+
+/**
  * @param {BrowserSdkConfiguration} cfg
  */
 export function startBrowserSdk(cfg = {}) {
@@ -79,6 +90,7 @@ export function startBrowserSdk(cfg = {}) {
     let endpointUrl;
     try {
         endpointUrl = new URL(config.otlpEndpoint);
+        console.log(endpointUrl.pathname)
     } catch (urlErr) {
         diag.error(
             `The value "${config.otlpEndpoint}" for "otlpEndpoint" configuration is not an URL. SDK won't start.`
@@ -97,7 +109,8 @@ export function startBrowserSdk(cfg = {}) {
     // so IMHO it would be redundant to use console exporters
 
     // traces signal configuration
-    const tracesEndpoint = `${endpointUrl.href}/v1/traces`;
+    // const tracesEndpoint = `${endpointUrl.href}v1/traces`;
+    const tracesEndpoint = appendPath(endpointUrl, 'v1/traces').href;
     const tracerProvider = new WebTracerProvider({
         resource,
         sampler: new TraceIdRatioBasedSampler(config.sampleRate),
@@ -120,7 +133,8 @@ export function startBrowserSdk(cfg = {}) {
     // but there is no way to set propagators and context manager
 
     // metrics signal configuration
-    const metricsEndpoint = `${endpointUrl.href}/v1/metrics`;
+    // const metricsEndpoint = `${endpointUrl.href}v1/metrics`;
+    const metricsEndpoint = appendPath(endpointUrl, 'v1/metrics').href;
     const meterProvider = new MeterProvider({
         resource,
         readers: [
@@ -135,7 +149,8 @@ export function startBrowserSdk(cfg = {}) {
     metrics.setGlobalMeterProvider(meterProvider);
 
     // logs signal configuration
-    const logsEndpoint = `${endpointUrl.href}/v1/logs`;
+    // const logsEndpoint = `${endpointUrl.href}v1/logs`;
+    const logsEndpoint = appendPath(endpointUrl, 'v1/logs').href;
     const loggerProvider = new LoggerProvider({
         resource,
         processors: [
