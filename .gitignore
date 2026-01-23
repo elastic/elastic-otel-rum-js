@@ -1,0 +1,23 @@
+# system ad env files
+.DS_Store
+.env
+
+# node
+node_modules
+npm-debug.log*
+
+# build & docs artifacts
+assets
+build
+docs/.artifacts
+.artifacts
+
+# Playwright
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+playwright/.auth/
+
+# temporary
+docs

@@ -1,0 +1,24 @@
+{
+  "name": "elastic-otel-rum-js",
+  "version": "0.1.0",
+  "description": "",
+  "license": "Apache-2.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "ci-all": "./scripts/oneach.sh npm ci",
+    "lint": "npm run lint:eslint && npm run lint:prettier",
+    "lint:eslint": "eslint .",
+    "lint:prettier": "prettier --check .",
+    "lint:fix": "eslint . --fix && prettier --write ."
+  },
+  "devDependencies": {
+    "eslint": "^9.39.2",
+    "eslint-plugin-baseline-js": "^0.4.2",
+    "eslint-plugin-yet-another-license-header": "^0.2.0",
+    "minimatch": "^10.1.1",
+    "prettier": "^3.8.0",
+    "semver": "^7.7.3",
+    "typescript": "5.0.4"
+  }
+}

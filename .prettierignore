@@ -1,0 +1,16 @@
+*.md
+*.json
+*.jsonc
+*.json5
+*.yml
+*.yaml
+*.html
+*.css
+*.d.ts
+
+**/assets/**
+**/*.example.js
+**/*.example.mjs
+**/node_modules/**
+**/build/**
+**/*.min.js

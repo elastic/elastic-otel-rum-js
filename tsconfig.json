@@ -1,0 +1,16 @@
+{
+  "compileOnSave": false,
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "target": "ESNext",
+    "resolveJsonModule": true,
+    "moduleResolution": "node",
+    "module": "es2022",
+    "allowSyntheticDefaultImports": true,
+    "lib": ["ES2022", "DOM"]
+  },
+  "exclude": ["node_modules"]
+}

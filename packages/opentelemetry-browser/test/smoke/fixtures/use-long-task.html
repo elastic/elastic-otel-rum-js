@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>Long Task Instrumentation Test</title>
+        <!-- EDOT_PLACEHOLDER (DO NOT REMOVE)-->
+    </head>
+    <body>
+        <h1>Long Task Instrumentation Test</h1>
+        <button id="long-task">Exec Long Task</button>
+        <p id="result"></p>
+        <script>
+            const result = document.getElementById('result');
+            const LONGTASK_DURATION = 60; // more thatn 50 is considered a long task
+            function generateLongTask() {
+                const startingTimestamp = performance.now();
+                while (performance.now() - startingTimestamp < LONGTASK_DURATION) {}
+            };
+            // Do an expensive work
+            document.getElementById('long-task').addEventListener('click', () => {
+                generateLongTask();
+                result.innerText = 'Long task finished';
+            });
+        </script>
+    </body>
+</html>

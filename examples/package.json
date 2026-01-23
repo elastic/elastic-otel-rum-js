@@ -1,0 +1,17 @@
+{
+  "name": "elastic-otel-rum-js-examples",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "server.js",
+  "license": "Apache-2.0",
+  "private": true,
+  "scripts": {
+    "edot:update": "cd ../packages/opentelemetry-browser && npm run build:iife && cp build/* ../../examples/public/assets",
+    "//start:todo": "instrument the server?",
+    "start": "npm run edot:update && node ./server.js"
+  },
+  "dependencies": {
+    "dotenv": "^17.2.3",
+    "mime": "^4.1.0"
+  }
+}
