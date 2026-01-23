@@ -17,12 +17,11 @@
  * You can set the `DEBUG=1` envvar to get some debug output.
  */
 
-
 import assert from 'assert';
 import {spawnSync} from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
-import {minimatch}  from 'minimatch';
+import {minimatch} from 'minimatch';
 import * as semver from 'semver';
 
 const TOP = process.cwd();

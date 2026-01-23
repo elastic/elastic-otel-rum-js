@@ -61,8 +61,8 @@ const defaultConfig = {
 
 /**
  * Returns a new URL with the path appended. Avoiding double slash
- * @param {URL} url 
- * @param {string} path 
+ * @param {URL} url
+ * @param {string} path
  */
 function appendPath(url, path) {
     const result = new URL(url.href);
@@ -90,7 +90,7 @@ export function startBrowserSdk(cfg = {}) {
     let endpointUrl;
     try {
         endpointUrl = new URL(config.otlpEndpoint);
-        console.log(endpointUrl.pathname)
+        console.log(endpointUrl.pathname);
     } catch (urlErr) {
         diag.error(
             `The value "${config.otlpEndpoint}" for "otlpEndpoint" configuration is not an URL. SDK won't start.`
