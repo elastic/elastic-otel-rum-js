@@ -104,8 +104,9 @@ export const PatcherContextManager = {
     active: function () {
         return currentContext;
     },
-    with: function (context = ROOT_CONTEXT, fn, thisArg, ...args) {
+    with: function (context, fn, thisArg, ...args) {
         const prevContext = currentContext;
+        currentContext = context || ROOT_CONTEXT;
         try {
             return fn.call(thisArg, ...args);
         } finally {
