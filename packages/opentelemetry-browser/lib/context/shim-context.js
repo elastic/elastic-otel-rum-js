@@ -1,5 +1,5 @@
 
-import {ROOT_CONTEXT} from '@opentelemetry/api';
+import {context, ROOT_CONTEXT} from '@opentelemetry/api';
 
 // use the diag one?
 const logger = console.error.bind(console);
@@ -77,15 +77,15 @@ function unwrap(nodule, name) {
 }
 
 /**
- * 
  * @param {Function} fn 
- * @param {import('@opentelemetry/api').ContextManager} manager 
- * @returns 
+ * @param {import('@opentelemetry/api').ContextManager} manager
+ * @param {import('@opentelemetry/api').Context} context
+ * @returns {Function}
  */
-function bindFn(fn, manager) {
-    const activeCtx = manager.active();
+function bindFn(fn, manager, context) {
+    const ctx = context || manager.active();
     function wrappedCtxFn(...args) {
-        return manager.with(activeCtx, () => fn.apply(this, args));
+        return manager.with(ctx, () => fn.apply(this, args));
     }
     Object.defineProperty(wrappedCtxFn, 'length', {
         enumerable: false,
@@ -112,34 +112,38 @@ export const PatcherContextManager = {
             currentContext = prevContext;
         }
     },
+    // @ts-ignore -- upstream types expects a generic type as return
     bind: function (context, target) {
+        if (typeof target === 'function') {
+            return bindFn(target, this, context);
+        }
         return target;
     },
     enable: function () {
         const manager = this;
         wrap(window, 'setTimeout', (origSetTimeout) => {
             return function (...args) {
-                args[0] = bindFn(args[0], manager);
+                args[0] = bindFn(args[0], manager, manager.active());
                 return origSetTimeout.apply(this, args);
             }
         });
         wrap(window, 'setImmediate', (origSetImmediate) => {
             return function (...args) {
-                args[0] = bindFn(args[0], manager);
+                args[0] = bindFn(args[0], manager, manager.active());
                 return origSetImmediate.apply(this, args);
             }
         });
         if (window.Promise) {
             wrap(Promise.prototype, 'then', (origThen) => {
                 return function (...args) {
-                    args[0] = bindFn(args[0], manager);
-                    args[1] = bindFn(args[1], manager);
+                    args[0] = bindFn(args[0], manager, manager.active());
+                    args[1] = bindFn(args[1], manager, manager.active());
                     return origThen.apply(this, args);
                 }
             });
             wrap(Promise.prototype, 'catch', (origCatch) => {
                 return function (...args) {
-                    args[0] = bindFn(args[0], manager);
+                    args[0] = bindFn(args[0], manager, manager.active());
                     return origCatch.apply(this, args);
                 }
             });
