@@ -27,6 +27,7 @@ import {UserInteractionInstrumentation} from '@opentelemetry/instrumentation-use
 import {XMLHttpRequestInstrumentation} from '@opentelemetry/instrumentation-xml-http-request';
 import {ExceptionInstrumentation} from '@opentelemetry/instrumentation-web-exception';
 
+import {TimedContextManager} from './context/timed-context.js';
 import {createLogger} from './logging.js';
 import {detectResource} from './detector.js';
 
@@ -61,8 +62,8 @@ const defaultConfig = {
 
 /**
  * Returns a new URL with the path appended. Avoiding double slash
- * @param {URL} url 
- * @param {string} path 
+ * @param {URL} url
+ * @param {string} path
  */
 function appendPath(url, path) {
     const result = new URL(url.href);
@@ -90,7 +91,6 @@ export function startBrowserSdk(cfg = {}) {
     let endpointUrl;
     try {
         endpointUrl = new URL(config.otlpEndpoint);
-        console.log(endpointUrl.pathname)
     } catch (urlErr) {
         diag.error(
             `The value "${config.otlpEndpoint}" for "otlpEndpoint" configuration is not an URL. SDK won't start.`
@@ -127,7 +127,9 @@ export function startBrowserSdk(cfg = {}) {
     // - a composite propagator [W3C, Baggage]
     // - a context manager (no-op)
     // Should we allow users to pass their own propagator, contextmanager?
-    tracerProvider.register();
+    tracerProvider.register({
+        contextManager: TimedContextManager,
+    });
     // ideally it shoud be
     // trace.setGlobalTracerProvider(tracerProvider);
     // but there is no way to set propagators and context manager
