@@ -12,12 +12,11 @@
 import {ROOT_CONTEXT} from '@opentelemetry/api';
 import {createLogger} from './logging.js';
 
-
 // use the diag one?
 const logger = createLogger({logLevel: 'warn'});
 
-// This var keeps track of the current context whenver
-// it switches within the `with` method.
+// Keep the state of the current context here so only
+// the manager has direct access.
 let currentContext = ROOT_CONTEXT;
 /** @type {import('@opentelemetry/api').ContextManager} */
 export const PatchContextManager = {
@@ -100,32 +99,28 @@ function bindFn(fn, manager, context) {
  * @param {import('@opentelemetry/api').ContextManager} manager 
  */
 function wrapPromise(manager) {
-    wrap(window, 'Promise', (promiseCtor) => {
-        return function (resolve, reject) {
-            // No need to wra resolve/reject since they havejsut change the promise state
-            const prom = new promiseCtor(resolve, reject);
-            wrap(prom, 'then', (origThen) => {
-                return function (onResolved, onRejected) {
-                    return origThen(
-                        bindFn(onResolved, manager, manager.active()),
-                        bindFn(onRejected, manager, manager.active()),
-                    );
-                };
-            });
-            wrap(prom, 'catch', (origCatch) => {
-                return function (onRejected) {
-                    return origCatch(
-                        bindFn(onRejected, manager, manager.active()),
-                    );
-                };
-            });
-            return prom;
+    wrap(Promise.prototype, 'then', (origThen) => {
+        return function (onResolved, onRejected) {
+            return origThen.call(
+                this,
+                bindFn(onResolved, manager, manager.active()),
+                bindFn(onRejected, manager, manager.active()),
+            );
         };
-    })
+    });
+    wrap(Promise.prototype, 'catch', (origCatch) => {
+        return function (onRejected) {
+            return origCatch.call(
+                this,   
+                bindFn(onRejected, manager, manager.active()),
+            );
+        };
+    });
 }
 
 
 const xhrProps = ['onabort', 'onerror', 'onload', 'onloadend', 'onloadstart', 'onprogress', 'ontimeout'];
+const xhrProto = XMLHttpRequest.prototype;
 const xhrTargetProto = XMLHttpRequestEventTarget.prototype;
 /**
  * By patching the XHR constructor we can keep track of the event listeners
@@ -168,6 +163,9 @@ function wrapXMLHttpRequest (manager) {
             });
         }
     });
+    // make sure to keep the prototype
+    window.XMLHttpRequest.prototype = xhrProto;
+
     // Wrap onload, onerror, on... properties from XMLHttpRequestEventTarget.prototype
     for (const prop of xhrProps) {
         const descriptor = Object.getOwnPropertyDescriptor(xhrTargetProto, prop);
