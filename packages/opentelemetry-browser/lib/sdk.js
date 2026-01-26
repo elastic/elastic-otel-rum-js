@@ -27,7 +27,7 @@ import {UserInteractionInstrumentation} from '@opentelemetry/instrumentation-use
 import {XMLHttpRequestInstrumentation} from '@opentelemetry/instrumentation-xml-http-request';
 import {ExceptionInstrumentation} from '@opentelemetry/instrumentation-web-exception';
 
-import {TimedContextManager} from './context/timed-context.js';
+import {PatchContextManager} from './context.js';
 import {createLogger} from './logging.js';
 import {detectResource} from './detector.js';
 
@@ -59,17 +59,6 @@ const defaultConfig = {
     exportHeaders: {},
     //TODO: instrumentation configurations
 };
-
-/**
- * Returns a new URL with the path appended. Avoiding double slash
- * @param {URL} url
- * @param {string} path
- */
-function appendPath(url, path) {
-    const result = new URL(url.href);
-    result.pathname = (result.pathname + path).replace('//', '/');
-    return result;
-}
 
 /**
  * @param {BrowserSdkConfiguration} cfg
@@ -109,7 +98,6 @@ export function startBrowserSdk(cfg = {}) {
     // so IMHO it would be redundant to use console exporters
 
     // traces signal configuration
-    // const tracesEndpoint = `${endpointUrl.href}v1/traces`;
     const tracesEndpoint = appendPath(endpointUrl, 'v1/traces').href;
     const tracerProvider = new WebTracerProvider({
         resource,
@@ -125,17 +113,16 @@ export function startBrowserSdk(cfg = {}) {
     });
     // TODO: WebTracerProvider comes with
     // - a composite propagator [W3C, Baggage]
-    // - a context manager (no-op)
+    // - a context manager (Stack, which has issues with exporters)
     // Should we allow users to pass their own propagator, contextmanager?
     tracerProvider.register({
-        contextManager: TimedContextManager,
+        contextManager: PatchContextManager,
     });
     // ideally it shoud be
     // trace.setGlobalTracerProvider(tracerProvider);
     // but there is no way to set propagators and context manager
 
     // metrics signal configuration
-    // const metricsEndpoint = `${endpointUrl.href}v1/metrics`;
     const metricsEndpoint = appendPath(endpointUrl, 'v1/metrics').href;
     const meterProvider = new MeterProvider({
         resource,
@@ -151,7 +138,6 @@ export function startBrowserSdk(cfg = {}) {
     metrics.setGlobalMeterProvider(meterProvider);
 
     // logs signal configuration
-    // const logsEndpoint = `${endpointUrl.href}v1/logs`;
     const logsEndpoint = appendPath(endpointUrl, 'v1/logs').href;
     const loggerProvider = new LoggerProvider({
         resource,
@@ -183,4 +169,17 @@ export function startBrowserSdk(cfg = {}) {
     sdkStarted = true;
 
     // TODO: return API??? flush???
+}
+
+// -- helper functions
+
+/**
+ * Returns a new URL with the path appended. Avoiding double slash
+ * @param {URL} url
+ * @param {string} path
+ */
+function appendPath(url, path) {
+    const result = new URL(url.href);
+    result.pathname = (result.pathname + path).replace('//', '/');
+    return result;
 }
