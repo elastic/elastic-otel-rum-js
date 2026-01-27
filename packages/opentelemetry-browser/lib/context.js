@@ -80,6 +80,9 @@ export const PatchContextManager = {
  * @returns {Function}
  */
 function bindFn(fn, manager, context) {
+    if (typeof fn !== 'function') {
+        return fn;
+    }
     const ctx = context || manager.active();
     function wrappedCtxFn(...args) {
         return manager.with(ctx, () => fn.apply(this, args));
@@ -116,12 +119,20 @@ function wrapPromise(manager) {
             );
         };
     });
+    wrap(Promise.prototype, 'finally', (origFinally) => {
+        return function (onCompleted) {
+            return origFinally.call(
+                this,   
+                bindFn(onCompleted, manager, manager.active()),
+            );
+        };
+    });
 }
 
 
 const xhrProps = ['onabort', 'onerror', 'onload', 'onloadend', 'onloadstart', 'onprogress', 'ontimeout'];
-const xhrProto = XMLHttpRequest.prototype;
-const xhrTargetProto = XMLHttpRequestEventTarget.prototype;
+const xhrProto = globalThis.XMLHttpRequest.prototype;
+const xhrTargetProto = globalThis.XMLHttpRequestEventTarget.prototype;
 /**
  * By patching the XHR constructor we can keep track of the event listeners
  * on the same XHR instance that were registered and its easier to cleared
@@ -129,42 +140,34 @@ const xhrTargetProto = XMLHttpRequestEventTarget.prototype;
  * @param {import('@opentelemetry/api').ContextManager} manager 
  */
 function wrapXMLHttpRequest (manager) {
-    wrap(window, 'XMLHttpRequest', function (xhrCtor) {
-        // Only one possible param
-        // ref: https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/XMLHttpRequest#options
-        return function(options) {
-            /** @type {XMLHttpRequest & {__bound: Map<Function, Function>}} */
-            const xhr = new xhrCtor(options);
-            xhr.__bound = new Map(); // keep bound listeners to remove if necessary
-            wrap(xhr, 'addEventListener', (origAEL) => {
-                return function (...args) {
-                    if (typeof args[1] === 'function') {
-                        const handler = args[1];
-                        const bound = xhr.__bound.get(handler);
-                        args[1] = bound || bindFn(handler, manager, manager.active());
-                        xhr.__bound.set(handler, args[1]);
-                    }
-                    return origAEL.apply(this, args);
-                }
-            });
-            wrap(xhr, 'removeEventListener', (origREL) => {
-                return function (...args) {
-                    if (typeof args[1] === 'function') {
-                        const handler = args[1];
-                        const bound = xhr.__bound.get(handler);
-                        if (bound) {
-                            args[1] = bound;
-                            // NOTE: this handler might be registered more than once
-                            // or for other event types so better to keep it in the map
-                        }
-                    }
-                    return origREL.apply(this, args);
-                }
-            });
+    wrap(xhrProto, 'addEventListener', function (origAEL) {
+        return function (...args) {
+            const xhr = this;
+            if (typeof args[1] === 'function') {
+                xhr.__bound = xhr.__bound || new Map(); 
+                const handler = args[1];
+                const bound = xhr.__bound.get(handler);
+                args[1] = bound || bindFn(handler, manager, manager.active());
+                xhr.__bound.set(handler, args[1]);
+            }
+            return origAEL.apply(xhr, args);
         }
     });
-    // make sure to keep the prototype
-    window.XMLHttpRequest.prototype = xhrProto;
+    wrap(xhrProto, 'removeEventListener', function (origREL) {
+        return function (...args) {
+            const xhr = this;
+            if (typeof args[1] === 'function') {
+                const handler = args[1];
+                const bound = xhr.__bound?.get(handler);
+                if (bound) {
+                    args[1] = bound;
+                    // NOTE: this handler might be registered more than once
+                    // or for other event types so better to keep it in the map
+                }
+            }
+            return origREL.apply(xhr, args);
+        }
+    });
 
     // Wrap onload, onerror, on... properties from XMLHttpRequestEventTarget.prototype
     for (const prop of xhrProps) {
@@ -195,7 +198,8 @@ function wrapXMLHttpRequest (manager) {
 }
 
 function unwrapXMLHttpRequest() {
-    unwrap(window, 'XMLHttpRequest');
+    unwrap(xhrProto, 'addEventListener');
+    unwrap(xhrProto, 'removeEventListener');
     // Unwrap onload, onerror, on... properties from XMLHttpRequestEventTarget.prototype
     for (const prop of xhrProps) {
         const descriptor = Object.getOwnPropertyDescriptor(xhrTargetProto, prop);
