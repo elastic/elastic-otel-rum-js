@@ -62,6 +62,14 @@ const defaultConfig = {
 
 /**
  * @param {BrowserSdkConfiguration} cfg
+ * @returns {{
+ *      providers: {
+ *          tracer: import('@opentelemetry/api').TracerProvider;
+ *          meter: import('@opentelemetry/api').MeterProvider;
+ *          logger: import('@opentelemetry/api-logs').LoggerProvider;
+ *      };
+ *      flush: () => Promise<void>
+ * }}
  */
 export function startBrowserSdk(cfg = {}) {
     if (sdkStarted || cfg.disabled) {
@@ -99,17 +107,16 @@ export function startBrowserSdk(cfg = {}) {
 
     // traces signal configuration
     const tracesEndpoint = appendPath(endpointUrl, 'v1/traces').href;
+    const spanProcessor = new BatchSpanProcessor(
+        new OTLPTraceExporter({
+            url: tracesEndpoint,
+            headers: config.exportHeaders,
+        }),
+    );
     const tracerProvider = new WebTracerProvider({
         resource,
         sampler: new TraceIdRatioBasedSampler(config.sampleRate),
-        spanProcessors: [
-            new BatchSpanProcessor(
-                new OTLPTraceExporter({
-                    url: tracesEndpoint,
-                    headers: config.exportHeaders,
-                })
-            ),
-        ],
+        spanProcessors: [spanProcessor],
     });
     // TODO: WebTracerProvider comes with
     // - a composite propagator [W3C, Baggage]
@@ -124,31 +131,29 @@ export function startBrowserSdk(cfg = {}) {
 
     // metrics signal configuration
     const metricsEndpoint = appendPath(endpointUrl, 'v1/metrics').href;
+    const metricsReader = new PeriodicExportingMetricReader({
+        exporter: new OTLPMetricExporter({
+            url: metricsEndpoint,
+            headers: config.exportHeaders,
+        }),
+    });
     const meterProvider = new MeterProvider({
         resource,
-        readers: [
-            new PeriodicExportingMetricReader({
-                exporter: new OTLPMetricExporter({
-                    url: metricsEndpoint,
-                    headers: config.exportHeaders,
-                }),
-            }),
-        ],
+        readers: [metricsReader],
     });
     metrics.setGlobalMeterProvider(meterProvider);
 
     // logs signal configuration
     const logsEndpoint = appendPath(endpointUrl, 'v1/logs').href;
+    const logsProcessor = new BatchLogRecordProcessor(
+        new OTLPLogExporter({
+            url: logsEndpoint,
+            headers: config.exportHeaders,
+        }),
+    );
     const loggerProvider = new LoggerProvider({
         resource,
-        processors: [
-            new BatchLogRecordProcessor(
-                new OTLPLogExporter({
-                    url: logsEndpoint,
-                    headers: config.exportHeaders,
-                })
-            ),
-        ],
+        processors: [logsProcessor],
     });
     logs.setGlobalLoggerProvider(loggerProvider);
 
@@ -169,6 +174,21 @@ export function startBrowserSdk(cfg = {}) {
     sdkStarted = true;
 
     // TODO: return API??? flush???
+    return {
+        providers: {
+            tracer: tracerProvider,
+            meter: meterProvider,
+            logger: loggerProvider,
+        },
+        flush() {
+            return Promise.all([
+                spanProcessor.forceFlush(),
+                metricsReader.forceFlush(),
+                logsProcessor.forceFlush(),
+            ]).then(() => { return; });
+        }
+    };
+
 }
 
 // -- helper functions
