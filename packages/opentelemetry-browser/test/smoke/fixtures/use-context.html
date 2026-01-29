@@ -18,26 +18,36 @@
             <button id="xhr-event">XHR with EventListener</button>
             <button id="xhr-prop">XHR with Property</button>
             <script>
-                const tracerProvider = edotBrowser.providers.tracer;
-                document.querySelector('#timeout').addEventListener('click', () => {
-                    setTimeout(() => {
-                        tracerProvider.getTracer('default').startSpan('timeout-child').end();
-                    }, 1);
-                });
-                document.querySelector('#promise').addEventListener('click', () => {
-                    new Promise((resolve) => {
-                        tracerProvider.getTracer('default').startSpan('promise-ctor').end();
-                        resolve();
+                function getTracer(name) {
+                    return edotBrowser.providers.tracer.getTracer(name);
+                }
+                // NOTE: we wait until document loaded to make sure EDOT is started
+                // We do this because we want `@opentelemetry/instrumentation-user-interaction`
+                // to be enbled. IMHO is think this is not complete specifically for 'click'
+                // events
+                window.addEventListener('load', () => {
+                    // Reginstering at thids moment the click event we will get
+                    // user interaction spans
+                    document.querySelector('#timeout').addEventListener('click', () => {
+                        setTimeout(() => {
+                            getTracer('default').startSpan('timeout-child').end();
+                        }, 1);
                     });
-                });
-                document.querySelector('#promise-then-success').addEventListener('click', () => {
-                    Promise.resolve().then(() => {
-                        tracerProvider.getTracer('default').startSpan('promise-then-success').end();
+                    document.querySelector('#promise-ctor').addEventListener('click', () => {
+                        new Promise((resolve) => {
+                            getTracer('default').startSpan('promise-ctor').end();
+                            resolve();
+                        });
                     });
-                });
-                document.querySelector('#promise-then-failure').addEventListener('click', () => {
-                    Promise.resolve().then(() => {
-                        tracerProvider.getTracer('default').startSpan('promise-then-failure').end();
+                    document.querySelector('#promise-then-success').addEventListener('click', () => {
+                        Promise.resolve().then(() => {
+                            getTracer('default').startSpan('promise-then-success').end();
+                        });
+                    });
+                    document.querySelector('#promise-then-failure').addEventListener('click', () => {
+                        Promise.resolve().then(() => {
+                            getTracer('default').startSpan('promise-then-failure').end();
+                        });
                     });
                 });
             </script>
