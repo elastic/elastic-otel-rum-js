@@ -8,21 +8,26 @@
     <body>
         <h1>Context Manager Test</h1>
         <!-- TODO: add buttons -->
-            <button id="timeout">Trigger setTimeout</button>
-            <button id="promise">Trigger Promise</button>
-            <button id="fetch">Trigger Fetch</button>
-            <button id="xhr-event">Trigger XHR with EventListener</button>
-            <button id="xhr-prop">Trigger XHR with Property</button>
+            <button id="timeout">setTimeout</button>
+            <button id="promise-ctor">Promise - constructor</button>
+            <button id="promise-then">Promise - then</button>
+            <button id="promise-catch">Promise - catch</button>
+            <button id="promise-finally">Promise - finally</button>
+            <button id="fetch">Fetch</button>
+            <button id="xhr-event">XHR with EventListener</button>
+            <button id="xhr-prop">XHR with Property</button>
             <script>
+                const tracerProvider = edotBrowser.providers.tracer;
                 document.querySelector('#timeout').addEventListener('click', () => {
                     setTimeout(() => {
-                        // TODO: use API to create a span and end it
+                        tracerProvider.getTracer('default').startSpan('timeout-child').end();
                     }, 1);
                 });
-                document.querySelector('#timeout').addEventListener('click', () => {
-                    setTimeout(() => {
-                        // TODO: use API to create a span and end it
-                    }, 1);
+                document.querySelector('#promise').addEventListener('click', () => {
+                    new Promise((resolve) => {
+                        tracerProvider.getTracer('default').startSpan('promise-ctor').end();
+                        resolve();
+                    });
                 });
             </script>
     </body>
