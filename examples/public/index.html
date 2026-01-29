@@ -19,6 +19,7 @@
 
             j.src = './assets/elastic-otel-browser.js'
             j.onload = function() {
+                // Expose the EDOT so you can play with it in the console
                 window.edotBrowser = startBrowserSdk(c);
                 // We want page load traces. Reload after 1st export is done
                 // in 5secs aprox

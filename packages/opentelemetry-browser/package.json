@@ -29,9 +29,8 @@
     "build:iife": "esbuild ./lib/bundle.js --bundle --sourcemap --platform=browser --target=es2022 --outfile=build/elastic-otel-browser.js",
     "build:min": "esbuild ./lib/bundle.js --bundle --minify --sourcemap --platform=browser --target=es2022 --outfile=build/elastic-otel-browser.min.js",
     "build": "npm run build:iife && npm run build:min",
-    "postbuild": "build/* ./test/integration/assets",
     "gen:types": "rm -rf types && tsc # TODO: would be nice to tree-shake the *.d.ts files",
-    "test:smoke": "playwright test",
+    "test:smoke": "npm run build && cp build/* ./test/smoke/assets && playwright test",
     "test:unit": "node --test test/unit/*.test.js"
   },
   "author": "",

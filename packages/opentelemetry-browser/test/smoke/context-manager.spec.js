@@ -6,18 +6,19 @@
 import {test, expect} from '@playwright/test';
 import {createCollector} from './test-utils';
 
-test('should export agent metadata default case', async ({page}) => {
+test.skip('should carry context on different async operations and functions', async ({page}) => {
     const collector = createCollector(page);
-    await page.goto('/fixtures/use-document-load.html');
+    await page.goto('/fixtures/use-context.html');
 
-    const spans = await collector.getSpans();
-    const attribs = spans[0].resource.attributes;
+    // Discard all telemetry related to page load
+    let spans = await collector.getSpans();
+    // collector.resetData()
 
-    // Test OTel SDK add its metadata
-    expect(attribs['telemetry.sdk.language']).toStrictEqual('webjs');
-    expect(attribs['telemetry.sdk.name']).toStrictEqual('opentelemetry');
-    expect(attribs['telemetry.sdk.version']).toBeDefined();
-    // Test metadata from the distro
-    expect(attribs['telemetry.distro.name']).toStrictEqual('elastic');
-    expect(attribs['telemetry.distro.version']).toBeDefined();
+    // Timeout
+    console.log('timeout test')
+    await page.click('#timeout');
+    spans = await collector.getSpans();
+    const timeoutSpan = spans.find((s) => s.name === 'timeout-child');
+    expect(timeoutSpan).toBeDefined();
+
 });

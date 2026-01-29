@@ -10,7 +10,8 @@
         <!-- TODO: add buttons -->
             <button id="timeout">setTimeout</button>
             <button id="promise-ctor">Promise - constructor</button>
-            <button id="promise-then">Promise - then</button>
+            <button id="promise-then-success">Promise - then success</button>
+            <button id="promise-then-failure">Promise - then failure</button>
             <button id="promise-catch">Promise - catch</button>
             <button id="promise-finally">Promise - finally</button>
             <button id="fetch">Fetch</button>
@@ -27,6 +28,16 @@
                     new Promise((resolve) => {
                         tracerProvider.getTracer('default').startSpan('promise-ctor').end();
                         resolve();
+                    });
+                });
+                document.querySelector('#promise-then-success').addEventListener('click', () => {
+                    Promise.resolve().then(() => {
+                        tracerProvider.getTracer('default').startSpan('promise-then-success').end();
+                    });
+                });
+                document.querySelector('#promise-then-failure').addEventListener('click', () => {
+                    Promise.resolve().then(() => {
+                        tracerProvider.getTracer('default').startSpan('promise-then-failure').end();
                     });
                 });
             </script>

@@ -46,7 +46,7 @@ export function createCollector(page) {
      * @returns {Promise<any[]>}
      */
     const waitForData = (signal) =>
-        new Promise((res) => {
+        new Promise((resolve, reject) => {
             // TODO: The default export interval is 5secs. We wait for a little longer to
             // give the EDOT time to export. IF we could configure the interval we
             // could pass a lower value to speed up tests. But do we want this config to be public?
@@ -58,9 +58,12 @@ export function createCollector(page) {
             const intervalId = setInterval(() => {
                 const hasSpans = raw[signal].length > 0;
                 const timedOut = Date.now() - start > timeout;
-                if (hasSpans || timedOut) {
+                if (hasSpans) {
                     clearInterval(intervalId);
-                    res(raw[signal]);
+                    resolve(raw[signal]);
+                } else if (timedOut) {
+                    clearInterval(intervalId);
+                    reject(new Error(`No new "${signal} received in ${timeout}ms"`));
                 }
             }, 50);
         });
