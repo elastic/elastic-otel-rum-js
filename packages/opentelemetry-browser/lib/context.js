@@ -64,7 +64,7 @@ export const PatchContextManager = {
         unwrap(window, 'setImmediate');
         unwrapXMLHttpRequest();
         if (window.Promise) {
-            unwrap(window, 'Promise');
+            unwrapPromise();
         }
         return this;
     },
@@ -127,6 +127,12 @@ function wrapPromise(manager) {
             );
         };
     });
+}
+
+function unwrapPromise() {
+    unwrap(Promise.prototype, 'then');
+    unwrap(Promise.prototype, 'catch');
+    unwrap(Promise.prototype, 'finally');
 }
 
 
