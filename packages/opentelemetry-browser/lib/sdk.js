@@ -42,7 +42,6 @@ import {detectResource} from './detector.js';
  * }} InstrumentationsConfigMap
  */
 
-
 /**
  * @typedef {Object} BrowserSdkConfiguration
  * @property {boolean} [disabled]
@@ -122,7 +121,7 @@ export function startBrowserSdk(cfg = {}) {
         new OTLPTraceExporter({
             url: tracesEndpoint,
             headers: config.exportHeaders,
-        }),
+        })
     );
     const tracerProvider = new WebTracerProvider({
         resource,
@@ -160,7 +159,7 @@ export function startBrowserSdk(cfg = {}) {
         new OTLPLogExporter({
             url: logsEndpoint,
             headers: config.exportHeaders,
-        }),
+        })
     );
     const loggerProvider = new LoggerProvider({
         resource,
@@ -175,7 +174,7 @@ export function startBrowserSdk(cfg = {}) {
     /** @type {Record<keyof InstrumentationsConfigMap, (cfg: any) => any>} */
     const instrFactories = {
         'document-load': (cfg) => new DocumentLoadInstrumentation(cfg),
-        'fetch': (cfg) => new FetchInstrumentation(cfg),
+        fetch: (cfg) => new FetchInstrumentation(cfg),
         'long-task': (cfg) => new LongTaskInstrumentation(cfg),
         'user-interaction': (cfg) => new UserInteractionInstrumentation(cfg),
         'xml-http-request': (cfg) => new XMLHttpRequestInstrumentation(cfg),
@@ -190,7 +189,7 @@ export function startBrowserSdk(cfg = {}) {
             instrumentations.push(instrFactories[key](instrConfig));
         }
     }
-    registerInstrumentations({ instrumentations });
+    registerInstrumentations({instrumentations});
 
     // Flag as started
     sdkStarted = true;
@@ -207,10 +206,11 @@ export function startBrowserSdk(cfg = {}) {
                 spanProcessor.forceFlush(),
                 metricsReader.forceFlush(),
                 logsProcessor.forceFlush(),
-            ]).then(() => { return; });
-        }
+            ]).then(() => {
+                return;
+            });
+        },
     };
-
 }
 
 // -- helper functions

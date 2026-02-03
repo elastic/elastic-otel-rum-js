@@ -6,16 +6,20 @@
 import {test, expect} from '@playwright/test';
 import {createCollector} from './test-utils';
 
-test.only('should carry context on different async operations and functions', async ({page}) => {
+test.only('should carry context on different async operations and functions', async ({
+    page,
+}) => {
     // Disabling `@opentelemetry/instrumentation-fetch` to avoid extra exports
     // because of the export instrumentation issue
     // ref: https://github.com/open-telemetry/opentelemetry-js/issues/6339
-    const config = encodeURIComponent(JSON.stringify({
-        logLevel: 'debug',
-        instrumentationsConfigs: {
-            fetch: { enabled: false },
-        },
-    }));
+    const config = encodeURIComponent(
+        JSON.stringify({
+            logLevel: 'debug',
+            instrumentationsConfigs: {
+                fetch: {enabled: false},
+            },
+        })
+    );
     const collector = createCollector(page);
     await page.goto(`/fixtures/use-context.html?config=${config}`);
 
@@ -24,7 +28,8 @@ test.only('should carry context on different async operations and functions', as
     collector.clear();
 
     let parentSpan, childSpan;
-    const buttonIds = ['timeout',
+    const buttonIds = [
+        'timeout',
         'promise-ctor',
         'promise-then-success',
         'promise-then-failure',
@@ -43,7 +48,9 @@ test.only('should carry context on different async operations and functions', as
         // - the JS logic of the page to finish (specifically for XHR & fetch)
         // - the spans to be collected
         await page.click(`#${id}`);
-        await page.waitForFunction(() => document.getElementById('status').innerText === 'finished');
+        await page.waitForFunction(
+            () => document.getElementById('status').innerText === 'finished'
+        );
         spans = await collector.getSpans();
 
         // Get the span created in the callback
@@ -55,9 +62,12 @@ test.only('should carry context on different async operations and functions', as
         // Check that comes from the right user action
         parentSpan = spans.find((s) => s.spanId === childSpan.parentSpanId);
         expect(parentSpan).toBeDefined();
-        expect(parentSpan.name).toStrictEqual('click')
-        expect(parentSpan.attributes.target_xpath).toStrictEqual(`//*[@id="${id}"]`)
-        expect(parentSpan.scope.name).toStrictEqual('@opentelemetry/instrumentation-user-interaction');
+        expect(parentSpan.name).toStrictEqual('click');
+        expect(parentSpan.attributes.target_xpath).toStrictEqual(
+            `//*[@id="${id}"]`
+        );
+        expect(parentSpan.scope.name).toStrictEqual(
+            '@opentelemetry/instrumentation-user-interaction'
+        );
     }
-
 });

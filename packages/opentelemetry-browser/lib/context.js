@@ -46,13 +46,13 @@ export const PatchContextManager = {
             return function (...args) {
                 args[0] = bindFn(args[0], manager, manager.active());
                 return origSetTimeout.apply(this, args);
-            }
+            };
         });
         wrap(window, 'setImmediate', (origSetImmediate) => {
             return function (...args) {
                 args[0] = bindFn(args[0], manager, manager.active());
                 return origSetImmediate.apply(this, args);
-            }
+            };
         });
         wrapXMLHttpRequest(manager);
         if (window.Promise) {
@@ -71,11 +71,10 @@ export const PatchContextManager = {
     },
 };
 
-
 // -- helper functions
 
 /**
- * @param {Function} fn 
+ * @param {Function} fn
  * @param {import('@opentelemetry/api').ContextManager} manager
  * @param {import('@opentelemetry/api').Context} context
  * @returns {Function}
@@ -100,7 +99,7 @@ function bindFn(fn, manager, context) {
 /**
  * Wraps the promise constructor so any new promises carry
  * the context in their sbsequent calls to `.then` and `.catch`
- * @param {import('@opentelemetry/api').ContextManager} manager 
+ * @param {import('@opentelemetry/api').ContextManager} manager
  */
 function wrapPromise(manager) {
     wrap(Promise.prototype, 'then', (origThen) => {
@@ -108,23 +107,23 @@ function wrapPromise(manager) {
             return origThen.call(
                 this,
                 bindFn(onResolved, manager, manager.active()),
-                bindFn(onRejected, manager, manager.active()),
+                bindFn(onRejected, manager, manager.active())
             );
         };
     });
     wrap(Promise.prototype, 'catch', (origCatch) => {
         return function (onRejected) {
             return origCatch.call(
-                this,   
-                bindFn(onRejected, manager, manager.active()),
+                this,
+                bindFn(onRejected, manager, manager.active())
             );
         };
     });
     wrap(Promise.prototype, 'finally', (origFinally) => {
         return function (onCompleted) {
             return origFinally.call(
-                this,   
-                bindFn(onCompleted, manager, manager.active()),
+                this,
+                bindFn(onCompleted, manager, manager.active())
             );
         };
     });
@@ -138,28 +137,36 @@ function unwrapPromise() {
 
 const xhrProps = ['onreadystatechange'];
 const xhrProto = globalThis.XMLHttpRequest.prototype;
-const xhrTargetProps = ['onabort', 'onerror', 'onload', 'onloadend', 'onloadstart', 'onprogress', 'ontimeout'];
+const xhrTargetProps = [
+    'onabort',
+    'onerror',
+    'onload',
+    'onloadend',
+    'onloadstart',
+    'onprogress',
+    'ontimeout',
+];
 const xhrTargetProto = globalThis.XMLHttpRequestEventTarget.prototype;
 /**
  * We keep track of the event listeners on the same XHR instance that were
  * registered in a property named `__bound` so its easier to be cleared
  * and, therefore, garbage collected.
- * @param {import('@opentelemetry/api').ContextManager} manager 
+ * @param {import('@opentelemetry/api').ContextManager} manager
  */
-function wrapXMLHttpRequest (manager) {
+function wrapXMLHttpRequest(manager) {
     // Wrap events
     wrap(xhrProto, 'addEventListener', function (origAEL) {
         return function (...args) {
             const xhr = this;
             if (typeof args[1] === 'function') {
-                xhr.__bound = xhr.__bound || new Map(); 
+                xhr.__bound = xhr.__bound || new Map();
                 const handler = args[1];
                 const bound = xhr.__bound.get(handler);
                 args[1] = bound || bindFn(handler, manager, manager.active());
                 xhr.__bound.set(handler, args[1]);
             }
             return origAEL.apply(xhr, args);
-        }
+        };
     });
     wrap(xhrProto, 'removeEventListener', function (origREL) {
         return function (...args) {
@@ -174,7 +181,7 @@ function wrapXMLHttpRequest (manager) {
                 }
             }
             return origREL.apply(xhr, args);
-        }
+        };
     });
     // Wrap prototype descriptors
     for (const prop of xhrProps) {
@@ -184,10 +191,13 @@ function wrapXMLHttpRequest (manager) {
             Object.defineProperty(xhrProto, prop, descriptor);
         }
     }
-    
+
     // Wrap onload, onerror, on... properties from XMLHttpRequestEventTarget.prototype
     for (const prop of xhrTargetProps) {
-        const descriptor = Object.getOwnPropertyDescriptor(xhrTargetProto, prop);
+        const descriptor = Object.getOwnPropertyDescriptor(
+            xhrTargetProto,
+            prop
+        );
         if (descriptor) {
             wrapDescriptor(descriptor, manager);
             Object.defineProperty(xhrTargetProto, prop, descriptor);
@@ -210,7 +220,10 @@ function unwrapXMLHttpRequest() {
         }
     }
     for (const prop of xhrTargetProps) {
-        const descriptor = Object.getOwnPropertyDescriptor(xhrTargetProto, prop);
+        const descriptor = Object.getOwnPropertyDescriptor(
+            xhrTargetProto,
+            prop
+        );
         if (descriptor) {
             unwrap(descriptor, 'set');
             unwrap(descriptor, 'get');

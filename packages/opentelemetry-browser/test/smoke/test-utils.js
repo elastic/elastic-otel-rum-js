@@ -64,7 +64,11 @@ export function createCollector(page) {
                     resolve(raw[signal]);
                 } else if (timedOut) {
                     clearInterval(intervalId);
-                    reject(new Error(`No new "${signal}" received in ${timeout}ms"`));
+                    reject(
+                        new Error(
+                            `No new "${signal}" received in ${timeout}ms"`
+                        )
+                    );
                 }
             }, 50);
         });
@@ -105,10 +109,10 @@ export function createCollector(page) {
             const logs = [];
             return logs;
         },
-        clear () {
+        clear() {
             // Clear all arrays
-            Object.keys(raw).forEach(k => raw[k].length = 0);
-        }
+            Object.keys(raw).forEach((k) => (raw[k].length = 0));
+        },
     };
 }
 
