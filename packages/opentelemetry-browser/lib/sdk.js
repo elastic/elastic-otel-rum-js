@@ -194,7 +194,6 @@ export function startBrowserSdk(cfg = {}) {
     // Flag as started
     sdkStarted = true;
 
-    // TODO: return API??? flush???
     return {
         providers: {
             tracer: tracerProvider,
