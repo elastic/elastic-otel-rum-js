@@ -6,7 +6,7 @@
 import {test, expect} from '@playwright/test';
 import {createCollector} from './test-utils';
 
-test.only('should carry context on different async operations and functions', async ({
+test('should carry context on different async operations and functions', async ({
     page,
 }) => {
     // Disabling `@opentelemetry/instrumentation-fetch` to avoid extra exports
