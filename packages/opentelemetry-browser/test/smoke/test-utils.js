@@ -57,9 +57,9 @@ export function createCollector(page) {
             const timeout = 7_000;
             const start = Date.now();
             const intervalId = setInterval(() => {
-                const hasSpans = raw[signal].length > 0;
+                const hasData = raw[signal].length > 0;
                 const timedOut = Date.now() - start > timeout;
-                if (hasSpans) {
+                if (hasData) {
                     clearInterval(intervalId);
                     resolve(raw[signal]);
                 } else if (timedOut) {

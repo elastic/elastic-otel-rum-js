@@ -6,7 +6,8 @@
 import {test, expect} from '@playwright/test';
 import {createCollector} from './test-utils';
 
-test('should export fetch related spans', async ({page}) => {
+// TODO: enable when there is a fix for https://github.com/open-telemetry/opentelemetry-js/issues/6339
+test.skip('should export fetch related spans', async ({page}) => {
     const collector = createCollector(page);
     const sameOriginHeaders = {};
     const otherOriginHeaders = {};

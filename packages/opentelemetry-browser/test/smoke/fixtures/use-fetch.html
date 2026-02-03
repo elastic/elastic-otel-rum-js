@@ -10,18 +10,22 @@
         <h1>Fetch Instrumentation Test</h1>
         <button id="same-origin">Fetch Same Origin</button>
         <button id="other-origin">Fetch Same Origin</button>
-        <p id="result"></p>
+        <p id="status"></p>
         <script>
-            const result = document.getElementById('result');
+            const statusElem = document.getElementById('status');
             document.getElementById('same-origin').addEventListener('click', () => {
-                fetch('/api/method', { headers: {foo: 'bar'}})
-                .then(res => res.text())
-                .then(txt => result.innerText = txt);
+                statusElem.innerText = 'started';
+                fetch('/api/method', { headers: { foo: 'bar' } })
+                    .then(() => {
+                        statusElem.innerText = 'finished';
+                    });
             });
             document.getElementById('other-origin').addEventListener('click', () => {
-                fetch('http://www.example.com', { headers: {bar: 'baz'}})
-                .then(res => res.text())
-                .then(txt => result.innerText = txt);
+                statusElem.innerText = 'started';
+                fetch('http://www.example.com', { headers: { bar: 'baz' } })
+                    .then(() => {
+                        statusElem.innerText = 'finished';
+                    });
             });
         </script>
     </body>
