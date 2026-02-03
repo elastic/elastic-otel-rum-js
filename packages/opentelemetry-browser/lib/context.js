@@ -5,9 +5,10 @@
 
 // This manager patches some async APIs to keep track of the context
 // on the most common cases for web applications like when user performs
-//. an action and
+// an action and:
 // - a timer is set
 // - a fetch/XHR request is made
+// - a Promise is chained with `then`, `catch` or `finally`
 
 import {ROOT_CONTEXT} from '@opentelemetry/api';
 import {createLogger} from './logging.js';
@@ -135,17 +136,18 @@ function unwrapPromise() {
     unwrap(Promise.prototype, 'finally');
 }
 
-
-const xhrProps = ['onabort', 'onerror', 'onload', 'onloadend', 'onloadstart', 'onprogress', 'ontimeout'];
+const xhrProps = ['onreadystatechange'];
 const xhrProto = globalThis.XMLHttpRequest.prototype;
+const xhrTargetProps = ['onabort', 'onerror', 'onload', 'onloadend', 'onloadstart', 'onprogress', 'ontimeout'];
 const xhrTargetProto = globalThis.XMLHttpRequestEventTarget.prototype;
 /**
- * By patching the XHR constructor we can keep track of the event listeners
- * on the same XHR instance that were registered and its easier to cleared
- * (therefore garbage collected)
+ * We keep track of the event listeners on the same XHR instance that were
+ * registered in a property named `__bound` so its easier to be cleared
+ * and, therefore, garbage collected.
  * @param {import('@opentelemetry/api').ContextManager} manager 
  */
 function wrapXMLHttpRequest (manager) {
+    // Wrap events
     wrap(xhrProto, 'addEventListener', function (origAEL) {
         return function (...args) {
             const xhr = this;
@@ -174,30 +176,20 @@ function wrapXMLHttpRequest (manager) {
             return origREL.apply(xhr, args);
         }
     });
-
-    // Wrap onload, onerror, on... properties from XMLHttpRequestEventTarget.prototype
+    // Wrap prototype descriptors
     for (const prop of xhrProps) {
+        const descriptor = Object.getOwnPropertyDescriptor(xhrProto, prop);
+        if (descriptor) {
+            wrapDescriptor(descriptor, manager);
+            Object.defineProperty(xhrProto, prop, descriptor);
+        }
+    }
+    
+    // Wrap onload, onerror, on... properties from XMLHttpRequestEventTarget.prototype
+    for (const prop of xhrTargetProps) {
         const descriptor = Object.getOwnPropertyDescriptor(xhrTargetProto, prop);
         if (descriptor) {
-            wrap(descriptor, 'set', function (origSet) {
-                return function (value) {
-                    if (typeof value === 'function') {
-                        const origValue = value;
-                        value = bindFn(origValue, manager, manager.active());
-                        value.__original = origValue;
-                    }
-                    return origSet.call(this, value);
-                };
-            });
-            wrap(descriptor, 'get', function (origGet) {
-                return function () {
-                    const value = origGet.call(this);
-                    if (typeof value === 'function' && value.__original) {
-                        return value.__original;
-                    }
-                    return value;
-                };
-            });
+            wrapDescriptor(descriptor, manager);
             Object.defineProperty(xhrTargetProto, prop, descriptor);
         }
     }
@@ -206,8 +198,18 @@ function wrapXMLHttpRequest (manager) {
 function unwrapXMLHttpRequest() {
     unwrap(xhrProto, 'addEventListener');
     unwrap(xhrProto, 'removeEventListener');
-    // Unwrap onload, onerror, on... properties from XMLHttpRequestEventTarget.prototype
+    // Unwrap onload, onerror, on... properties from:
+    // - XMLHttpRequest.prototype
+    // - XMLHttpRequestEventTarget.prototype
     for (const prop of xhrProps) {
+        const descriptor = Object.getOwnPropertyDescriptor(xhrProto, prop);
+        if (descriptor) {
+            unwrap(descriptor, 'set');
+            unwrap(descriptor, 'get');
+            Object.defineProperty(xhrProto, prop, descriptor);
+        }
+    }
+    for (const prop of xhrTargetProps) {
         const descriptor = Object.getOwnPropertyDescriptor(xhrTargetProto, prop);
         if (descriptor) {
             unwrap(descriptor, 'set');
@@ -271,6 +273,28 @@ function unwrap(nodule, name) {
         wrapped.__unwrap();
         return;
     }
+}
+
+function wrapDescriptor(descriptor, manager) {
+    wrap(descriptor, 'set', function (origSet) {
+        return function (value) {
+            if (typeof value === 'function') {
+                const origValue = value;
+                value = bindFn(origValue, manager, manager.active());
+                value.__original = origValue;
+            }
+            return origSet.call(this, value);
+        };
+    });
+    wrap(descriptor, 'get', function (origGet) {
+        return function () {
+            const value = origGet.call(this);
+            if (typeof value === 'function' && value.__original) {
+                return value.__original;
+            }
+            return value;
+        };
+    });
 }
 
 /**

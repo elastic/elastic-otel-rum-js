@@ -17,7 +17,11 @@
             <button id="fetch">Fetch</button>
             <button id="xhr-event">XHR with EventListener</button>
             <button id="xhr-prop">XHR with Property</button>
+            <button id="xhr-target-prop">XHR with XHREventTarget Property</button>
+            <!-- Some test are dooing async work and playwright need to know when to do assertions -->
+            <p id="status"></p>
             <script>
+                const statusElem = document.querySelector('#status');
                 function getTracer(name) {
                     return edotBrowser.providers.tracer.getTracer(name);
                 }
@@ -26,28 +30,93 @@
                 // to be enbled. IMHO is think this is not complete specifically for 'click'
                 // events
                 window.addEventListener('load', () => {
-                    // Reginstering at thids moment the click event we will get
+                    // Registering at this moment the click event we will get
                     // user interaction spans
                     document.querySelector('#timeout').addEventListener('click', () => {
+                        statusElem.innerText = 'started';
                         setTimeout(() => {
                             getTracer('default').startSpan('timeout-child').end();
+                            statusElem.innerText = 'finished';
                         }, 1);
                     });
                     document.querySelector('#promise-ctor').addEventListener('click', () => {
+                        statusElem.innerText = 'started';
                         new Promise((resolve) => {
-                            getTracer('default').startSpan('promise-ctor').end();
+                            getTracer('default').startSpan('promise-ctor-child').end();
                             resolve();
+                            statusElem.innerText = 'finished';
                         });
                     });
                     document.querySelector('#promise-then-success').addEventListener('click', () => {
+                        statusElem.innerText = 'started';
                         Promise.resolve().then(() => {
-                            getTracer('default').startSpan('promise-then-success').end();
+                            getTracer('default').startSpan('promise-then-success-child').end();
+                            statusElem.innerText = 'finished';
                         });
                     });
                     document.querySelector('#promise-then-failure').addEventListener('click', () => {
-                        Promise.resolve().then(() => {
-                            getTracer('default').startSpan('promise-then-failure').end();
+                        statusElem.innerText = 'started';
+                        Promise.reject().then(
+                            () => undefined,
+                            () => {
+                                getTracer('default').startSpan('promise-then-failure-child').end();
+                                statusElem.innerText = 'finished';
+                            }
+                        );
+                    });
+                    document.querySelector('#promise-catch').addEventListener('click', () => {
+                        statusElem.innerText = 'started';
+                        Promise.reject().catch(() => {
+                            getTracer('default').startSpan('promise-catch-child').end();
+                            statusElem.innerText = 'finished';
                         });
+                    });
+                    document.querySelector('#promise-finally').addEventListener('click', () => {
+                        statusElem.innerText = 'started';
+                        Promise.reject().finally(() => {
+                            getTracer('default').startSpan('promise-finally-child').end();
+                            statusElem.innerText = 'finished';
+                        });
+                    });
+                    document.querySelector('#xhr-event').addEventListener('click', () => {
+                        statusElem.innerText = 'started';
+                        const xhr = new XMLHttpRequest();
+                        const method = "GET";
+                        const url = "/";
+                        xhr.open(method, url, true);
+                        xhr.addEventListener('readystatechange', () => {
+                            if (xhr.readyState === XMLHttpRequest.DONE) {
+                                getTracer('default').startSpan('xhr-event-child').end();
+                                statusElem.innerText = 'finished';
+                            }
+                        });
+                        xhr.send();
+                    });
+                    document.querySelector('#xhr-prop').addEventListener('click', () => {
+                        statusElem.innerText = 'started';
+                        const xhr = new XMLHttpRequest();
+                        const method = "GET";
+                        const url = "/";
+                        xhr.open(method, url, true);
+                        xhr.onreadystatechange = () => {
+                            if (xhr.readyState === XMLHttpRequest.DONE) {
+                                getTracer('default').startSpan('xhr-prop-child').end();
+                                statusElem.innerText = 'finished';
+                            }
+                        };
+                        xhr.send();
+                    });
+                    document.querySelector('#xhr-target-prop').addEventListener('click', () => {
+                        statusElem.innerText = 'started';
+                        const xhr = new XMLHttpRequest();
+                        const method = "GET";
+                        const url = "/";
+                        xhr.open(method, url, true);
+                        xhr.onloadend = () => {
+                            getTracer('default').startSpan('xhr-target-prop-child').end();
+                            statusElem.innerText = 'finished';
+                        };
+                        xhr.send();
                     });
                 });
             </script>

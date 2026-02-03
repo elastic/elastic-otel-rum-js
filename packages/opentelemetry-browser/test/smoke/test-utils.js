@@ -9,6 +9,7 @@
  *  getSpans: () => Promise<any[]>;
  *  getMetrics: () => Promise<any[]>;
  *  getLogs: () => Promise<any[]>;
+ *  clear: () => void;
  * }} Collector
  */
 
@@ -45,16 +46,16 @@ export function createCollector(page) {
      * @param {'traces' | 'metrics' | 'logs'} signal
      * @returns {Promise<any[]>}
      */
-    const waitForData = (signal) =>
-        new Promise((resolve, reject) => {
-            // TODO: The default export interval is 5secs. We wait for a little longer to
-            // give the EDOT time to export. IF we could configure the interval we
-            // could pass a lower value to speed up tests. But do we want this config to be public?
+    const waitForData = async (signal) => {
+        // Is there any situation we prefe to wait?
+        await page.evaluate(() => globalThis.edotBrowser.flush());
+
+        return new Promise((resolve, reject) => {
+            // The default export interval is 5secs. Although we flushed we wait for a little longer to
+            // give the EDOT time to export. If we could configure the interval we
+            // could pass a lower value to speed up tests wihtou flushing. Do we want this config to be public?
             const timeout = 7_000;
             const start = Date.now();
-            // TODO: tell EDOT to flush data
-            // maybe if the `startBrowserSdk` returns an object we can expose a `flush` API and even
-            // a `shutdown` if it makes sense
             const intervalId = setInterval(() => {
                 const hasSpans = raw[signal].length > 0;
                 const timedOut = Date.now() - start > timeout;
@@ -63,10 +64,12 @@ export function createCollector(page) {
                     resolve(raw[signal]);
                 } else if (timedOut) {
                     clearInterval(intervalId);
-                    reject(new Error(`No new "${signal} received in ${timeout}ms"`));
+                    reject(new Error(`No new "${signal}" received in ${timeout}ms"`));
                 }
             }, 50);
         });
+    };
+
     return {
         getRequests() {
             return raw.requests;
@@ -102,6 +105,10 @@ export function createCollector(page) {
             const logs = [];
             return logs;
         },
+        clear () {
+            // Clear all arrays
+            Object.keys(raw).forEach(k => raw[k].length = 0);
+        }
     };
 }
 
