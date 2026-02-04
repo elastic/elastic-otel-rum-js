@@ -44,7 +44,11 @@ export const PatchContextManager = {
         const manager = this;
         wrap(window, 'setTimeout', (origSetTimeout) => {
             return function (...args) {
-                args[0] = bindFn(args[0], manager, manager.active());
+                // We do not want to carry context for callbacks that are called out
+                // of what could be an user interaction. The value is arbitrary.
+                if (typeof args[1] === 'number' && !isNaN(args[1]) && args[1] <= 50) {
+                    args[0] = bindFn(args[0], manager, manager.active());
+                }
                 return origSetTimeout.apply(this, args);
             };
         });
