@@ -14,11 +14,11 @@
             <button id="promise-then-failure">Promise - then failure</button>
             <button id="promise-catch">Promise - catch</button>
             <button id="promise-finally">Promise - finally</button>
-            <button id="fetch">Fetch</button>
             <button id="xhr-event">XHR with EventListener</button>
             <button id="xhr-prop">XHR with Property</button>
             <button id="xhr-target-prop">XHR with XHREventTarget Property</button>
-            <!-- Some test are dooing async work and playwright need to know when to do assertions -->
+            <button id="fetch">Fetch</button>
+            <!-- The test file will look here to wait for the completion of the handlers -->
             <p id="status"></p>
             <script>
                 const statusElem = document.querySelector('#status');
@@ -117,6 +117,13 @@
                             statusElem.innerText = 'finished';
                         };
                         xhr.send();
+                    });
+                    document.querySelector('#fetch').addEventListener('click', () => {
+                        statusElem.innerText = 'started';
+                        fetch('/').then(() => {
+                            getTracer('default').startSpan('fetch-child').end();
+                            statusElem.innerText = 'finished';
+                        });
                     });
                 });
             </script>
