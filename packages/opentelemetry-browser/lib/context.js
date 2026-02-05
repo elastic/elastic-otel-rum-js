@@ -44,9 +44,12 @@ export const PatchContextManager = {
         const manager = this;
         wrap(window, 'setTimeout', (origSetTimeout) => {
             return function (...args) {
-                // We do not want to carry context for callbacks that are called out
-                // of what could be an user interaction. The value is arbitrary.
-                if (typeof args[1] === 'number' && !isNaN(args[1]) && args[1] <= 50) {
+                // Coerce to number like the original function does. This give us a number (including NaN)
+                // ref: https://developer.mozilla.org/en-US/docs/Web/API/Window/setTimeout#non-number_delay_values_are_silently_coerced_into_numbers
+                const delay = Number(args[1]);
+                // Only carry the context if the delay is low enough. `NaN` is the same as `undefined`
+                // and schedules the callback immediately. The max value (50) is arbitrary.
+                if (isNaN(delay) || delay <= 50) {
                     args[0] = bindFn(args[0], manager, manager.active());
                 }
                 return origSetTimeout.apply(this, args);
