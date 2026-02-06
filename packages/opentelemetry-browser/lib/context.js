@@ -19,6 +19,7 @@ const logger = createLogger({logLevel: 'warn'});
 // Keep the state of the current context here so only
 // the manager has direct access.
 let currentContext = ROOT_CONTEXT;
+let managerEnabled = false;
 /** @type {import('@opentelemetry/api').ContextManager} */
 export const AsyncApisContextManager = {
     active: function () {
@@ -41,6 +42,9 @@ export const AsyncApisContextManager = {
         return target;
     },
     enable: function () {
+        if (managerEnabled) {
+            return this;
+        }
         const manager = this;
         wrap(window, 'setTimeout', (origSetTimeout) => {
             return function (...args) {
@@ -65,14 +69,18 @@ export const AsyncApisContextManager = {
         if (window.Promise) {
             wrapPromise(manager);
         }
+        managerEnabled = true;
         return manager;
     },
     disable: function () {
-        unwrap(window, 'setTimeout');
-        unwrap(window, 'setImmediate');
-        unwrapXMLHttpRequest();
-        if (window.Promise) {
-            unwrapPromise();
+        if (managerEnabled) {
+            unwrap(window, 'setTimeout');
+            unwrap(window, 'setImmediate');
+            unwrapXMLHttpRequest();
+            if (window.Promise) {
+                unwrapPromise();
+            }
+            managerEnabled = false;
         }
         return this;
     },
