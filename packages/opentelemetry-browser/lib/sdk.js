@@ -27,7 +27,7 @@ import {UserInteractionInstrumentation} from '@opentelemetry/instrumentation-use
 import {XMLHttpRequestInstrumentation} from '@opentelemetry/instrumentation-xml-http-request';
 import {ExceptionInstrumentation} from '@opentelemetry/instrumentation-web-exception';
 
-import {PatchContextManager} from './context.js';
+import {AsyncApisContextManager} from './context.js';
 import {createLogger} from './logging.js';
 import {detectResource} from './detector.js';
 
@@ -133,7 +133,7 @@ export function startBrowserSdk(cfg = {}) {
     // - a context manager (Stack, which has issues with exporters)
     // Should we allow users to pass their own propagator, contextmanager?
     tracerProvider.register({
-        contextManager: PatchContextManager,
+        contextManager: AsyncApisContextManager,
     });
     // ideally it shoud be
     // trace.setGlobalTracerProvider(tracerProvider);

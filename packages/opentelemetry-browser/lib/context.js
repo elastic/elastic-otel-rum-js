@@ -20,7 +20,7 @@ const logger = createLogger({logLevel: 'warn'});
 // the manager has direct access.
 let currentContext = ROOT_CONTEXT;
 /** @type {import('@opentelemetry/api').ContextManager} */
-export const PatchContextManager = {
+export const AsyncApisContextManager = {
     active: function () {
         return currentContext;
     },
@@ -44,7 +44,7 @@ export const PatchContextManager = {
         const manager = this;
         wrap(window, 'setTimeout', (origSetTimeout) => {
             return function (...args) {
-                // Coerce to number like the original function does. This give us a number (including NaN)
+                // Coerce the delay argument to number like the original function does.
                 // ref: https://developer.mozilla.org/en-US/docs/Web/API/Window/setTimeout#non-number_delay_values_are_silently_coerced_into_numbers
                 const delay = Number(args[1]);
                 // Only carry the context if the delay is low enough. `NaN` is the same as `undefined`
@@ -190,7 +190,7 @@ function wrapXMLHttpRequest(manager) {
             return origREL.apply(xhr, args);
         };
     });
-    // Wrap prototype descriptors
+    // Wrap on... properties of XMLHttpRequest.prototype
     for (const prop of xhrProps) {
         const descriptor = Object.getOwnPropertyDescriptor(xhrProto, prop);
         if (descriptor) {
@@ -199,7 +199,7 @@ function wrapXMLHttpRequest(manager) {
         }
     }
 
-    // Wrap onload, onerror, on... properties from XMLHttpRequestEventTarget.prototype
+    // Wrap onload, onerror, on... properties of XMLHttpRequestEventTarget.prototype
     for (const prop of xhrTargetProps) {
         const descriptor = Object.getOwnPropertyDescriptor(
             xhrTargetProto,
