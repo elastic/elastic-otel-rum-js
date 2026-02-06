@@ -14,12 +14,20 @@ import {getBrowserInfo, getPlatformInfo} from '../../lib/detector.js';
 // Check that our simpler version of parsing the user agent is good enough. We are comparing to a well
 // know solution https://www.npmjs.com/package/ua-parser-js and using a dataset from github
 // https://github.com/EngineeringSample/UserAgentsDatabase/blob/main/BreadcrumbsUserAgentsDatabase.txt
+
+// TODO: crawl data from https://explore.whatismybrowser.com/useragents/explore/
+// software and OS categories
+// check https://github.com/microlinkhq/top-user-agents
+
+// USE => https://github.com/ua-parser/uap-core/
+
+// https://github.com/faisalman/ua-parser-js/blob/master/test/data/ua/browser/browser-all.json
+
 const fixturesPath = join(
     import.meta.dirname,
-    './fixtures/BreadcrumbsUserAgentsDatabase.txt'
+    './fixtures/browser-all.json'
 );
-const contents = readFileSync(fixturesPath, {encoding: 'utf-8'});
-const userAgentList = contents.split('\n');
+const userAgentList = JSON.parse(readFileSync(fixturesPath, {encoding: 'utf-8'}));
 
 test('getBrowserInfo - should get the right browser name', () => {
     const excludedBrowsers = ['IE', 'IEMobile'];
@@ -32,7 +40,8 @@ test('getBrowserInfo - should get the right browser name', () => {
     };
     const errors = [];
 
-    for (const ua of userAgentList) {
+    for (const item of userAgentList) {
+        const {ua} = item;
         const parsed = UAParser(ua);
         const detected = getBrowserInfo(ua);
 
@@ -54,7 +63,7 @@ test('getBrowserInfo - should get the right browser name', () => {
     }
     stats.ratio = stats.success / stats.detected;
     // Uncomment this log message to get a sample of the failing detections
-    // console.log(errors.slice(0, 50));
+    console.log(errors.slice(0, 50));
     console.log(stats);
     const treshold = 0.75;
     assert.ok(
@@ -74,7 +83,8 @@ test('getPlatformInfo - should get the right platform name', () => {
     };
     const errors = [];
 
-    for (const ua of userAgentList) {
+    for (const item of userAgentList) {
+        const {ua} = item;
         const parsed = UAParser(ua);
         const detected = getPlatformInfo(ua);
 

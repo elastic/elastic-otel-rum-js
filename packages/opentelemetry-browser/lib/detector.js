@@ -82,6 +82,9 @@ export function detectResource(attribs, serviceName, serviceVersion) {
     return resourceFromAttributes({...attribs, ...SDK_INFO});
 }
 
+// -- helper functions
+// ref: https://mdn2.netlify.app/en-us/docs/web/http/browser_detection_using_the_user_agent/#which_part_of_the_user_agent_contains_the_information_you_are_looking_for
+
 /**
  * We can always pull something like https://www.npmjs.com/package/ua-parser-js
  * but not for now.
@@ -89,6 +92,8 @@ export function detectResource(attribs, serviceName, serviceVersion) {
  * @returns {{name: string; version: string} | undefined}
  */
 export function getPlatformInfo(userAgent) {
+    // TODO: more than one regexp /** @type {Array<{name: string; test: MaybeArray<RegExp>}>} */
+    /** @type {Array<{name: string; test: RegExp}>} */
     const platforms = [
         {name: 'Windows Phone', test: /Windows Phone (\d+(\.\d+)*)/i},
         {name: 'Windows', test: /Windows (\d+)/i},
@@ -117,11 +122,19 @@ export function getPlatformInfo(userAgent) {
  */
 export function getBrowserInfo(userAgent) {
     // note: only get the major version
+    // TODO: more than one regexp 
+    /** @type {Array<{name: string; test: MaybeArray<RegExp>}>} */
     const browsers = [
         // Special names (keep them?)
+        {name: 'Baidu', test: [/bdbrowser\/(\d+(\.\d+)*)/i, /baiduboxapp\/(\d+)/i, /BIDUBrowser\/(\d+)/i, /BaiduHD\/(\d+)/i, /BDSpark\/(\d+)/i] },
+        {name: 'Bing', test: [/BingSapphire\/(\d+)/i, /BingWeb\/(\d+)/i]},
+        {name: 'Camino', test: /Camino\/(\d+)/i},
         {name: 'Coc Coc', test: /coc_coc_browser\/(\d+)/i},
-        {name: 'Baidu', test: /bdbrowser\/(\d+(\.\d+)*)/i},
+        {name: 'Dragon', test: [/Comodo_Dragon\/(\d+)/i, /Dragon\/(\d+)/i]},
+        {name: 'DuckDuckGo', test: [/DuckDuckGo\/(\d+)/i, /Ddg\/(\d+)/i]},
         {name: 'GSA', test: /GSA\/(\d+(\.\d+)*)/i},
+        {name: 'Huawei Browser', test: /HuaweiBrowser\/(\d+)/i},
+        {name: 'Samsung Internet', test: /SamsungBrowser\/(\d+)/i},
         {name: 'Silk', test: /Silk\/(\d+(\.\d+)*)/i},
         {name: 'Yandex', test: /YaBrowser\/(\d+(\.\d+)*)/i},
 
@@ -139,11 +152,20 @@ export function getBrowserInfo(userAgent) {
     ];
 
     for (const b of browsers) {
-        const match = b.test.exec(userAgent);
-        if (match) {
-            const name = b.name;
-            const version = match[1].replaceAll('_', '.');
-            return {name, version};
+        const tests = Array.isArray(b.test) ? b.test : [b.test];
+        let match;
+
+        for (const t of tests) {
+            match = t.exec(userAgent);
+            if (match) {
+                const name = b.name;
+                if (!match[1]) {
+                    console.log('no version match')
+                    console.log(match)
+                }
+                const version = match[1].replaceAll('_', '.');
+                return {name, version};
+            }
         }
     }
 }
