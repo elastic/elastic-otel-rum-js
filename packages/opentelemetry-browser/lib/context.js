@@ -18,20 +18,20 @@ const logger = createLogger({logLevel: 'warn'});
 
 // Keep the state of the current context here so only
 // the manager has direct access.
-let currentContext = ROOT_CONTEXT;
-let managerEnabled = false;
+let _currentContext = ROOT_CONTEXT;
+let _managerEnabled = false;
 /** @type {import('@opentelemetry/api').ContextManager} */
 export const AsyncApisContextManager = {
     active: function () {
-        return currentContext;
+        return _currentContext;
     },
     with: function (context, fn, thisArg, ...args) {
-        const prevContext = currentContext;
-        currentContext = context || ROOT_CONTEXT;
+        const prevContext = _currentContext;
+        _currentContext = context || ROOT_CONTEXT;
         try {
             return fn.call(thisArg, ...args);
         } finally {
-            currentContext = prevContext;
+            _currentContext = prevContext;
         }
     },
     // @ts-ignore -- upstream types expects a generic type as return
@@ -42,7 +42,7 @@ export const AsyncApisContextManager = {
         return target;
     },
     enable: function () {
-        if (managerEnabled) {
+        if (_managerEnabled) {
             return this;
         }
         const manager = this;
@@ -69,18 +69,20 @@ export const AsyncApisContextManager = {
         if (window.Promise) {
             wrapPromise(manager);
         }
-        managerEnabled = true;
+        _currentContext = ROOT_CONTEXT;
+        _managerEnabled = true;
         return manager;
     },
     disable: function () {
-        if (managerEnabled) {
+        if (_managerEnabled) {
             unwrap(window, 'setTimeout');
             unwrap(window, 'setImmediate');
             unwrapXMLHttpRequest();
             if (window.Promise) {
                 unwrapPromise();
             }
-            managerEnabled = false;
+            _currentContext = ROOT_CONTEXT;
+            _managerEnabled = false;
         }
         return this;
     },
