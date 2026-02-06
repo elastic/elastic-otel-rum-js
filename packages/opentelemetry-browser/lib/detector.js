@@ -92,7 +92,6 @@ export function detectResource(attribs, serviceName, serviceVersion) {
  * @returns {{name: string; version: string} | undefined}
  */
 export function getPlatformInfo(userAgent) {
-    // TODO: more than one regexp /** @type {Array<{name: string; test: MaybeArray<RegExp>}>} */
     /** @type {Array<{name: string; test: RegExp}>} */
     const platforms = [
         {name: 'Windows Phone', test: /Windows Phone (\d+(\.\d+)*)/i},
@@ -122,10 +121,10 @@ export function getPlatformInfo(userAgent) {
  */
 export function getBrowserInfo(userAgent) {
     // note: only get the major version
-    // TODO: more than one regexp 
     /** @type {Array<{name: string; test: MaybeArray<RegExp>}>} */
     const browsers = [
-        // Special names (keep them?)
+        // Special names
+        // TODO: make use of non capturing grops
         {name: 'Baidu', test: [/bdbrowser\/(\d+(\.\d+)*)/i, /baiduboxapp\/(\d+)/i, /BIDUBrowser\/(\d+)/i, /BaiduHD\/(\d+)/i, /BDSpark\/(\d+)/i] },
         {name: 'Bing', test: [/BingSapphire\/(\d+)/i, /BingWeb\/(\d+)/i]},
         {name: 'Camino', test: /Camino\/(\d+)/i},
@@ -134,20 +133,30 @@ export function getBrowserInfo(userAgent) {
         {name: 'DuckDuckGo', test: [/DuckDuckGo\/(\d+)/i, /Ddg\/(\d+)/i]},
         {name: 'GSA', test: /GSA\/(\d+(\.\d+)*)/i},
         {name: 'Huawei Browser', test: /HuaweiBrowser\/(\d+)/i},
-        {name: 'Samsung Internet', test: /SamsungBrowser\/(\d+)/i},
+        {name: 'Iron', test: [/Iron\/(\d+(\.\d+)*)/i, /Iron Safari\/(\d+(\.\d+)*)/i]},
+        {name: 'LG Browser', test: /LG Browser\/(\d+(\.\d+)*)/i},
+        {name: 'Lunascape', test: /Lunascape\/(\d+(\.\d+)*)/i},
+        {name: 'Maxthon', test: [/Maxthon\/(\d+(\.\d+)*)/i, /MxBrowser\/(\d+(\.\d+)*)/i, /MXiOS\/(\d+(\.\d+)*)/]},
+        {name: 'MIUI Browser', test: /MiuiBrowser\/(\d+(\.\d+)*)/i},
+        {name: 'NokiaBrowser', test: /NokiaBrowser\/(\d+(\.\d+)*)/i},
+        {name: 'Oculus Browser', test: /OculusBrowser\/(\d+(\.\d+)*)/i},
+        {name: 'Pico Browser', test: /PicoBrowser\/(\d+(\.\d+)*)/i},
+        {name: 'Samsung Internet', test: /SamsungBrowser\/(\d+(\.\d+)*)/i},
         {name: 'Silk', test: /Silk\/(\d+(\.\d+)*)/i},
+        {name: 'Smart Lenovo Browser', test: /SLBrowser\/(\d+(\.\d+)*)/i},
         {name: 'Yandex', test: /YaBrowser\/(\d+(\.\d+)*)/i},
 
         // The usual suspects
-        {name: 'Edge', test: /Edg\/(\d+)/i},
-        {name: 'Edge', test: /Edge\/(\d+)/i},
-        {name: 'Opera', test: /OPR\/(\d+(\.\d+)*)/i},
-        {name: 'Opera', test: /Opera\/(\d+(\.\d+)*)/i},
+        {name: 'Brave', test: /Brave\/(\d+(\.\d+)*)/i},
+        {name: 'Edge', test: /(?:Edg|Edge|EdgA)\/(\d+)/i},
+        {name: 'Opera', test: /(?:OPR|OPT|OPiOS|Opera)\/(\d+(\.\d+)*)/i},
         {name: 'Chromium', test: /Chromium\/(\d+)/i},
-        {name: 'Chrome', test: /Chrome\/(\d+)/i},
-        {name: 'Chrome', test: /CriOS\/(\d+)/i},
+        {name: 'Chrome', test: [/Chrome\/(\d+)/i, /CriOS\/(\d+)/i, /CrMo\/(\d+)/i]},
+        {name: 'Chrome Headless', test: [/HeadlessChrome\/(\d+)/i, /HeadlessChrome Safari\/(\d+)/i]},
+
+        
         {name: 'Android Browser', test: /Android \d.+Safari\/(\d+)/i},
-        {name: 'Firefox', test: /Firefox\/(\d+)/i},
+        {name: 'Firefox', test: /(?:Firefox|FxiOS)\/(\d+)/i},
         {name: 'Safari', test: /Safari\/(\d+)/i},
     ];
 
