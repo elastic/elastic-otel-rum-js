@@ -172,12 +172,18 @@ export function startBrowserSdk(cfg = {}) {
     // by configuration
     /** @type {Record<keyof InstrumentationsConfigMap, (cfg: any) => any>} */
     const instrFactories = {
-        '@opentelemetry/instrumentation-document-load': (cfg) => new DocumentLoadInstrumentation(cfg),
-        '@opentelemetry/instrumentation-fetch': (cfg) => new FetchInstrumentation(cfg),
-        '@opentelemetry/instrumentation-long-task': (cfg) => new LongTaskInstrumentation(cfg),
-        '@opentelemetry/instrumentation-user-interaction': (cfg) => new UserInteractionInstrumentation(cfg),
-        '@opentelemetry/instrumentation-xml-http-request': (cfg) => new XMLHttpRequestInstrumentation(cfg),
-        '@opentelemetry/instrumentation-web-exception': (cfg) => new ExceptionInstrumentation(cfg),
+        '@opentelemetry/instrumentation-document-load': (cfg) =>
+            new DocumentLoadInstrumentation(cfg),
+        '@opentelemetry/instrumentation-fetch': (cfg) =>
+            new FetchInstrumentation(cfg),
+        '@opentelemetry/instrumentation-long-task': (cfg) =>
+            new LongTaskInstrumentation(cfg),
+        '@opentelemetry/instrumentation-user-interaction': (cfg) =>
+            new UserInteractionInstrumentation(cfg),
+        '@opentelemetry/instrumentation-xml-http-request': (cfg) =>
+            new XMLHttpRequestInstrumentation(cfg),
+        '@opentelemetry/instrumentation-web-exception': (cfg) =>
+            new ExceptionInstrumentation(cfg),
     };
     const {configInstrumentations} = config;
     const instrumentations = [];
