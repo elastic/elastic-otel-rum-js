@@ -33,12 +33,12 @@ import {detectResource} from './detector.js';
 
 /**
  * @typedef {{
- *  "document-load": import('@opentelemetry/instrumentation-document-load').DocumentLoadInstrumentationConfig;
- *  "fetch": import('@opentelemetry/instrumentation-fetch').FetchInstrumentationConfig;
- *  "long-task": import('@opentelemetry/instrumentation-long-task').LongtaskInstrumentationConfig;
- *  "user-interaction": import('@opentelemetry/instrumentation-user-interaction').UserInteractionInstrumentationConfig;
- *  "xml-http-request": import('@opentelemetry/instrumentation-xml-http-request').XMLHttpRequestInstrumentationConfig;
- *  "web-exception": import('@opentelemetry/instrumentation-web-exception').GlobalErrorsInstrumentationConfig;
+ *  "@opentelemetry/instrumentation-document-load": import('@opentelemetry/instrumentation-document-load').DocumentLoadInstrumentationConfig;
+ *  "@opentelemetry/instrumentation-fetch": import('@opentelemetry/instrumentation-fetch').FetchInstrumentationConfig;
+ *  "@opentelemetry/instrumentation-long-task": import('@opentelemetry/instrumentation-long-task').LongtaskInstrumentationConfig;
+ *  "@opentelemetry/instrumentation-user-interaction": import('@opentelemetry/instrumentation-user-interaction').UserInteractionInstrumentationConfig;
+ *  "@opentelemetry/instrumentation-xml-http-request": import('@opentelemetry/instrumentation-xml-http-request').XMLHttpRequestInstrumentationConfig;
+ *  "@opentelemetry/instrumentation-web-exception": import('@opentelemetry/instrumentation-web-exception').GlobalErrorsInstrumentationConfig;
  * }} InstrumentationsConfigMap
  */
 
@@ -54,7 +54,7 @@ import {detectResource} from './detector.js';
  * @property {Record<string, string>} [exportHeaders] // defaults to {}
  *
  * // other options
- * @property {Partial<InstrumentationsConfigMap>} [instrumentationsConfigs]
+ * @property {Partial<InstrumentationsConfigMap>} [configInstrumentations]
  */
 
 // To control multipla calls to `startBrowserSdk`
@@ -170,20 +170,19 @@ export function startBrowserSdk(cfg = {}) {
     // Resgister instrumentations. The `registerInstrumentations` enabled al of them
     // regardles of the configuration so EDOT only add the ones that are not disabled
     // by configuration
-    // TODO: validation of configurations?
     /** @type {Record<keyof InstrumentationsConfigMap, (cfg: any) => any>} */
     const instrFactories = {
-        'document-load': (cfg) => new DocumentLoadInstrumentation(cfg),
-        fetch: (cfg) => new FetchInstrumentation(cfg),
-        'long-task': (cfg) => new LongTaskInstrumentation(cfg),
-        'user-interaction': (cfg) => new UserInteractionInstrumentation(cfg),
-        'xml-http-request': (cfg) => new XMLHttpRequestInstrumentation(cfg),
-        'web-exception': (cfg) => new ExceptionInstrumentation(cfg),
+        '@opentelemetry/instrumentation-document-load': (cfg) => new DocumentLoadInstrumentation(cfg),
+        '@opentelemetry/instrumentation-fetch': (cfg) => new FetchInstrumentation(cfg),
+        '@opentelemetry/instrumentation-long-task': (cfg) => new LongTaskInstrumentation(cfg),
+        '@opentelemetry/instrumentation-user-interaction': (cfg) => new UserInteractionInstrumentation(cfg),
+        '@opentelemetry/instrumentation-xml-http-request': (cfg) => new XMLHttpRequestInstrumentation(cfg),
+        '@opentelemetry/instrumentation-web-exception': (cfg) => new ExceptionInstrumentation(cfg),
     };
-    const {instrumentationsConfigs} = config;
+    const {configInstrumentations} = config;
     const instrumentations = [];
     for (const key of Object.keys(instrFactories)) {
-        const instrConfig = instrumentationsConfigs?.[key];
+        const instrConfig = configInstrumentations?.[key];
         const isDisabled = instrConfig?.enabled === false;
         if (!isDisabled) {
             instrumentations.push(instrFactories[key](instrConfig));
