@@ -13,7 +13,9 @@ test('should export fetch related spans', async ({page}) => {
     const config = encodeURIComponent(
         JSON.stringify({
             configInstrumentations: {
-                '@opentelemetry/instrumentation-document-load': {enabled: false},
+                '@opentelemetry/instrumentation-document-load': {
+                    enabled: false,
+                },
             },
         })
     );
