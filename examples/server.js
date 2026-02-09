@@ -44,7 +44,7 @@ const server = createServer((req, res) => {
                 const text = Buffer.concat(chunks).toString('utf-8');
                 const pretty = JSON.stringify(JSON.parse(text), null, 4);
                 // TODO: offer summay option ???
-                // console.log(`Data in ${signal} => ${pretty}`)
+                console.log(`Data in ${signal} => ${pretty}`);
             } catch (error) {
                 console.log(`Error in ${signal} => ${error}`);
             }
