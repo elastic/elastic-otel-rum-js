@@ -157,9 +157,7 @@ export function getBrowserInfo(userAgent) {
         {name: 'Twitter', test: /Twitter/i},
         {name: 'Vivaldi', test: /Vivaldi\/([\w\.]+)/i},
         {name: 'Yandex', test: /Ya(:?SearchBrowser|Browser)\/([\w\.]+)/i},
-        {name: 'WeChat', test: /microm.+\bqbcore\/([\w\.]+)/i},
-        {name: 'WeChat', test: /\bqbcore\/([\w\.]+).+microm/i},
-        {name: 'WeChat', test: /micromessenger\/([\w\.]+)/i},
+        {name: 'WeChat', test: [/microm.+\bqbcore\/([\w\.]+)/i, /\bqbcore\/([\w\.]+).+microm/i, /micromessenger\/([\w\.]+)/i]},
         // Some wechat UAs contain qqbrowser
         {name: 'QQBrowser', test: /M?QQbrowser\/([\w\.]+)/i},
 
