@@ -129,17 +129,17 @@ export function getBrowserInfo(userAgent) {
         // Special names
         // TODO: make use of non capturing grops
         {name: 'AliPay', test: /AliPayClient\/([\w\.]+)/i},
-        {name: 'Baidu', test: [/bdbrowser\/([\w\.]+)/i, /baiduboxapp\/(\d+)/i, /BIDUBrowser\/(\d+)/i, /BaiduHD\/(\d+)/i, /BDSpark\/(\d+)/i] },
-        {name: 'Bing', test: [/BingSapphire\/(\d+)/i, /BingWeb\/(\d+)/i]},
-        {name: 'Camino', test: /Camino\/(\d+)/i},
-        {name: 'Coc Coc', test: /coc_coc_browser\/(\d+)/i},
-        {name: 'Dragon', test: [/Comodo_Dragon\/(\d+)/i, /Dragon\/(\d+)/i]},
-        {name: 'DuckDuckGo', test: [/DuckDuckGo\/(\d+)/i, /Ddg\/(\d+)/i]},
+        {name: 'Baidu', test: [/bd(:?browser|spark)\/([\w\.]+)/i, /baidu(:?boxapp|hd)\/([\w\.]+)/i, /BIDUBrowser\/([\w\.]+)/i]},
+        {name: 'Bing', test: /Bing(:?Web|Sapphire)\/([\w\.]+)/i},
+        {name: 'Camino', test: /Camino\/([\w\.]+)/i},
+        {name: 'Coc Coc', test: /coc_coc_browser\/([\w\.]+)/i},
+        {name: 'Dragon', test: /(:?Dragon|Comodo_Dragon)\/([\w\.]+)/i},
+        {name: 'DuckDuckGo', test: /(:?Ddg|DuckDuckGo)\/([\w\.]+)/i},
         {name: 'Electron', test: /Electron\/([\w\.]+)/i},
         {name: 'Facebook', test: [/;fbav\/([\w\.]+);/i,/(?:fban\/fbios|fb_iab\/fb4a)/i]},
         {name: 'GSA', test: /GSA\/([\w\.]+)/i},
-        {name: 'Huawei Browser', test: /HuaweiBrowser\/(\d+)/i},
-        {name: 'Iron', test: [/Iron\/([\w\.]+)/i, /Iron Safari\/([\w\.]+)/i]},
+        {name: 'Huawei Browser', test: /HuaweiBrowser\/([\w\.]+)/i},
+        {name: 'Iron', test: /(:?Iron|Iron Safari)\/([\w\.]+)/i},
         {name: 'LG Browser', test: /LG Browser\/([\w\.]+)/i},
         {name: 'Lunascape', test: /Lunascape\/([\w\.]+)/i},
         {name: 'Maxthon', test: [/Maxthon\/([\w\.]+)/i, /Mx(:?Browser|iOS)\/([\w\.]+)/i]},
@@ -165,14 +165,14 @@ export function getBrowserInfo(userAgent) {
 
         // The usual suspects
         {name: 'Brave', test: /Brave\/([\w\.]+)/i},
-        {name: 'Edge', test: /(?:Edg|Edge|EdgA|EdgW|EdgiOS)\/(\d+)/i},
+        {name: 'Edge', test: /(?:Edg|Edge|EdgA|EdgW|EdgiOS)\/([\w\.]+)/i},
         {name: 'Opera', test: [/(?:OPR|OPT|OPiOS|Opera)\/([\w\.]+)/i, /Coast\/([\w\.]+)/i]},
-        {name: 'Chromium', test: /Chromium\/(\d+)/i},
-        {name: 'Chrome', test: [/Chrome\/(\d+)/i, /Cr(:?iOS|Mo)\/(\d+)/i]},
-        {name: 'Chrome Headless', test: [/HeadlessChrome\/(\d+)/i, /HeadlessChrome Safari\/(\d+)/i]},        
-        {name: 'Android Browser', test: /Android \d.+Safari\/(\d+)/i},
-        {name: 'Firefox', test: /(?:Firefox|FxiOS)\/(\d+)/i},
-        {name: 'Safari', test: /Safari\/(\d+)/i},
+        {name: 'Chromium', test: /Chromium\/([\w\.]+)/i},
+        {name: 'Chrome', test: [/Chrome\/([\w\.]+)/i, /Cr(:?iOS|Mo)\/([\w\.]+)/i]},
+        {name: 'Chrome Headless', test: [/HeadlessChrome\/([\w\.]+)/i, /HeadlessChrome Safari\/([\w\.]+)/i]},        
+        {name: 'Android Browser', test: /Android \d.+Safari\/([\w\.]+)/i},
+        {name: 'Firefox', test: /(?:Firefox|FxiOS)\/([\w\.]+)/i},
+        {name: 'Safari', test: /Safari\/([\w\.]+)/i},
     ];
 
     for (const b of browsers) {
