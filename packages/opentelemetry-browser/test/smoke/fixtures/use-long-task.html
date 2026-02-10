@@ -8,9 +8,9 @@
     <body>
         <h1>Long Task Instrumentation Test</h1>
         <button id="long-task">Exec Long Task</button>
-        <p id="result"></p>
+        <p id="status"></p>
         <script>
-            const result = document.getElementById('result');
+            const status = document.getElementById('status');
             const LONGTASK_DURATION = 60; // more thatn 50 is considered a long task
             function generateLongTask() {
                 const startingTimestamp = performance.now();
@@ -19,7 +19,7 @@
             // Do an expensive work
             document.getElementById('long-task').addEventListener('click', () => {
                 generateLongTask();
-                result.innerText = 'Long task finished';
+                status.innerText = 'finished';
             });
         </script>
     </body>

@@ -13,8 +13,13 @@ test('should not export if EDOT is disabled via configuration', async ({
     const config = encodeURIComponent(JSON.stringify({disabled: true}));
     await page.goto(`/fixtures/use-document-load.html?config=${config}`);
 
-    const spans = await collector.getSpans();
-    expect(spans.length).toStrictEqual(0);
+    let error;
+    try {
+        await collector.getSpans();
+    } catch (err) {
+        error = err;
+    }
+    expect(error).toBeDefined();
 });
 
 test('should export if EDOT is enabled via configuration', async ({page}) => {

@@ -69,7 +69,7 @@ function injectSdk(html, config) {
             var j = d.createElement(s),
                 t = d.getElementsByTagName(s)[0];
             j.src = '/assets/elastic-otel-browser.min.js';
-            j.onload = function() { startBrowserSdk(c); };
+            j.onload = function() { globalThis.edotBrowser = startBrowserSdk(c); };
             t.parentNode.insertBefore(j, t);
         })(document, 'script', ${JSON.stringify(config)})
         </script>

@@ -1,4 +1,4 @@
-# Test "packages/opentelemetry-node" (a.k.a. EDOT Browser).
+# Test "packages/opentelemetry-browser" (a.k.a. EDOT Browser).
 name: test-edot
 
 on:
@@ -7,13 +7,13 @@ on:
     branches:
       - main
     paths:
-      - 'packages/opentelemetry-node/**'
+      - 'packages/opentelemetry-browser/**'
       - '.github/workflows/test-edot.yml'
   pull_request:
     branches:
       - main
     paths:
-      - 'packages/opentelemetry-node/**'
+      - 'packages/opentelemetry-browser/**'
       - '.github/workflows/test-edot.yml'
 
       # Cancel jobs running for old commits on a PR. Allow concurrent runs on 'main'.
