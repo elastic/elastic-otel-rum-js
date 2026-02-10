@@ -124,63 +124,59 @@ export function getPlatformInfo(userAgent) {
  */
 export function getBrowserInfo(userAgent) {
     // note: only get the major version
-    /** @type {Array<{name: string; test: MaybeArray<RegExp>}>} */
+    /** @type {Array<[string, RegExp[]]>} */
     const browsers = [
-        // Special names
-        // TODO: make use of non capturing grops
-        {name: 'AliPay', test: /AliPayClient\/([\w\.]+)/i},
-        {name: 'Baidu', test: [/bd(:?browser|spark)\/([\w\.]+)/i, /baidu(:?boxapp|hd)\/([\w\.]+)/i, /BIDUBrowser\/([\w\.]+)/i]},
-        {name: 'Bing', test: /Bing(:?Web|Sapphire)\/([\w\.]+)/i},
-        {name: 'Camino', test: /Camino\/([\w\.]+)/i},
-        {name: 'Coc Coc', test: /coc_coc_browser\/([\w\.]+)/i},
-        {name: 'Dragon', test: /(:?Dragon|Comodo_Dragon)\/([\w\.]+)/i},
-        {name: 'DuckDuckGo', test: /(:?Ddg|DuckDuckGo)\/([\w\.]+)/i},
-        {name: 'Electron', test: /Electron\/([\w\.]+)/i},
-        {name: 'Facebook', test: [/;fbav\/([\w\.]+);/i,/(?:fban\/fbios|fb_iab\/fb4a)/i]},
-        {name: 'GSA', test: /GSA\/([\w\.]+)/i},
-        {name: 'Huawei Browser', test: /HuaweiBrowser\/([\w\.]+)/i},
-        {name: 'Iron', test: /(:?Iron|Iron Safari)\/([\w\.]+)/i},
-        {name: 'LG Browser', test: /LG Browser\/([\w\.]+)/i},
-        {name: 'Lunascape', test: /Lunascape\/([\w\.]+)/i},
-        {name: 'Maxthon', test: [/Maxthon\/([\w\.]+)/i, /Mx(:?Browser|iOS)\/([\w\.]+)/i]},
-        {name: 'MIUI Browser', test: /MiuiBrowser\/([\w\.]+)/i},
-        {name: 'NokiaBrowser', test: /NokiaBrowser\/([\w\.]+)/i},
-        {name: 'Oculus Browser', test: /OculusBrowser\/([\w\.]+)/i},
-        {name: 'Pico Browser', test: /PicoBrowser\/([\w\.]+)/i},
-        {name: 'Qwant', test: /Qwant(:?Mobile|Browser|iOS)\/([\w\.]+)/i},
-        {name: 'Samsung Internet', test: /SamsungBrowser\/([\w\.]+)/i},
-        {name: 'Silk', test: /Silk\/([\w\.]+)/i},
-        {name: 'Smart Lenovo Browser', test: /SLBrowser\/([\w\.]+)/i},
-        {name: 'Snapchat', test: /Snapchat\/([\w\.]+)/i},
-        {name: 'Steam', test: /Valve Steam/i},
-        {name: 'TikTok', test: /musical_ly.+app_version\/([\w\.]+)/i},
-        {name: 'Twitter', test: /Twitter/i},
-        {name: 'Vivaldi', test: /Vivaldi\/([\w\.]+)/i},
-        {name: 'Yandex', test: /Ya(:?SearchBrowser|Browser)\/([\w\.]+)/i},
-        {name: 'WeChat', test: [/microm.+\bqbcore\/([\w\.]+)/i, /\bqbcore\/([\w\.]+).+microm/i, /micromessenger\/([\w\.]+)/i]},
-        // Some wechat UAs contain qqbrowser
-        {name: 'QQBrowser', test: /M?QQbrowser\/([\w\.]+)/i},
+        // Branded or inapp browsers
+        ['AliPay',[/AliPayClient\/([\w\.]+)/i]],
+        ['Baidu',[/bd(:?browser|spark)\/([\w\.]+)/i, /baidu(:?boxapp|hd)\/([\w\.]+)/i, /BIDUBrowser\/([\w\.]+)/i]],
+        ['Bing',[/Bing(:?Web|Sapphire)\/([\w\.]+)/i]],
+        ['Camino',[/Camino\/([\w\.]+)/i]],
+        ['Coc Coc',[/coc_coc_browser\/([\w\.]+)/i]],
+        ['Dragon',[/(:?Dragon|Comodo_Dragon)\/([\w\.]+)/i]],
+        ['DuckDuckGo',[/(:?Ddg|DuckDuckGo)\/([\w\.]+)/i]],
+        ['Electron',[/Electron\/([\w\.]+)/i]],
+        ['Facebook',[/;fbav\/([\w\.]+);/i,/(?:fban\/fbios|fb_iab\/fb4a)/i]],
+        ['GSA',[/GSA\/([\w\.]+)/i]],
+        ['Huawei Browser',[/HuaweiBrowser\/([\w\.]+)/i]],
+        ['Iron',[/(:?Iron|Iron Safari)\/([\w\.]+)/i]],
+        ['LG Browser',[/LG Browser\/([\w\.]+)/i]],
+        ['Lunascape',[/Lunascape\/([\w\.]+)/i]],
+        ['Maxthon',[/Maxthon\/([\w\.]+)/i, /Mx(:?Browser|iOS)\/([\w\.]+)/i]],
+        ['MIUI Browser',[/MiuiBrowser\/([\w\.]+)/i]],
+        ['NokiaBrowser',[/NokiaBrowser\/([\w\.]+)/i]],
+        ['Oculus Browser',[/OculusBrowser\/([\w\.]+)/i]],
+        ['Pico Browser',[/PicoBrowser\/([\w\.]+)/i]],
+        ['Qwant',[/Qwant(:?Mobile|Browser|iOS)\/([\w\.]+)/i]],
+        ['Samsung Internet',[/SamsungBrowser\/([\w\.]+)/i]],
+        ['Silk',[/Silk\/([\w\.]+)/i]],
+        ['Smart Lenovo Browser',[/SLBrowser\/([\w\.]+)/i]],
+        ['Snapchat',[/Snapchat\/([\w\.]+)/i]],
+        ['Steam',[/Valve Steam/i]],
+        ['TikTok',[/musical_ly.+app_version\/([\w\.]+)/i]],
+        ['Twitter',[/Twitter/i]],
+        ['Vivaldi',[/Vivaldi\/([\w\.]+)/i]],
+        ['Yandex',[/Ya(:?SearchBrowser|Browser)\/([\w\.]+)/i]],
+        ['WeChat',[/microm.+\bqbcore\/([\w\.]+)/i, /\bqbcore\/([\w\.]+).+microm/i, /micromessenger\/([\w\.]+)/i]],
+        // Some wechat UAs contain qqbrowser so this should be last
+        ['QQBrowser',[/M?QQbrowser\/([\w\.]+)/i]],
 
         // The usual suspects
-        {name: 'Brave', test: /Brave\/([\w\.]+)/i},
-        {name: 'Edge', test: /(?:Edg|Edge|EdgA|EdgW|EdgiOS)\/([\w\.]+)/i},
-        {name: 'Opera', test: [/(?:OPR|OPT|OPiOS|Opera)\/([\w\.]+)/i, /Coast\/([\w\.]+)/i]},
-        {name: 'Chromium', test: /Chromium\/([\w\.]+)/i},
-        {name: 'Chrome', test: [/Chrome\/([\w\.]+)/i, /Cr(:?iOS|Mo)\/([\w\.]+)/i]},
-        {name: 'Chrome Headless', test: [/HeadlessChrome\/([\w\.]+)/i, /HeadlessChrome Safari\/([\w\.]+)/i]},        
-        {name: 'Android Browser', test: /Android \d.+Safari\/([\w\.]+)/i},
-        {name: 'Firefox', test: /(?:Firefox|FxiOS)\/([\w\.]+)/i},
-        {name: 'Safari', test: /Safari\/([\w\.]+)/i},
+        ['Brave',[/Brave\/([\w\.]+)/i]],
+        ['Edge',[/(?:Edg|Edge|EdgA|EdgW|EdgiOS)\/([\w\.]+)/i]],
+        ['Opera',[/(?:OPR|OPT|OPiOS|Opera)\/([\w\.]+)/i, /Coast\/([\w\.]+)/i]],
+        ['Chromium',[/Chromium\/([\w\.]+)/i]],
+        ['Chrome',[/Chrome\/([\w\.]+)/i, /Cr(:?iOS|Mo)\/([\w\.]+)/i]],
+        ['Chrome Headless',[/HeadlessChrome\/([\w\.]+)/i, /HeadlessChrome Safari\/([\w\.]+)/i]],
+        ['Android Browser',[/Android \d.+Safari\/([\w\.]+)/i]],
+        ['Firefox',[/(?:Firefox|FxiOS)\/([\w\.]+)/i]],
+        ['Safari',[/Safari\/([\w\.]+)/i]],
     ];
 
     for (const b of browsers) {
-        const tests = Array.isArray(b.test) ? b.test : [b.test];
-        let match;
-
+        const [name, tests] = b
         for (const t of tests) {
-            match = t.exec(userAgent);
+            const match = t.exec(userAgent);
             if (match) {
-                const name = b.name;
                 let version;
                 if (match[1]) {
                     version = match[1].replaceAll('_', '.');
