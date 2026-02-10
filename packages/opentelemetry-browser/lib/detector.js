@@ -58,7 +58,9 @@ export function detectResource(attribs, serviceName, serviceVersion) {
 
     if (browserInfo) {
         attribs['browser.name'] = browserInfo.name;
-        attribs['browser.version'] = browserInfo.version;
+        if (browserInfo.version) {
+            attribs['browser.version'] = browserInfo.version;
+        }
     }
     if (platform) {
         attribs[ATTR_BROWSER_PLATFORM] = platform.name;
@@ -98,6 +100,7 @@ export function getPlatformInfo(userAgent) {
         {name: 'Windows', test: /Windows (\d+)/i},
         {name: 'Windows RT', test: /Windows NT (\d+(\.\d+)*).+ARM;/i},
         {name: 'Windows', test: /Windows NT (\d+\.\d+)/i},
+        {name: 'Windows IoT', test: /Windows IoT (\d+\.\d+)/i},
         {name: 'iOS', test: /iPhone OS (\d+(_\d+)*)/i},
         {name: 'macOS', test: /Mac OS (\d+(_\d+)*)/i},
         {name: 'macOS', test: /Mac OS X (\d+(\.\d+)*)/i},
@@ -117,7 +120,7 @@ export function getPlatformInfo(userAgent) {
 
 /**
  * @param {string} userAgent
- * @returns {{name: string; version: string} | undefined}
+ * @returns {{name: string; version: string | undefined} | undefined}
  */
 export function getBrowserInfo(userAgent) {
     // note: only get the major version
@@ -125,36 +128,48 @@ export function getBrowserInfo(userAgent) {
     const browsers = [
         // Special names
         // TODO: make use of non capturing grops
+        {name: 'AliPay', test: /AliPayClient\/(\d+(\.\d+)*)/i},
         {name: 'Baidu', test: [/bdbrowser\/(\d+(\.\d+)*)/i, /baiduboxapp\/(\d+)/i, /BIDUBrowser\/(\d+)/i, /BaiduHD\/(\d+)/i, /BDSpark\/(\d+)/i] },
         {name: 'Bing', test: [/BingSapphire\/(\d+)/i, /BingWeb\/(\d+)/i]},
         {name: 'Camino', test: /Camino\/(\d+)/i},
         {name: 'Coc Coc', test: /coc_coc_browser\/(\d+)/i},
         {name: 'Dragon', test: [/Comodo_Dragon\/(\d+)/i, /Dragon\/(\d+)/i]},
         {name: 'DuckDuckGo', test: [/DuckDuckGo\/(\d+)/i, /Ddg\/(\d+)/i]},
+        {name: 'Electron', test: /Electron\/(\d+(\.\d+)*)/i},
+        {name: 'Facebook', test: [/;fbav\/([\w\.]+);/i,/(?:fban\/fbios|fb_iab\/fb4a)/i]},
         {name: 'GSA', test: /GSA\/(\d+(\.\d+)*)/i},
         {name: 'Huawei Browser', test: /HuaweiBrowser\/(\d+)/i},
         {name: 'Iron', test: [/Iron\/(\d+(\.\d+)*)/i, /Iron Safari\/(\d+(\.\d+)*)/i]},
         {name: 'LG Browser', test: /LG Browser\/(\d+(\.\d+)*)/i},
         {name: 'Lunascape', test: /Lunascape\/(\d+(\.\d+)*)/i},
-        {name: 'Maxthon', test: [/Maxthon\/(\d+(\.\d+)*)/i, /MxBrowser\/(\d+(\.\d+)*)/i, /MXiOS\/(\d+(\.\d+)*)/]},
+        {name: 'Maxthon', test: [/Maxthon\/(\d+(\.\d+)*)/i, /Mx(:?Browser|iOS)\/(\d+(\.\d+)*)/i]},
         {name: 'MIUI Browser', test: /MiuiBrowser\/(\d+(\.\d+)*)/i},
         {name: 'NokiaBrowser', test: /NokiaBrowser\/(\d+(\.\d+)*)/i},
         {name: 'Oculus Browser', test: /OculusBrowser\/(\d+(\.\d+)*)/i},
         {name: 'Pico Browser', test: /PicoBrowser\/(\d+(\.\d+)*)/i},
+        {name: 'Qwant', test: /Qwant(:?Mobile|Browser|iOS)\/(\d+(\.\d+)*)/i},
         {name: 'Samsung Internet', test: /SamsungBrowser\/(\d+(\.\d+)*)/i},
         {name: 'Silk', test: /Silk\/(\d+(\.\d+)*)/i},
         {name: 'Smart Lenovo Browser', test: /SLBrowser\/(\d+(\.\d+)*)/i},
-        {name: 'Yandex', test: /YaBrowser\/(\d+(\.\d+)*)/i},
+        {name: 'Snapchat', test: /Snapchat\/(\d+(\.\d+)*)/i},
+        {name: 'Steam', test: /Valve Steam/i},
+        {name: 'TikTok', test: /musical_ly.+app_version\/(\d+(\.\d+)*)/i},
+        {name: 'Twitter', test: /Twitter/i},
+        {name: 'Vivaldi', test: /Vivaldi\/(\d+(\.\d+)*)/i},
+        {name: 'Yandex', test: /Ya(:?SearchBrowser|Browser)\/(\d+(\.\d+)*)/i},
+        {name: 'WeChat', test: /microm.+\bqbcore\/([\w\.]+)/i},
+        {name: 'WeChat', test: /\bqbcore\/([\w\.]+).+microm/i},
+        {name: 'WeChat', test: /micromessenger\/([\w\.]+)/i},
+        // Some wechat UAs contain qqbrowser
+        {name: 'QQBrowser', test: /M?QQbrowser\/(\d+(\.\d+)*)/i},
 
         // The usual suspects
         {name: 'Brave', test: /Brave\/(\d+(\.\d+)*)/i},
-        {name: 'Edge', test: /(?:Edg|Edge|EdgA)\/(\d+)/i},
-        {name: 'Opera', test: /(?:OPR|OPT|OPiOS|Opera)\/(\d+(\.\d+)*)/i},
+        {name: 'Edge', test: /(?:Edg|Edge|EdgA|EdgW|EdgiOS)\/(\d+)/i},
+        {name: 'Opera', test: [/(?:OPR|OPT|OPiOS|Opera)\/(\d+(\.\d+)*)/i, /Coast\/([\w\.]+)/i]},
         {name: 'Chromium', test: /Chromium\/(\d+)/i},
-        {name: 'Chrome', test: [/Chrome\/(\d+)/i, /CriOS\/(\d+)/i, /CrMo\/(\d+)/i]},
-        {name: 'Chrome Headless', test: [/HeadlessChrome\/(\d+)/i, /HeadlessChrome Safari\/(\d+)/i]},
-
-        
+        {name: 'Chrome', test: [/Chrome\/(\d+)/i, /Cr(:?iOS|Mo)\/(\d+)/i]},
+        {name: 'Chrome Headless', test: [/HeadlessChrome\/(\d+)/i, /HeadlessChrome Safari\/(\d+)/i]},        
         {name: 'Android Browser', test: /Android \d.+Safari\/(\d+)/i},
         {name: 'Firefox', test: /(?:Firefox|FxiOS)\/(\d+)/i},
         {name: 'Safari', test: /Safari\/(\d+)/i},
@@ -168,11 +183,10 @@ export function getBrowserInfo(userAgent) {
             match = t.exec(userAgent);
             if (match) {
                 const name = b.name;
-                if (!match[1]) {
-                    console.log('no version match')
-                    console.log(match)
+                let version;
+                if (match[1]) {
+                    version = match[1].replaceAll('_', '.');
                 }
-                const version = match[1].replaceAll('_', '.');
                 return {name, version};
             }
         }

@@ -54,17 +54,20 @@ test('getBrowserInfo - should get the right browser name', () => {
         const actual = detected.name;
         // We will be more relaxed in matches:
         // - "Mobile X" is considered just "X" since we are sending the `isMobile` attribute
-        // - "Opera X" is considered jusnt "Opera"
+        // - "Opera X" is considered just "Opera"
+        // - "Edge X" is considered just "Edge"
         
         let expected = parsed.browser.name.replace('Mobile ', '');
         if (expected.startsWith('Opera')) {
             expected = 'Opera';
+        } else if (expected.startsWith('Edge')) {
+            expected = 'Edge';
         }
 
         if (expected === actual) {
             stats.success++;
         } else {
-            errors.push({actual, expected, ua});
+            errors.push({actual, expected, ua, v: parsed.browser.version});
             stats.fail++;
         }
     }
@@ -117,7 +120,7 @@ test('getPlatformInfo - should get the right platform name', () => {
     stats.ratio = stats.success / stats.detected;
     // Uncomment this log message to get a sample of the failing detections
     // console.log(errors.slice(0,50))
-    console.log(stats);
+    // console.log(stats);
     const treshold = 0.95;
     assert.ok(
         stats.ratio >= treshold,
