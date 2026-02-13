@@ -26,8 +26,8 @@
   "scripts": {
     "clean": "rm -rf build",
     "watch": "node ../../scripts/watch.mjs ./lib npm run build",
-    "build:iife": "esbuild ./lib/bundle.js --bundle --conditions=esnext --sourcemap --platform=browser --target=es2022 --outfile=build/elastic-otel-browser.js",
-    "build:min": "esbuild ./lib/bundle.js --bundle --conditions=esnext --minify --sourcemap --platform=browser --target=es2022 --outfile=build/elastic-otel-browser.min.js",
+    "build:iife": "esbuild ./lib/bundle.js --bundle --conditions=esnext,module --sourcemap --platform=browser --target=es2022 --outfile=build/elastic-otel-browser.js",
+    "build:min": "esbuild ./lib/bundle.js --bundle --conditions=esnext,module --minify --sourcemap --platform=browser --target=es2022 --outfile=build/elastic-otel-browser.min.js",
     "build": "npm run build:iife && npm run build:min",
     "gen:types": "rm -rf types && tsc # TODO: would be nice to tree-shake the *.d.ts files",
     "test:smoke": "npm run build && cp build/* ./test/smoke/assets && playwright test",
