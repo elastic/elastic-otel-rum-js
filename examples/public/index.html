@@ -17,7 +17,7 @@
             var j = d.createElement(s),
                 t = d.getElementsByTagName(s)[0]
 
-            j.src = './assets/elastic-otel-browser.min.js'
+            j.src = './assets/elastic-otel-browser.js'
             j.onload = function() {
                 // Expose the EDOT so you can play with it in the console
                 window.edotBrowser = startBrowserSdk(c);
@@ -39,9 +39,9 @@
             exportHeaders: otelEnv.exportHeaders || {},
             // NOTE: uncomment this to avoid the export instrumentation issue
             // ref: https://github.com/open-telemetry/opentelemetry-js/issues/6339
-            // instrumentationsConfigs: {
-            //     fetch: { enabled: false }
-            // }
+            configInstrumentations: {
+                '@opentelemetry/instrumentation-fetch': { enabled: false }
+            }
         })
     </script>
 </head>
