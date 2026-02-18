@@ -19,7 +19,8 @@ const template = `
  */
 export function Component(target) {
     // TODO: create a logger here using the API
-    const logger = globalThis.edotBrowser.providers.logger.getLogger('log-view');
+    const logger =
+        globalThis.edotBrowser.providers.logger.getLogger('log-view');
 
     // Render
     target.innerHTML = template;
