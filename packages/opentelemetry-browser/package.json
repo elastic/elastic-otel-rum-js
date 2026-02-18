@@ -30,6 +30,11 @@
     "build:min": "esbuild ./lib/bundle.js --bundle --conditions=esnext,module --minify --sourcemap --platform=browser --target=es2022 --outfile=build/elastic-otel-browser.min.js",
     "build": "npm run build:iife && npm run build:min",
     "gen:types": "rm -rf types && tsc # TODO: would be nice to tree-shake the *.d.ts files",
+    "lint": "npm run lint:eslint && npm run lint:prettier && npm run lint:licenses",
+    "lint:eslint": "eslint .",
+    "lint:prettier": "(cd ../../; prettier --check $npm_config_local_prefix)",
+    "lint:licenses": "../../scripts/gen-notice.sh --lint .  # requires node >=16",
+    "lint:fix": "eslint --fix . && prettier --write .",
     "test:smoke": "npm run build && cp build/* ./test/smoke/assets && playwright test",
     "test:unit": "node --test test/unit/*.test.js"
   },
