@@ -19,6 +19,7 @@ const template = `
  */
 export function Component(target) {
     // TODO: create a logger here using the API
+    const logger = globalThis.edotBrowser.providers.logger.getLogger('log-view');
 
     // Render
     target.innerHTML = template;
@@ -33,7 +34,11 @@ export function Component(target) {
         const message = data.get('message').toString().trim();
 
         if (message) {
-            // TODO: send the log
+            logger.emit({
+                eventName: 'custom-log',
+                body: message,
+            });
+            form.reset();
         }
     });
 }
