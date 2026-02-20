@@ -7,7 +7,7 @@
   "type": "module",
   "scripts": {
     "ci-all": "./scripts/oneach.sh npm ci",
-    "lint": "npm run lint:eslint && npm run lint:prettier",
+    "lint": "npm run lint:eslint && npm run lint:prettier && ./scripts/oneach.sh npm run --if-present lint:ci",
     "lint:eslint": "eslint .",
     "lint:prettier": "prettier --check .",
     "lint:fix": "eslint . --fix && prettier --write ."
