@@ -27,8 +27,20 @@ import {UserInteractionInstrumentation} from '@opentelemetry/instrumentation-use
 import {XMLHttpRequestInstrumentation} from '@opentelemetry/instrumentation-xml-http-request';
 import {ExceptionInstrumentation} from '@opentelemetry/instrumentation-web-exception';
 
+import {AsyncApisContextManager} from './context.js';
 import {createLogger} from './logging.js';
 import {detectResource} from './detector.js';
+
+/**
+ * @typedef {{
+ *  "@opentelemetry/instrumentation-document-load": import('@opentelemetry/instrumentation-document-load').DocumentLoadInstrumentationConfig;
+ *  "@opentelemetry/instrumentation-fetch": import('@opentelemetry/instrumentation-fetch').FetchInstrumentationConfig;
+ *  "@opentelemetry/instrumentation-long-task": import('@opentelemetry/instrumentation-long-task').LongtaskInstrumentationConfig;
+ *  "@opentelemetry/instrumentation-user-interaction": import('@opentelemetry/instrumentation-user-interaction').UserInteractionInstrumentationConfig;
+ *  "@opentelemetry/instrumentation-xml-http-request": import('@opentelemetry/instrumentation-xml-http-request').XMLHttpRequestInstrumentationConfig;
+ *  "@opentelemetry/instrumentation-web-exception": import('@opentelemetry/instrumentation-web-exception').GlobalErrorsInstrumentationConfig;
+ * }} InstrumentationsConfigMap
+ */
 
 /**
  * @typedef {Object} BrowserSdkConfiguration
@@ -42,7 +54,7 @@ import {detectResource} from './detector.js';
  * @property {Record<string, string>} [exportHeaders] // defaults to {}
  *
  * // other options
- * @property {number} [samplingRate]
+ * @property {Partial<InstrumentationsConfigMap>} [configInstrumentations]
  */
 
 // To control multipla calls to `startBrowserSdk`
@@ -56,22 +68,18 @@ const defaultConfig = {
     resourceAttributes: {},
     otlpEndpoint: 'http://localhost:4318',
     exportHeaders: {},
-    //TODO: instrumentation configurations
 };
 
 /**
- * Returns a new URL with the path appended. Avoiding double slash
- * @param {URL} url
- * @param {string} path
- */
-function appendPath(url, path) {
-    const result = new URL(url.href);
-    result.pathname = (result.pathname + path).replace('//', '/');
-    return result;
-}
-
-/**
  * @param {BrowserSdkConfiguration} cfg
+ * @returns {{
+ *      providers: {
+ *          tracer: import('@opentelemetry/api').TracerProvider;
+ *          meter: import('@opentelemetry/api').MeterProvider;
+ *          logger: import('@opentelemetry/api-logs').LoggerProvider;
+ *      };
+ *      flush: () => Promise<void>
+ * }}
  */
 export function startBrowserSdk(cfg = {}) {
     if (sdkStarted || cfg.disabled) {
@@ -90,7 +98,6 @@ export function startBrowserSdk(cfg = {}) {
     let endpointUrl;
     try {
         endpointUrl = new URL(config.otlpEndpoint);
-        console.log(endpointUrl.pathname);
     } catch (urlErr) {
         diag.error(
             `The value "${config.otlpEndpoint}" for "otlpEndpoint" configuration is not an URL. SDK won't start.`
@@ -109,76 +116,116 @@ export function startBrowserSdk(cfg = {}) {
     // so IMHO it would be redundant to use console exporters
 
     // traces signal configuration
-    // const tracesEndpoint = `${endpointUrl.href}v1/traces`;
     const tracesEndpoint = appendPath(endpointUrl, 'v1/traces').href;
+    const spanProcessor = new BatchSpanProcessor(
+        new OTLPTraceExporter({
+            url: tracesEndpoint,
+            headers: config.exportHeaders,
+        })
+    );
     const tracerProvider = new WebTracerProvider({
         resource,
         sampler: new TraceIdRatioBasedSampler(config.sampleRate),
-        spanProcessors: [
-            new BatchSpanProcessor(
-                new OTLPTraceExporter({
-                    url: tracesEndpoint,
-                    headers: config.exportHeaders,
-                })
-            ),
-        ],
+        spanProcessors: [spanProcessor],
     });
     // TODO: WebTracerProvider comes with
     // - a composite propagator [W3C, Baggage]
-    // - a context manager (no-op)
+    // - a context manager (Stack, which has issues with exporters)
     // Should we allow users to pass their own propagator, contextmanager?
-    tracerProvider.register();
+    tracerProvider.register({
+        contextManager: AsyncApisContextManager,
+    });
     // ideally it shoud be
     // trace.setGlobalTracerProvider(tracerProvider);
     // but there is no way to set propagators and context manager
 
     // metrics signal configuration
-    // const metricsEndpoint = `${endpointUrl.href}v1/metrics`;
     const metricsEndpoint = appendPath(endpointUrl, 'v1/metrics').href;
+    const metricsReader = new PeriodicExportingMetricReader({
+        exporter: new OTLPMetricExporter({
+            url: metricsEndpoint,
+            headers: config.exportHeaders,
+        }),
+    });
     const meterProvider = new MeterProvider({
         resource,
-        readers: [
-            new PeriodicExportingMetricReader({
-                exporter: new OTLPMetricExporter({
-                    url: metricsEndpoint,
-                    headers: config.exportHeaders,
-                }),
-            }),
-        ],
+        readers: [metricsReader],
     });
     metrics.setGlobalMeterProvider(meterProvider);
 
     // logs signal configuration
-    // const logsEndpoint = `${endpointUrl.href}v1/logs`;
     const logsEndpoint = appendPath(endpointUrl, 'v1/logs').href;
+    const logsProcessor = new BatchLogRecordProcessor(
+        new OTLPLogExporter({
+            url: logsEndpoint,
+            headers: config.exportHeaders,
+        })
+    );
     const loggerProvider = new LoggerProvider({
         resource,
-        processors: [
-            new BatchLogRecordProcessor(
-                new OTLPLogExporter({
-                    url: logsEndpoint,
-                    headers: config.exportHeaders,
-                })
-            ),
-        ],
+        processors: [logsProcessor],
     });
     logs.setGlobalLoggerProvider(loggerProvider);
 
-    // Resgister instrumentations
-    // TODO: decide on how to let the user config this
-    registerInstrumentations({
-        instrumentations: [
-            new DocumentLoadInstrumentation(),
-            new FetchInstrumentation(),
-            new LongTaskInstrumentation(),
-            new UserInteractionInstrumentation(),
-            new XMLHttpRequestInstrumentation(),
-            new ExceptionInstrumentation(),
-        ],
-    });
+    // Resgister instrumentations. The `registerInstrumentations` enabled al of them
+    // regardles of the configuration so EDOT only add the ones that are not disabled
+    // by configuration
+    /** @type {Record<keyof InstrumentationsConfigMap, (cfg: any) => any>} */
+    const instrFactories = {
+        '@opentelemetry/instrumentation-document-load': (cfg) =>
+            new DocumentLoadInstrumentation(cfg),
+        '@opentelemetry/instrumentation-fetch': (cfg) =>
+            new FetchInstrumentation(cfg),
+        '@opentelemetry/instrumentation-long-task': (cfg) =>
+            new LongTaskInstrumentation(cfg),
+        '@opentelemetry/instrumentation-user-interaction': (cfg) =>
+            new UserInteractionInstrumentation(cfg),
+        '@opentelemetry/instrumentation-xml-http-request': (cfg) =>
+            new XMLHttpRequestInstrumentation(cfg),
+        '@opentelemetry/instrumentation-web-exception': (cfg) =>
+            new ExceptionInstrumentation(cfg),
+    };
+    const {configInstrumentations} = config;
+    const instrumentations = [];
+    for (const key of Object.keys(instrFactories)) {
+        const instrConfig = configInstrumentations?.[key];
+        const isDisabled = instrConfig?.enabled === false;
+        if (!isDisabled) {
+            instrumentations.push(instrFactories[key](instrConfig));
+        }
+    }
+    registerInstrumentations({instrumentations});
 
     // Flag as started
     sdkStarted = true;
 
-    // TODO: return API??? flush???
+    return {
+        providers: {
+            tracer: tracerProvider,
+            meter: meterProvider,
+            logger: loggerProvider,
+        },
+        flush() {
+            return Promise.all([
+                spanProcessor.forceFlush(),
+                metricsReader.forceFlush(),
+                logsProcessor.forceFlush(),
+            ]).then(() => {
+                return;
+            });
+        },
+    };
+}
+
+// -- helper functions
+
+/**
+ * Returns a new URL with the path appended. Avoiding double slash
+ * @param {URL} url
+ * @param {string} path
+ */
+function appendPath(url, path) {
+    const result = new URL(url.href);
+    result.pathname = (result.pathname + path).replace('//', '/');
+    return result;
 }

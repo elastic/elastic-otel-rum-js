@@ -12,10 +12,10 @@ const template = `
         <button class="pure-button" id="button-xhr">Do XHR</button>
     </p>
 
-    <h3 class="content-subhead">(TODO) Log Tasks</h3>
+    <h3 class="content-subhead">(TODO) Long Tasks</h3>
     <p>
         <div id="tasks-results"></div>
-        <button class="pure-button" id="button-task">Do Logs Task</button>
+        <button class="pure-button" id="button-task">Do Long Task</button>
     </p>
 `;
 

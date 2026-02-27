@@ -1,5 +1,6 @@
 import {createReadStream, existsSync, readFileSync} from 'fs';
 import {createServer} from 'http';
+import {createGzip} from 'zlib';
 
 import 'dotenv/config';
 import mime from 'mime';
@@ -44,7 +45,7 @@ const server = createServer((req, res) => {
                 const text = Buffer.concat(chunks).toString('utf-8');
                 const pretty = JSON.stringify(JSON.parse(text), null, 4);
                 // TODO: offer summay option ???
-                // console.log(`Data in ${signal} => ${pretty}`)
+                console.log(`Data in ${signal} => ${pretty}`);
             } catch (error) {
                 console.log(`Error in ${signal} => ${error}`);
             }
@@ -100,7 +101,15 @@ const server = createServer((req, res) => {
         // For the rest just pipe
         const fileStream = createReadStream(filePath);
         res.setHeader('content-type', mime.getType(filePath));
-        fileStream.pipe(res);
+        // Gzip if possible
+        const acceptEncoding = req.headers['accept-encoding'];
+        if (acceptEncoding && acceptEncoding.match(/\bgzip\b/)) {
+            const gzip = createGzip();
+            res.setHeader('content-encoding', 'gzip');
+            fileStream.pipe(gzip).pipe(res);
+        } else {
+            fileStream.pipe(res);
+        }
     } else {
         res.writeHead(404, 'Not Found');
         res.end();
