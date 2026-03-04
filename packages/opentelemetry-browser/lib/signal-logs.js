@@ -11,7 +11,7 @@ import { appendPath } from './utils.js';
 /**
  * TODO: add processors as config option
  * @param {Object} config
- * @param {URL} config.endpointUrl
+ * @param {string} config.otlpEndpoint
  * @param {import('@opentelemetry/resources').Resource} config.resource
  * @param {Record<string, string>} [config.exportHeaders] // defaults to {}
  * 
@@ -19,7 +19,7 @@ import { appendPath } from './utils.js';
  */
 export function withLogs(config) {
     // logs signal configuration
-    const logsEndpoint = appendPath(config.endpointUrl, 'v1/logs').href;
+    const logsEndpoint = appendPath(config.otlpEndpoint, 'v1/logs').href;
     const logsProcessor = new BatchLogRecordProcessor(
         new OTLPLogExporter({
             url: logsEndpoint,

@@ -15,7 +15,7 @@ import { appendPath } from './utils.js';
 /**
  * TODO: add readers as config option?
  * @param {Object} config
- * @param {URL} config.endpointUrl
+ * @param {string} config.otlpEndpoint
  * @param {import('@opentelemetry/resources').Resource} config.resource
  * @param {Record<string, string>} [config.exportHeaders] // defaults to {}
  * 
@@ -23,7 +23,7 @@ import { appendPath } from './utils.js';
  */
 export function withMetrics(config) {
     // metrics signal configuration
-    const metricsEndpoint = appendPath(config.endpointUrl, 'v1/metrics').href;
+    const metricsEndpoint = appendPath(config.otlpEndpoint, 'v1/metrics').href;
     const metricsReader = new PeriodicExportingMetricReader({
         exporter: new OTLPMetricExporter({
             url: metricsEndpoint,

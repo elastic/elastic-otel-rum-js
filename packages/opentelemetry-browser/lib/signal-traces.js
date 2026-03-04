@@ -17,7 +17,7 @@ import {appendPath} from './utils.js';
 /**
  * TODO: add processors as config option
  * @param {Object} config
- * @param {URL} config.endpointUrl
+ * @param {string} config.otlpEndpoint
  * @param {import('@opentelemetry/resources').Resource} config.resource
  * @param {Record<string, string>} [config.exportHeaders] // defaults to {}
  * @param {number} [config.sampleRate] // defaults to 1
@@ -34,7 +34,7 @@ export function withTraces(config) {
     context.setGlobalContextManager(AsyncApisContextManager)
 
     // traces signal configuration
-    const tracesEndpoint = appendPath(config.endpointUrl, 'v1/traces').href;
+    const tracesEndpoint = appendPath(config.otlpEndpoint, 'v1/traces').href;
     const spanProcessor = new BatchSpanProcessor(
         new OTLPTraceExporter({
             url: tracesEndpoint,

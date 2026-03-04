@@ -37,7 +37,7 @@
             serviceName: 'otel-browser-example-app',
             serviceVersion: '0.0.1',
             otlpEndpoint: otelEnv.otlpEndpoint || `${location.protocol}//${location.host}`,
-            exportHeaders: otelEnv.exportHeaders || {},
+            exportHeaders: otelEnv.exportHeaders || { foo: 'bar' },
         })
     </script>
 </head>
