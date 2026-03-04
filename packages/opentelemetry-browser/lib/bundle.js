@@ -13,7 +13,7 @@ import {UserInteractionInstrumentation} from '@opentelemetry/instrumentation-use
 import {XMLHttpRequestInstrumentation} from '@opentelemetry/instrumentation-xml-http-request';
 import {ExceptionInstrumentation} from '@opentelemetry/instrumentation-web-exception';
 
-import { setupSdk } from './sdk-builder.js'
+import { buildSdk } from './sdk-builder.js'
 import { withTraces } from './signal-traces.js';
 import { withLogs } from './signal-logs.js';
 import { withMetrics } from './signal-metrics.js';
@@ -46,6 +46,7 @@ const defaultConfig = {
     otlpEndpoint: 'http://localhost:4318',
     exportHeaders: {},
 };
+
 
 /**
  * @param {BrowserSdkConfiguration} cfg 
@@ -80,17 +81,12 @@ globalThis['startBrowserSdk'] = function startBrowserSdk(cfg) {
         serviceName,
         serviceVersion
     );
-    const sdk = setupSdk(
-        withLogs,
-        withTraces,
-        withMetrics,
-        {
-            endpointUrl,
-            resource,
-            exportHeaders: config.exportHeaders,
-            sampleRate: 1
-        }
-    );
+    const sdk = buildSdk(withLogs,withMetrics,withTraces)({
+        endpointUrl,
+        resource,
+        exportHeaders: config.exportHeaders,
+        sampleRate: config.sampleRate,
+    });
 
     // TODO: set configs here
     const instrumentations = [
