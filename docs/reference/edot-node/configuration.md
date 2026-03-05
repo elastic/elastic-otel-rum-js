@@ -20,8 +20,8 @@ The {{edot}} Browser (EDOT Browser) is configured with environment variables beg
 
 If not configured, EDOT Browser will send telemetry data to `http://localhost:4318` with no authentication information, and identify the running service as `unknown_service:web`. Typically a minimal configuration will include
 
-<!-- TODO -->
-
+* `otlpEndpoint`: The full URL of an OpenTelemetry Collector where data will be sent.
+* `serviceName`: The name of your service, used to distinguish telemetry data from other services in your system.
 
 ## Configuration reference
 
