@@ -47,7 +47,7 @@ export function createCollector(page) {
      * @returns {Promise<any[]>}
      */
     const waitForData = async (signal) => {
-        // Is there any situation we prefe to wait?
+        // Is there any situation we prefer to wait?
         await page.evaluate(() => globalThis.edotBrowser.flush());
 
         return new Promise((resolve, reject) => {
