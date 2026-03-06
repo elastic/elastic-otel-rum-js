@@ -28,7 +28,7 @@ test('should export web vitals', async ({page, browserName}) => {
 
     // The number of vitals varies from browsers so we test all records
     // have a valid name
-    const webVitals = ['ttfb', 'fcp', 'cls', 'lcp'];
+    const webVitals = ['ttfb', 'fcp', 'cls', 'lcp', 'inp'];
     for (const logRecord of logs) {
         const name = logRecord.attributes['browser.web_vital.name'];
         expect(logRecord.eventName).toEqual('browser.web_vital');
