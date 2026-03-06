@@ -33,11 +33,15 @@ const server = createServer((req, res) => {
         if (fileUrl.pathname.endsWith('.html')) {
             const origHtml = readFileSync(fileUrl, {encoding: 'utf-8'});
             const config = url.searchParams.get('config') || '{}';
-            const jsSync = Boolean(url.searchParams.get('sync'));
+            const jsSync = url.searchParams.get('sync') === 'true';
 
             // inject the EDOT with config
             res.end(
-                injectSdk(origHtml, JSON.parse(decodeURIComponent(config)), jsSync)
+                injectSdk(
+                    origHtml,
+                    JSON.parse(decodeURIComponent(config)),
+                    jsSync
+                )
             );
             return;
         }
@@ -82,5 +86,5 @@ function injectSdk(html, config, jsSync) {
         </script>
     `;
 
-    return html.replace(placeholder, codeAsync);
+    return html.replace(placeholder, jsSync ? codeSync : codeAsync);
 }

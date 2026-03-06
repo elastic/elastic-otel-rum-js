@@ -6,20 +6,46 @@
 import {test, expect} from '@playwright/test';
 import {createCollector} from './test-utils';
 
-test.only('should export browser navigation related events', async ({
-    page,
-}) => {
-    const collector = createCollector(page);
-    await page.goto('/fixtures/use-document-load.html');
+test.only('should export browser navigation related events', async ({page}) => {
+    // Disable `@opentelemetry/instrumentation-user-interaction` instrumentation to avoid double
+    // wrapping of the history API which overrides the patch if browser navigation.
+    // TODO: create issue and discuss in the SIG
+    const config = encodeURIComponent(
+        JSON.stringify({
+            configInstrumentations: {
+                '@opentelemetry/instrumentation-user-interaction': {
+                    enabled: false,
+                },
+            },
+        })
+    );
 
-    // Make a couple of navigations
-    // - with push state
+    const collector = createCollector(page);
+    await page.goto(
+        `/fixtures/use-document-load.html?config=${config}&sync=true`
+    );
+
+    // Make a soft navigation
     await page.evaluate(() => history.pushState({}, '', '/with-push.html'));
-    await new Promise((r) => setTimeout(r,1_000));
-    // - with replace state
-    await page.evaluate(() => history.replaceState({}, '', '/with-replace.html'));
 
     const logs = await collector.getLogs();
-    console.log(logs)
-    expect(logs.length).toBeGreaterThan(0);
+    expect(logs.length).toEqual(2);
+
+    // 1st is a hard navigation
+    expect(logs[0].eventName).toEqual('browser.navigation');
+    expect(logs[0].attributes['browser.navigation.same_document']).toEqual(
+        false
+    );
+    expect(logs[0].attributes['browser.navigation.hash_change']).toEqual(false);
+
+    // 2nd is a soft navigation
+    expect(logs[1].eventName).toEqual('browser.navigation');
+    expect(logs[1].attributes['browser.navigation.same_document']).toEqual(
+        true
+    );
+    expect(logs[1].attributes['browser.navigation.hash_change']).toEqual(false);
+    expect(logs[1].attributes['browser.navigation.type']).toEqual('push');
+    expect(logs[1].attributes['url.full']).toEqual(
+        'http://localhost:3000/with-push.html'
+    );
 });

@@ -105,9 +105,21 @@ export function createCollector(page) {
         },
         async getLogs() {
             const rawLogs = await waitForData('logs');
-            // TODO: normalize logs
-            const logs = [];
-            return logs;
+            const records = [];
+            rawLogs.forEach((logs) => {
+                logs.resourceLogs.forEach((resourceLogs) => {
+                    normalizeAttributes(resourceLogs.resource);
+                    resourceLogs.scopeLogs.forEach((scopeLog) => {
+                        scopeLog.logRecords.forEach((logRecord) => {
+                            normalizeAttributes(logRecord);
+                            logRecord.resource = resourceLogs.resource;
+                            logRecord.scope = scopeLog.scope;
+                            records.push(logRecord);
+                        });
+                    });
+                });
+            });
+            return records;
         },
         clear() {
             // Clear all arrays
