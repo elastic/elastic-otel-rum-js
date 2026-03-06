@@ -6,7 +6,7 @@
 import {test, expect} from '@playwright/test';
 import {createCollector} from './test-utils';
 
-test.only('should export browser navigation related events', async ({page}) => {
+test('should export browser navigation related events', async ({page}) => {
     // Disable `@opentelemetry/instrumentation-user-interaction` instrumentation to avoid double
     // wrapping of the history API which overrides the patch if browser navigation.
     // TODO: create issue and discuss in the SIG
