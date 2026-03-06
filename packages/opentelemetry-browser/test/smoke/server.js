@@ -33,10 +33,15 @@ const server = createServer((req, res) => {
         if (fileUrl.pathname.endsWith('.html')) {
             const origHtml = readFileSync(fileUrl, {encoding: 'utf-8'});
             const config = url.searchParams.get('config') || '{}';
+            const jsSync = url.searchParams.get('sync') === 'true';
 
             // inject the EDOT with config
             res.end(
-                injectSdk(origHtml, JSON.parse(decodeURIComponent(config)))
+                injectSdk(
+                    origHtml,
+                    JSON.parse(decodeURIComponent(config)),
+                    jsSync
+                )
             );
             return;
         }
@@ -60,9 +65,9 @@ console.log(`server listening to http://localhost:${server.address().port}`);
 
 // -- helper functions
 
-function injectSdk(html, config) {
+function injectSdk(html, config, jsSync) {
     const placeholder = '<!-- EDOT_PLACEHOLDER (DO NOT REMOVE)-->';
-    const code = `
+    const codeAsync = `
         <script>
         // Same pattern as https://www.elastic.co/docs/reference/apm/agents/rum-js/install-agent#_asynchronous_non_blocking_pattern
         ;(function(d, s, c) {
@@ -74,6 +79,12 @@ function injectSdk(html, config) {
         })(document, 'script', ${JSON.stringify(config)})
         </script>
     `;
+    const codeSync = `
+        <script src="/assets/elastic-otel-browser.min.js"></script>
+        <script>
+            globalThis.edotBrowser = startBrowserSdk(${JSON.stringify(config)});
+        </script>
+    `;
 
-    return html.replace(placeholder, code);
+    return html.replace(placeholder, jsSync ? codeSync : codeAsync);
 }

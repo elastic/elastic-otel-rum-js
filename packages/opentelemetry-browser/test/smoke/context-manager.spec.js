@@ -14,7 +14,7 @@ test('should carry context on different async operations and functions', async (
     // ref: https://github.com/open-telemetry/opentelemetry-js/issues/6339
     const config = encodeURIComponent(
         JSON.stringify({
-            configInstrumentations: {
+            instrumentations: {
                 fetch: {enabled: false},
             },
         })
