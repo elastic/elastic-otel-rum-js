@@ -19,8 +19,8 @@ import {getBrowserInfo, getPlatformInfo} from '../../lib/detector.js';
 
 // Test for each fixture
 [
-    ['baseline', 0.75],
-    ['advanced', 0.5],
+    ['baseline', 0.8],
+    ['advanced', 0.4],
 ].forEach((spec) => {
     const [testType, threshold] = spec;
     test(`getBrowserInfo ${testType} - should get the right browser name`, () => {
@@ -74,7 +74,7 @@ import {getBrowserInfo, getPlatformInfo} from '../../lib/detector.js';
                 stats.fail++;
             }
         }
-        stats.ratio = stats.success / stats.detected;
+        stats.ratio = stats.success / stats.total;
         // Uncomment this log message to get a sample of the failing detections
         // console.log(errors.slice(0, 50));
         console.log(stats);
@@ -127,11 +127,11 @@ test('getPlatformInfo - should get the right platform name', () => {
             stats.fail++;
         }
     }
-    stats.ratio = stats.success / stats.detected;
+    stats.ratio = stats.success / stats.total;
     // Uncomment this log message to get a sample of the failing detections
     // console.log(errors.slice(0,50))
     console.log(stats);
-    const threshold = 0.95;
+    const threshold = 0.85;
     assert.ok(
         stats.ratio >= threshold,
         `Platform names detected are not good enough (ratio: ${stats.ratio}, threshold: ${threshold})`
