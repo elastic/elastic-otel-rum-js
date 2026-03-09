@@ -8,82 +8,93 @@ import {readFileSync} from 'node:fs';
 import {join} from 'node:path';
 import {test} from 'node:test';
 
-import {UAParser} from 'ua-parser-js';
 import {getBrowserInfo, getPlatformInfo} from '../../lib/detector.js';
 
-// Check that our simpler version of parsing the user agent is good enough. We are comparing to a well
-// know solution https://www.npmjs.com/package/ua-parser-js and using a dataset from github
-// https://github.com/EngineeringSample/UserAgentsDatabase/blob/main/BreadcrumbsUserAgentsDatabase.txt
+// For this tests we have collected a dataset from a public repository and run a tool
+// similar to the user agent processor. The results are stored here to prvide use cases for our unit tests.
+// The goal is not to make a 100% but to be good enough.
+// References:
+// - user agent processor https://www.elastic.co/docs/reference/enrich-processor/user-agent-processor
+// - data set for tests https://github.com/EngineeringSample/UserAgentsDatabase/blob/main/BreadcrumbsUserAgentsDatabase.txt
 
-// TODO: crawl data from https://explore.whatismybrowser.com/useragents/explore/
-// software and OS categories
-// check https://github.com/microlinkhq/top-user-agents
+// Test for each fixture
+[
+    ['baseline', 0.75],
+    ['advanced', 0.5],
+].forEach((spec) => {
+    const [testType, threshold] = spec;
+    test(`getBrowserInfo ${testType} - should get the right browser name`, () => {
+        const fixturesPath = join(
+            import.meta.dirname,
+            `./fixtures/browser-${testType}.json`
+        );
+        const userAgentList = JSON.parse(
+            readFileSync(fixturesPath, {encoding: 'utf-8'})
+        );
 
-// USE => https://github.com/ua-parser/uap-core/
+        const stats = {
+            total: 0,
+            detected: 0,
+            success: 0,
+            fail: 0,
+            ratio: 0,
+        };
+        const errors = [];
 
-// https://github.com/faisalman/ua-parser-js/blob/master/test/data/ua/browser/browser-all.json
+        for (const item of userAgentList) {
+            const {ua, expect} = item;
+            const detected = getBrowserInfo(ua);
 
-const fixturesPath = join(
-    import.meta.dirname,
-    './fixtures/browser-all.json'
-);
-const userAgentList = JSON.parse(readFileSync(fixturesPath, {encoding: 'utf-8'}));
+            stats.total++;
+            if (!detected) continue;
+            stats.detected++;
 
-test('getBrowserInfo - should get the right browser name', () => {
-    const excludedBrowsers = ['IE', 'IEMobile'];
-    const stats = {
-        total: 0,
-        detected: 0,
-        success: 0,
-        fail: 0,
-        ratio: 0,
-    };
-    const errors = [];
+            const actual = detected.name;
+            // We will be more relaxed in matches:
+            // - "Mobile X" is considered just "X" since we are sending the `isMobile` attribute
+            // - "Opera X" is considered just "Opera"
+            // - "Edge X" is considered just "Edge"
+            expect.name = expect.name.replace('Mobile ', '');
 
-    for (const item of userAgentList) {
-        const {ua} = item;
-        const parsed = UAParser(ua);
-        const detected = getBrowserInfo(ua);
+            if (expect.name.startsWith('Opera')) {
+                expect.name = 'Opera';
+            } else if (expect.name.startsWith('Edge')) {
+                expect.name = 'Edge';
+            }
 
-        if (!parsed.browser.name) continue;
-        if (excludedBrowsers.includes(parsed.browser.name)) continue;
-        stats.total++;
-        if (!detected) continue;
-        stats.detected++;
-
-        const actual = detected.name;
-        // We will be more relaxed in matches:
-        // - "Mobile X" is considered just "X" since we are sending the `isMobile` attribute
-        // - "Opera X" is considered just "Opera"
-        // - "Edge X" is considered just "Edge"
-        
-        let expected = parsed.browser.name.replace('Mobile ', '');
-        if (expected.startsWith('Opera')) {
-            expected = 'Opera';
-        } else if (expected.startsWith('Edge')) {
-            expected = 'Edge';
+            if (expect.name === actual) {
+                stats.success++;
+            } else {
+                errors.push({
+                    actual,
+                    expected: expect.name,
+                    ua,
+                    v: expect.version,
+                });
+                stats.fail++;
+            }
         }
-
-        if (expected === actual) {
-            stats.success++;
-        } else {
-            errors.push({actual, expected, ua, v: parsed.browser.version});
-            stats.fail++;
-        }
-    }
-    stats.ratio = stats.success / stats.detected;
-    // Uncomment this log message to get a sample of the failing detections
-    // console.log(errors.slice(0, 50));
-    console.log(errors);
-    console.log(stats);
-    const treshold = 0.75;
-    assert.ok(
-        stats.ratio >= treshold,
-        `Browser names detected are not good enough (ratio: ${stats.ratio}, treshold: ${treshold})`
-    );
+        stats.ratio = stats.success / stats.detected;
+        // Uncomment this log message to get a sample of the failing detections
+        // console.log(errors.slice(0, 50));
+        console.log(stats);
+        assert.ok(
+            // @ts-expect-error
+            stats.ratio >= threshold,
+            `Browser tests(${testType}): Browser names detected are not good enough (ratio: ${stats.ratio}, threshold: ${threshold})`
+        );
+    });
 });
 
 test('getPlatformInfo - should get the right platform name', () => {
+    const osFixturesPath = join(
+        import.meta.dirname,
+        './fixtures/os-baseline.json'
+    );
+    const userAgentList = JSON.parse(
+        readFileSync(osFixturesPath, {encoding: 'utf-8'})
+    );
+
     const linuxFlavors = ['Kubuntu', 'ubuntu', 'Debian'];
     const stats = {
         total: 0,
@@ -95,20 +106,19 @@ test('getPlatformInfo - should get the right platform name', () => {
     const errors = [];
 
     for (const item of userAgentList) {
-        const {ua} = item;
-        const parsed = UAParser(ua);
+        const {ua, expect} = item;
         const detected = getPlatformInfo(ua);
 
-        if (!parsed.os.name) continue;
+        if (!expect.name) continue;
 
         stats.total++;
         if (!detected) continue;
         stats.detected++;
 
         const actual = detected.name;
-        const expected = linuxFlavors.includes(parsed.os.name)
+        const expected = linuxFlavors.includes(expect.name)
             ? 'Linux'
-            : parsed.os.name;
+            : expect.name;
 
         if (expected === actual) {
             stats.success++;
@@ -120,10 +130,10 @@ test('getPlatformInfo - should get the right platform name', () => {
     stats.ratio = stats.success / stats.detected;
     // Uncomment this log message to get a sample of the failing detections
     // console.log(errors.slice(0,50))
-    // console.log(stats);
-    const treshold = 0.95;
+    console.log(stats);
+    const threshold = 0.95;
     assert.ok(
-        stats.ratio >= treshold,
-        `Platform names detected are not good enough (ratio: ${stats.ratio}, treshold: ${treshold})`
+        stats.ratio >= threshold,
+        `Platform names detected are not good enough (ratio: ${stats.ratio}, threshold: ${threshold})`
     );
 });
