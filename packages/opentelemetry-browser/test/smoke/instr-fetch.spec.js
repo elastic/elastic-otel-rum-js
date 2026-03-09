@@ -12,7 +12,7 @@ test('should export fetch related spans', async ({page}) => {
     // and gives us wrong data
     const config = encodeURIComponent(
         JSON.stringify({
-            configInstrumentations: {
+            instrumentations: {
                 '@opentelemetry/instrumentation-document-load': {
                     enabled: false,
                 },
@@ -42,9 +42,15 @@ test('should export fetch related spans', async ({page}) => {
 
     await page.goto(`/fixtures/use-fetch.html?config=${config}`);
     await page.click('#same-origin');
+    await page.waitForFunction(
+        () => document.getElementById('status').innerText === 'finished'
+    );
     await page.click('#other-origin');
+    await page.waitForFunction(
+        () => document.getElementById('status').innerText === 'finished'
+    );
 
-    const spans = await collector.getSpans();
+    const spans = await collector.getSpans({flush: false});
     const fetchSpans = spans.filter(
         (s) => s.scope.name === '@opentelemetry/instrumentation-fetch'
     );

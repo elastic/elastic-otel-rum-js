@@ -26,6 +26,7 @@ import {LongTaskInstrumentation} from '@opentelemetry/instrumentation-long-task'
 import {UserInteractionInstrumentation} from '@opentelemetry/instrumentation-user-interaction';
 import {XMLHttpRequestInstrumentation} from '@opentelemetry/instrumentation-xml-http-request';
 import {ExceptionInstrumentation} from '@opentelemetry/instrumentation-web-exception';
+import {WebVitalsInstrumentation} from './instrumentations/web-vitals.js';
 
 import {AsyncApisContextManager} from './context.js';
 import {createLogger} from './logging.js';
@@ -39,6 +40,7 @@ import {detectResource} from './detector.js';
  *  "@opentelemetry/instrumentation-user-interaction": import('@opentelemetry/instrumentation-user-interaction').UserInteractionInstrumentationConfig;
  *  "@opentelemetry/instrumentation-xml-http-request": import('@opentelemetry/instrumentation-xml-http-request').XMLHttpRequestInstrumentationConfig;
  *  "@opentelemetry/instrumentation-web-exception": import('@opentelemetry/instrumentation-web-exception').GlobalErrorsInstrumentationConfig;
+ *  "@opentelemetry/instrumentation-web-vitals": import('@opentelemetry/instrumentation').InstrumentationConfig & import('./instrumentations/web-vitals.js').WebVitalsInstrumentationConfig
  * }} InstrumentationsConfigMap
  */
 
@@ -54,7 +56,7 @@ import {detectResource} from './detector.js';
  * @property {Record<string, string>} [exportHeaders] // defaults to {}
  *
  * // other options
- * @property {Partial<InstrumentationsConfigMap>} [configInstrumentations]
+ * @property {Partial<InstrumentationsConfigMap>} [instrumentations]
  */
 
 // To control multipla calls to `startBrowserSdk`
@@ -184,17 +186,19 @@ export function startBrowserSdk(cfg = {}) {
             new XMLHttpRequestInstrumentation(cfg),
         '@opentelemetry/instrumentation-web-exception': (cfg) =>
             new ExceptionInstrumentation(cfg),
+        '@opentelemetry/instrumentation-web-vitals': (cfg) =>
+            new WebVitalsInstrumentation(cfg),
     };
-    const {configInstrumentations} = config;
-    const instrumentations = [];
+    const {instrumentations} = config;
+    const enabledInstrumentations = [];
     for (const key of Object.keys(instrFactories)) {
-        const instrConfig = configInstrumentations?.[key];
+        const instrConfig = instrumentations?.[key];
         const isDisabled = instrConfig?.enabled === false;
         if (!isDisabled) {
-            instrumentations.push(instrFactories[key](instrConfig));
+            enabledInstrumentations.push(instrFactories[key](instrConfig));
         }
     }
-    registerInstrumentations({instrumentations});
+    registerInstrumentations({instrumentations: enabledInstrumentations});
 
     // Flag as started
     sdkStarted = true;
