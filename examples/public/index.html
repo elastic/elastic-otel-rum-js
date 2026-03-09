@@ -31,7 +31,8 @@
                 }, 2000);
             }
             t.parentNode.insertBefore(j, t)
-        })(document, 'script', {
+        })(document, 'script',
+        {
             logLevel: 'debug',
             serviceName: 'otel-browser-example-app',
             serviceVersion: '0.0.1',
@@ -39,9 +40,9 @@
             exportHeaders: otelEnv.exportHeaders || {},
             // NOTE: uncomment this to avoid the export instrumentation issue
             // ref: https://github.com/open-telemetry/opentelemetry-js/issues/6339
-            // instrumentationsConfigs: {
-            //     fetch: { enabled: false }
-            // }
+            instrumentations: {
+                '@opentelemetry/instrumentation-fetch': { enabled: false }
+            }
         })
     </script>
 </head>
