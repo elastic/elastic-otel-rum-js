@@ -44,25 +44,25 @@
   "description": "",
   "dependencies": {
     "@opentelemetry/api": "^1.9.0",
-    "@opentelemetry/api-logs": "^0.211.0",
-    "@opentelemetry/exporter-logs-otlp-http": "^0.211.0",
-    "@opentelemetry/exporter-metrics-otlp-http": "^0.211.0",
-    "@opentelemetry/exporter-trace-otlp-http": "^0.211.0",
-    "@opentelemetry/instrumentation": "^0.211.0",
-    "@opentelemetry/instrumentation-document-load": "^0.56.0",
-    "@opentelemetry/instrumentation-fetch": "^0.211.0",
-    "@opentelemetry/instrumentation-long-task": "^0.55.0",
-    "@opentelemetry/instrumentation-user-interaction": "^0.55.0",
-    "@opentelemetry/instrumentation-web-exception": "^0.4.0",
-    "@opentelemetry/instrumentation-xml-http-request": "^0.211.0",
+    "@opentelemetry/api-logs": "^0.213.0",
+    "@opentelemetry/exporter-logs-otlp-http": "^0.213.0",
+    "@opentelemetry/exporter-metrics-otlp-http": "^0.213.0",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.213.0",
+    "@opentelemetry/instrumentation": "^0.213.0",
+    "@opentelemetry/instrumentation-document-load": "^0.57.0",
+    "@opentelemetry/instrumentation-fetch": "^0.213.0",
+    "@opentelemetry/instrumentation-long-task": "^0.56.0",
+    "@opentelemetry/instrumentation-user-interaction": "^0.56.0",
+    "@opentelemetry/instrumentation-web-exception": "^0.5.0",
+    "@opentelemetry/instrumentation-xml-http-request": "^0.213.0",
     "@opentelemetry/resources": "^2.2.0",
-    "@opentelemetry/sdk-logs": "^0.211.0",
+    "@opentelemetry/sdk-logs": "^0.213.0",
     "@opentelemetry/sdk-metrics": "^2.2.0",
-    "@opentelemetry/sdk-trace-web": "^2.2.0"
+    "@opentelemetry/sdk-trace-web": "^2.2.0",
+    "web-vitals": "^5.1.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.57.0",
-    "esbuild": "0.27.1",
-    "ua-parser-js": "^2.0.7"
+    "esbuild": "0.27.1"
   }
 }

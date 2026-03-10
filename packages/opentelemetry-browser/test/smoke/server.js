@@ -33,10 +33,15 @@ const server = createServer((req, res) => {
         if (fileUrl.pathname.endsWith('.html')) {
             const origHtml = readFileSync(fileUrl, {encoding: 'utf-8'});
             const config = url.searchParams.get('config') || '{}';
+            const jsSync = url.searchParams.get('sync') === 'true';
 
             // inject the EDOT with config
             res.end(
-                injectSdk(origHtml, JSON.parse(decodeURIComponent(config)))
+                injectSdk(
+                    origHtml,
+                    JSON.parse(decodeURIComponent(config)),
+                    jsSync
+                )
             );
             return;
         }
@@ -50,6 +55,32 @@ const server = createServer((req, res) => {
         }
         fileStream.pipe(res);
     } else {
+        // sanitize the path
+        const url = new URL(`http://localhost${req.url}`);
+        const [_, firstSegment, secondSegment] = url.pathname.split('/');
+
+        // anythign starting with "/v1/*" will be dumped here
+        // to show the traces, metrics & logs exports
+        if (firstSegment === 'v1') {
+            const signal = secondSegment;
+            const chunks = [];
+            req.on('data', (chunk) => chunks.push(chunk));
+            req.on('end', () => {
+                try {
+                    const text = Buffer.concat(chunks).toString('utf-8');
+                    const pretty = JSON.stringify(JSON.parse(text), null, 4);
+                    // TODO: offer summary option ???
+                    console.log(`Data in ${signal} => ${pretty}`);
+                } catch (error) {
+                    console.log(`Error in ${signal} => ${error}`);
+                }
+            });
+            res.writeHead(200, 'OK', {'content-type': 'application/json'});
+            res.end(JSON.stringify({ok: 1}));
+            return;
+        }
+
+        // Not found
         res.writeHead(404, 'Not Found');
         res.end();
     }
@@ -60,9 +91,9 @@ console.log(`server listening to http://localhost:${server.address().port}`);
 
 // -- helper functions
 
-function injectSdk(html, config) {
+function injectSdk(html, config, jsSync) {
     const placeholder = '<!-- EDOT_PLACEHOLDER (DO NOT REMOVE)-->';
-    const code = `
+    const codeAsync = `
         <script>
         // Same pattern as https://www.elastic.co/docs/reference/apm/agents/rum-js/install-agent#_asynchronous_non_blocking_pattern
         ;(function(d, s, c) {
@@ -74,6 +105,12 @@ function injectSdk(html, config) {
         })(document, 'script', ${JSON.stringify(config)})
         </script>
     `;
+    const codeSync = `
+        <script src="/assets/elastic-otel-browser.min.js"></script>
+        <script>
+            globalThis.edotBrowser = startBrowserSdk(${JSON.stringify(config)});
+        </script>
+    `;
 
-    return html.replace(placeholder, code);
+    return html.replace(placeholder, jsSync ? codeSync : codeAsync);
 }

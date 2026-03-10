@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>Web Vitals Instrumentation Test</title>
+        <!-- EDOT_PLACEHOLDER (DO NOT REMOVE)-->
+    </head>
+    <body>
+        <h1>Web Vitals Instrumentation Test</h1>
+
+        <button id="make-shift">Shift Content</button>
+        <button id="open-tab">New tab</button>
+
+        <p id="status">Content to be shifted</p>
+
+        <script>
+            const status = document.getElementById('status');
+            const shiftBtn = document.getElementById('make-shift');
+            const tabBtn = document.getElementById('open-tab');
+
+            function shift() {
+                const p = document.createElement('p');
+                p.innerText = 'The quick brown fox jumps over the lazy dog. '.repeat(30);			
+                status.insertBefore(p, status.firstChild);
+            }
+            window.addEventListener('load', shift);
+            shiftBtn.addEventListener('click', shift);
+            tabBtn.addEventListener('click', () => window.open('about:_blank'));
+        </script>
+    </body>
+</html>
