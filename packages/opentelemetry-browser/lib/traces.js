@@ -25,7 +25,7 @@ import {appendPath} from './utils.js';
 /** @type {WebTracerProvider} */
 let _tracerProvider;
 
-/** @type {import('./sdk-builder.js').WebSdk<TraceSdkConfig>} */
+/** @type {import('./sdk.js').WebSdk<TraceSdkConfig>} */
 export const TracesSdk = {
     init(config) {
         // TODO: WebTracerProvider comes with

@@ -10,10 +10,10 @@ import {UserInteractionInstrumentation} from '@opentelemetry/instrumentation-use
 import {XMLHttpRequestInstrumentation} from '@opentelemetry/instrumentation-xml-http-request';
 import {ExceptionInstrumentation} from '@opentelemetry/instrumentation-web-exception';
 
-import {WebSdkBuilder} from './sdk-builder.js';
-import {TracesSdk} from './traces.js';
 import {LogsSdk} from './logs.js';
 import {MetricsSdk} from './metrics.js';
+import {TracesSdk} from './traces.js';
+import {WebSdkBuilder} from './sdk.js';
 import {WebVitalsInstrumentation} from './instrumentations/web-vitals.js';
 
 /**

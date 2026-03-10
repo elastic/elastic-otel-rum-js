@@ -3,4 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-export {startBrowserSdk} from './sdk.js';
+export {LogsSdk} from './logs.js';
+export {MetricsSdk} from './metrics.js';
+export {TracesSdk} from './traces.js';
+export {WebSdkBuilder} from './sdk.js';

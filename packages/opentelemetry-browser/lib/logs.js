@@ -18,7 +18,7 @@ let _loggerProvider;
  * @property {import('@opentelemetry/resources').Resource} resource
  */
 
-/** @type {import('./sdk-builder.js').WebSdk<LogsSdkConfig>} */
+/** @type {import('./sdk.js').WebSdk<LogsSdkConfig>} */
 export const LogsSdk = {
     init(config) {
         const logsEndpoint = appendPath(config.otlpEndpoint, 'v1/logs').href;
@@ -28,13 +28,13 @@ export const LogsSdk = {
                 headers: config.exportHeaders,
             })
         );
-        const loggerProvider = new LoggerProvider({
+        _loggerProvider = new LoggerProvider({
             resource: config.resource,
             processors: [logsProcessor],
         });
-        logs.setGlobalLoggerProvider(loggerProvider);
+        logs.setGlobalLoggerProvider(_loggerProvider);
     },
     forceFlush() {
-        return _loggerProvider.shutdown();
+        return _loggerProvider.forceFlush();
     },
 };

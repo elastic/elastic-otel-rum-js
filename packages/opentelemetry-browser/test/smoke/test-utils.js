@@ -51,7 +51,7 @@ export function createCollector(page) {
         // Is there any situation we prefer to wait?
         // - yes, for fetch instrumentation tests
         if (flush) {
-            await page.evaluate(() => globalThis.edotBrowser.flush());
+            await page.evaluate(() => globalThis.edotBrowser.forceFlush());
         }
 
         return new Promise((resolve, reject) => {

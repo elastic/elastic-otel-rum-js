@@ -22,7 +22,7 @@ import {appendPath} from './utils.js';
 /** @type {MeterProvider} */
 let _meterProvider;
 
-/** @type {import('./sdk-builder.js').WebSdk<MetricsConfig>} */
+/** @type {import('./sdk.js').WebSdk<MetricsConfig>} */
 export const MetricsSdk = {
     init(config) {
         const metricsEndpoint = appendPath(
@@ -42,6 +42,6 @@ export const MetricsSdk = {
         metrics.setGlobalMeterProvider(_meterProvider);
     },
     forceFlush() {
-        return _meterProvider.shutdown();
+        return _meterProvider.forceFlush();
     },
 };
