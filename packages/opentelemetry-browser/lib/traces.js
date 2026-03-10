@@ -33,9 +33,6 @@ export const TracesSdk = {
         // - a context manager (Stack, which has issues with exporters)
         // Should we allow users to pass their own propagator, contextmanager?
 
-        // Set the context manager
-        context.setGlobalContextManager(AsyncApisContextManager);
-
         // traces signal configuration
         const tracesEndpoint = appendPath(
             config.otlpEndpoint,
@@ -52,7 +49,9 @@ export const TracesSdk = {
             sampler: new TraceIdRatioBasedSampler(config.sampleRate || 1),
             spanProcessors: [spanProcessor],
         });
-        trace.setGlobalTracerProvider(_tracerProvider);
+        _tracerProvider.register({
+            contextManager: AsyncApisContextManager,
+        });
     },
     forceFlush() {
         return _tracerProvider?.forceFlush();

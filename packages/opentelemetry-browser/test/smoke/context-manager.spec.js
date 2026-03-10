@@ -15,7 +15,7 @@ test('should carry context on different async operations and functions', async (
     const config = encodeURIComponent(
         JSON.stringify({
             instrumentations: {
-                fetch: {enabled: false},
+                '@opentelemetry/instrumentation-fetch': {enabled: false},
             },
         })
     );
