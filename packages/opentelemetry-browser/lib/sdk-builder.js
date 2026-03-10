@@ -3,106 +3,117 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { diag, DiagLogLevel } from '@opentelemetry/api';
+import {diag, DiagLogLevel} from '@opentelemetry/api';
 import {registerInstrumentations} from '@opentelemetry/instrumentation';
 
+import {detectResource} from './detector.js';
 import {createLogger} from './logging.js';
 
 /**
- * @typedef {Object} BrowserSdkConfig
+ * @typedef {Object} RootConfig
  * @property {boolean} [disabled]
  * @property {string} [serviceName]
  * @property {string} [serviceVersion]
  * @property {string} [logLevel] // defaults to 'info'
- * @property {number} [sampleRate] // defaults to 1
  * @property {string} [otlpEndpoint] // defaults to 'http://localhost:4318'
- * @property {Record<string, string>} [exportHeaders] // defaults to {}
- * @property {import('@opentelemetry/instrumentation').Instrumentation[]} [instrumentations] // defaults to []
+ * @property {Record<string, import('./detector.js').AttributeValue>} [resourceAttributes] // defaults to {}
+ * @property {import('@opentelemetry/instrumentation').Instrumentation[]} [instrumentations] // defaults to undefined
  */
-/**
- * @typedef {Object} BrowserSdk
- * @property {() => Promise<void>} shutdown
- * TODO: add more properties
- */
+
+/** @type {RootConfig} */
+const defaultConfig = {
+    logLevel: 'info',
+    serviceName: 'unknown_service:web',
+    otlpEndpoint: 'http://localhost:4318',
+    resourceAttributes: {},
+};
+
 /**
  * @template T
- * @typedef {(config: T & BrowserSdkConfig) => BrowserSdk} SdkBuilder<T>
+ * @typedef {Object} WebSdk
+ * @property {(config: T) => void} init
+ * @property {() => Promise<void>} forceFlush
  */
 
-/**
- * @typedef {Object} Signal
- * @property {() => Promise<void>} shutdown
- */
 /**
  * @template T
- * @typedef {(config: T) => Signal} SignalBuilder<T>
+ * @typedef {Object} WebSdkBuilder
+ * @property {<K>(sdk: WebSdk<K>) => WebSdkBuilder<T & Partial<K>>} with
+ * @property {() => WebSdk<T>} build
  */
 
-/**
- * @template S1
- * @template S2
- * @template S3
- * @param {SignalBuilder<S1>} firstSignalBuilder
- * @param {SignalBuilder<S2>} [secondSignalBuilder]
- * @param {SignalBuilder<S3>} [thirdSignalBuilder]
- * @returns {SdkBuilder<Parameters<SignalBuilder<S1>>[0] & Parameters<SignalBuilder<S2>>[0] & Parameters<SignalBuilder<S3>>[0]>}
- */
-export function buildSdk(firstSignalBuilder, secondSignalBuilder, thirdSignalBuilder) {
-    const args = [].slice.call(arguments);
-    if (args.length === 0) {
-        console.log('You need to pass at least one signal builder');
-        return;
-    }
-    if (args.some(arg => typeof arg !== 'function')) {
-        console.log('All signal builders need to be functions');
-        return;
-    }
+/** @type {WebSdk<any>[]} */
+const _sdks = [];
+let _sdkStarted = false;
 
-    // To control multiple calls to `startBrowserSdk`
-    let sdkStarted = false;
-    /** @type {BrowserSdkConfig} */
-    const defaultConfig = {
-        logLevel: 'info',
-        sampleRate: 1,
-        serviceName: 'unknown_service:web',
-        otlpEndpoint: 'http://localhost:4318',
-        exportHeaders: {},
-    };
-
-    return function startSdk(cfg) {
-        if (sdkStarted || cfg.disabled) {
-            return;
-        }
-        const logLevel = cfg.logLevel ?? defaultConfig.logLevel;
-        diag.setLogger(createLogger({logLevel}), {logLevel: DiagLogLevel.ALL});
-        diag.debug(`Browser SDK intialization`, cfg);
-    
-        const config = {...defaultConfig, ...cfg};
-    
-        // Input validation
-        /** @type {URL} */
-        let endpointUrl;
-        try {
-            endpointUrl = new URL(config.otlpEndpoint);
-        } catch (urlErr) {
-            diag.error(
-                `The value "${config.otlpEndpoint}" for "otlpEndpoint" configuration is not an URL. SDK won't start.`
-            );
-            return;
-        }
-        if (!Array.isArray(config.instrumentations) || config.instrumentations.length === 0) {
-            diag.error(
-                `The are no instrumentations defined in the configuration. SDK won't start.`
-            );
-            return;
-        }
-    
-        const signals = args.map(signalBuilder => signalBuilder(config));
-        registerInstrumentations({ instrumentations: config.instrumentations});
-
-        sdkStarted = true;
+/** @type {WebSdkBuilder<RootConfig>} */
+export const WebSdkBuilder = {
+    with(sdk) {
+        _sdks.push(sdk);
+        return this;
+    },
+    build() {
         return {
-            shutdown: () => Promise.all(signals.map(sdk => sdk.shutdown())).then(() => undefined),
-        }
-    }
-}
+            init(cfg) {
+                if (_sdkStarted || cfg.disabled) {
+                    return;
+                }
+                const logLevel = cfg.logLevel ?? defaultConfig.logLevel;
+                diag.setLogger(createLogger({logLevel}), {
+                    logLevel: DiagLogLevel.ALL,
+                });
+                diag.debug(`Browser SDK intialization`, cfg);
+
+                const config = {...defaultConfig, ...cfg};
+                const {
+                    serviceName,
+                    serviceVersion,
+                    instrumentations,
+                    resourceAttributes,
+                } = config;
+
+                // Input validation
+                /** @type {URL} */
+                let endpointUrl;
+                try {
+                    endpointUrl = new URL(config.otlpEndpoint);
+                } catch (urlErr) {
+                    diag.error(
+                        `The value "${config.otlpEndpoint}" for "otlpEndpoint" configuration is not an URL. SDK won't start.`
+                    );
+                    return;
+                }
+                if (
+                    !Array.isArray(instrumentations) ||
+                    instrumentations.length === 0
+                ) {
+                    diag.error(
+                        'There "instrumentations" array of the configuration is empty or undefined.'
+                    );
+                    return;
+                }
+
+                // Detect resource and inject into config
+                const resource = detectResource(
+                    resourceAttributes,
+                    serviceName,
+                    serviceVersion
+                );
+                // @ts-expect-error -- here TS does not know the extended configuration
+                config.resource = resource;
+
+                // Init the different SDKs and register instrumentations
+                for (const sdk of _sdks) {
+                    sdk.init(config);
+                }
+                registerInstrumentations({instrumentations});
+                _sdkStarted = true;
+            },
+            forceFlush() {
+                return Promise.all(_sdks.map((sdk) => sdk.forceFlush())).then(
+                    () => {}
+                );
+            },
+        };
+    },
+};
