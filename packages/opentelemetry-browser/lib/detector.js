@@ -88,32 +88,41 @@ export function detectResource(attribs, serviceName, serviceVersion) {
 // ref: https://mdn2.netlify.app/en-us/docs/web/http/browser_detection_using_the_user_agent/#which_part_of_the_user_agent_contains_the_information_you_are_looking_for
 
 /**
- * We can always pull something like https://www.npmjs.com/package/ua-parser-js
- * but not for now.
  * @param {string} userAgent
  * @returns {{name: string; version: string} | undefined}
  */
 export function getPlatformInfo(userAgent) {
-    /** @type {Array<{name: string; test: RegExp}>} */
+    /** @type {Array<[string,RegExp[]]>} */
     const platforms = [
-        {name: 'Windows Phone', test: /Windows Phone ([\w\.]+)/i},
-        {name: 'Windows', test: /Windows (\d+)/i},
-        {name: 'Windows RT', test: /Windows NT ([\w\.]+).+ARM;/i},
-        {name: 'Windows', test: /Windows NT (\d+\.\d+)/i},
-        {name: 'Windows IoT', test: /Windows IoT (\d+\.\d+)/i},
-        {name: 'iOS', test: /iPhone OS (\d+(_\d+)*)/i},
-        {name: 'macOS', test: /Mac OS (\d+(_\d+)*)/i},
-        {name: 'macOS', test: /Mac OS X ([\w\.]+)/i},
-        {name: 'Android', test: /Android ([\w\.]+)/i},
-        {name: 'Linux', test: /Linux (\d+)/i},
+        // {name: 'Firefox OS', test: /Firefox\/([\w\.]+)?/i},
+        ['Symbian', [/SymbianOS\/([\w\.]+)/i]],
+        ['Windows Phone', [/Windows Phone ([\w\.]+)/i]],
+        ['Xbox', [/Xbox?/i]],
+        ['Windows', [/Windows (\d+)/i]],
+        ['Windows RT', [/Windows NT ([\w\.]+).+ARM;/i]],
+        ['Windows', [/Windows NT (\d+\.\d+)/i]],
+        ['Windows IoT', [/Windows IoT (\d+\.\d+)/i]],
+        ['iOS', [/iPhone OS (\d+(_\d+)*)/i, /iPad;.+CPU OS (\d+(_\d+)*)/i]],
+        [
+            'macOS',
+            [/Mac OS (\d+(_\d+)*)/i, /Mac OS X ([\w\.]+)/i, /Intel Mac OS X/],
+        ],
+        ['Ubuntu Touch', [/Ubuntu ([\w\.]+).+Mobile/i]],
+        ['Android', [/Android ([\w\.]+)/i, /Android;/i]],
+        ['Linux', [/Linux ([\w_]+)/i, /Linux;/]],
     ];
 
     for (const p of platforms) {
-        const match = p.test.exec(userAgent);
-        if (match) {
-            const name = p.name;
-            const version = match[1].replaceAll('_', '.');
-            return {name, version};
+        const [name, tests] = p;
+        for (const t of tests) {
+            const match = t.exec(userAgent);
+            if (match) {
+                let version;
+                if (match[1]) {
+                    version = match[1].replaceAll('_', '.');
+                }
+                return {name, version};
+            }
         }
     }
 }

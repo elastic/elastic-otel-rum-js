@@ -46,10 +46,11 @@ import {getBrowserInfo, getPlatformInfo} from '../../lib/detector.js';
             const detected = getBrowserInfo(ua);
 
             stats.total++;
-            if (!detected) continue;
-            stats.detected++;
+            if (detected) {
+                stats.detected++;
+            }
 
-            const actual = detected.name;
+            const actual = detected?.name;
             // We will be more relaxed in matches:
             // - "Mobile X" is considered just "X" since we are sending the `isMobile` attribute
             // - "Opera X" is considered just "Opera"
@@ -95,7 +96,7 @@ test('getPlatformInfo - should get the right platform name', () => {
         readFileSync(osFixturesPath, {encoding: 'utf-8'})
     );
 
-    const linuxFlavors = ['Kubuntu', 'ubuntu', 'Debian'];
+    const linuxFlavors = ['Kubuntu', 'Ubuntu', 'Debian'];
     const stats = {
         total: 0,
         detected: 0,
@@ -109,13 +110,14 @@ test('getPlatformInfo - should get the right platform name', () => {
         const {ua, expect} = item;
         const detected = getPlatformInfo(ua);
 
-        if (!expect.name) continue;
+        // if (!expect.name) continue;
 
         stats.total++;
-        if (!detected) continue;
-        stats.detected++;
+        if (detected) {
+            stats.detected++;
+        }
 
-        const actual = detected.name;
+        const actual = detected?.name;
         const expected = linuxFlavors.includes(expect.name)
             ? 'Linux'
             : expect.name;
@@ -123,7 +125,7 @@ test('getPlatformInfo - should get the right platform name', () => {
         if (expected === actual) {
             stats.success++;
         } else {
-            errors.push({actual, expected, ua});
+            errors.push({actual, expect, ua});
             stats.fail++;
         }
     }
@@ -131,7 +133,7 @@ test('getPlatformInfo - should get the right platform name', () => {
     // Uncomment this log message to get a sample of the failing detections
     // console.log(errors.slice(0,50))
     console.log(stats);
-    const threshold = 0.85;
+    const threshold = 0.95;
     assert.ok(
         stats.ratio >= threshold,
         `Platform names detected are not good enough (ratio: ${stats.ratio}, threshold: ${threshold})`
