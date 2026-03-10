@@ -75,12 +75,7 @@ const defaultConfig = {
 /**
  * @param {BrowserSdkConfiguration} cfg
  * @returns {{
- *      providers: {
- *          tracer: import('@opentelemetry/api').TracerProvider;
- *          meter: import('@opentelemetry/api').MeterProvider;
- *          logger: import('@opentelemetry/api-logs').LoggerProvider;
- *      };
- *      flush: () => Promise<void>
+ *      forceFlush: () => Promise<void>
  * }}
  */
 export function startBrowserSdk(cfg = {}) {
@@ -204,19 +199,12 @@ export function startBrowserSdk(cfg = {}) {
     sdkStarted = true;
 
     return {
-        providers: {
-            tracer: tracerProvider,
-            meter: meterProvider,
-            logger: loggerProvider,
-        },
-        flush() {
+        forceFlush() {
             return Promise.all([
-                spanProcessor.forceFlush(),
-                metricsReader.forceFlush(),
-                logsProcessor.forceFlush(),
-            ]).then(() => {
-                return;
-            });
+                tracerProvider.forceFlush(),
+                meterProvider.forceFlush(),
+                loggerProvider.forceFlush(),
+            ]).then(() => {});
         },
     };
 }
