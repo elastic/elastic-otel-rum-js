@@ -19,32 +19,36 @@ import {appendPath} from './utils.js';
  * @property {import('@opentelemetry/resources').Resource} resource
  */
 
-/** @type {MeterProvider} */
-let _meterProvider;
+/**
+ * @returns {import('./sdk.js').WebSdk<MetricsConfig>}
+ */
+export function MetricsSdk() {
+    /** @type {MeterProvider} */
+    let _meterProvider;
 
-/** @type {import('./sdk.js').WebSdk<MetricsConfig>} */
-export const MetricsSdk = {
-    init(config) {
-        const metricsEndpoint = appendPath(
-            config.otlpEndpoint,
-            'v1/metrics'
-        ).href;
-        const metricsReader = new PeriodicExportingMetricReader({
-            exporter: new OTLPMetricExporter({
-                url: metricsEndpoint,
-                headers: config.exportHeaders,
-            }),
-        });
-        _meterProvider = new MeterProvider({
-            resource: config.resource,
-            readers: [metricsReader],
-        });
-        metrics.setGlobalMeterProvider(_meterProvider);
-    },
-    forceFlush() {
-        if (_meterProvider) {
-            return _meterProvider.forceFlush();
-        }
-        return Promise.resolve();
-    },
-};
+    return {
+        init(config) {
+            const metricsEndpoint = appendPath(
+                config.otlpEndpoint,
+                'v1/metrics'
+            ).href;
+            const metricsReader = new PeriodicExportingMetricReader({
+                exporter: new OTLPMetricExporter({
+                    url: metricsEndpoint,
+                    headers: config.exportHeaders,
+                }),
+            });
+            _meterProvider = new MeterProvider({
+                resource: config.resource,
+                readers: [metricsReader],
+            });
+            metrics.setGlobalMeterProvider(_meterProvider);
+        },
+        forceFlush() {
+            if (_meterProvider) {
+                return _meterProvider.forceFlush();
+            }
+            return Promise.resolve();
+        },
+    };
+}

@@ -45,9 +45,10 @@ import {WebVitalsInstrumentation} from './instrumentations/web-vitals.js';
  * @param {EdotWebSdkConfig} config
  */
 globalThis['startBrowserSdk'] = function startBrowserSdk(config) {
-    const webSdk = WebSdkBuilder.with(TracesSdk)
-        .with(MetricsSdk)
-        .with(LogsSdk)
+    const webSdk = WebSdkBuilder()
+        .with(TracesSdk())
+        .with(MetricsSdk())
+        .with(LogsSdk())
         .build();
 
     const bundleConfig = {

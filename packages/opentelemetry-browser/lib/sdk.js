@@ -42,78 +42,82 @@ const defaultConfig = {
  * @property {() => WebSdk<T>} build
  */
 
-/** @type {WebSdk<any>[]} */
-const _sdks = [];
-let _sdkStarted = false;
+/**
+ * @returns {WebSdkBuilder<RootConfig>}
+ */
+export function WebSdkBuilder() {
+    /** @type {WebSdk<any>[]} */
+    const _sdks = [];
+    let _sdkStarted = false;
 
-/** @type {WebSdkBuilder<RootConfig>} */
-export const WebSdkBuilder = {
-    with(sdk) {
-        _sdks.push(sdk);
-        return this;
-    },
-    build() {
-        return {
-            init(cfg) {
-                if (_sdkStarted || cfg.disabled) {
-                    return;
-                }
-                const logLevel = cfg.logLevel ?? defaultConfig.logLevel;
-                diag.setLogger(createLogger({logLevel}), {
-                    logLevel: DiagLogLevel.ALL,
-                });
-                diag.debug(`Browser SDK intialization`, cfg);
+    return {
+        with(sdk) {
+            _sdks.push(sdk);
+            return this;
+        },
+        build() {
+            return {
+                init(cfg) {
+                    if (_sdkStarted || cfg.disabled) {
+                        return;
+                    }
+                    const logLevel = cfg.logLevel ?? defaultConfig.logLevel;
+                    diag.setLogger(createLogger({logLevel}), {
+                        logLevel: DiagLogLevel.ALL,
+                    });
+                    diag.debug(`Browser SDK intialization`, cfg);
 
-                const config = {...defaultConfig, ...cfg};
-                const {
-                    serviceName,
-                    serviceVersion,
-                    instrumentations,
-                    resourceAttributes,
-                } = config;
+                    const config = {...defaultConfig, ...cfg};
+                    const {
+                        serviceName,
+                        serviceVersion,
+                        instrumentations,
+                        resourceAttributes,
+                    } = config;
 
-                // Input validation
-                /** @type {URL} */
-                let endpointUrl;
-                try {
-                    endpointUrl = new URL(config.otlpEndpoint);
-                } catch (urlErr) {
-                    diag.error(
-                        `The value "${config.otlpEndpoint}" for "otlpEndpoint" configuration is not an URL. SDK won't start.`
+                    // Input validation
+                    /** @type {URL} */
+                    let endpointUrl;
+                    try {
+                        endpointUrl = new URL(config.otlpEndpoint);
+                    } catch (urlErr) {
+                        diag.error(
+                            `The value "${config.otlpEndpoint}" for "otlpEndpoint" configuration is not an URL. SDK won't start.`
+                        );
+                        return;
+                    }
+                    if (
+                        !Array.isArray(instrumentations) ||
+                        instrumentations.length === 0
+                    ) {
+                        diag.error(
+                            'There "instrumentations" array of the configuration is empty or undefined.'
+                        );
+                        return;
+                    }
+
+                    // Detect resource and inject into config
+                    const resource = detectResource(
+                        resourceAttributes,
+                        serviceName,
+                        serviceVersion
                     );
-                    return;
-                }
-                if (
-                    !Array.isArray(instrumentations) ||
-                    instrumentations.length === 0
-                ) {
-                    diag.error(
-                        'There "instrumentations" array of the configuration is empty or undefined.'
-                    );
-                    return;
-                }
+                    // @ts-expect-error -- here TS does not know the extended configuration
+                    config.resource = resource;
 
-                // Detect resource and inject into config
-                const resource = detectResource(
-                    resourceAttributes,
-                    serviceName,
-                    serviceVersion
-                );
-                // @ts-expect-error -- here TS does not know the extended configuration
-                config.resource = resource;
-
-                // Init the different SDKs and register instrumentations
-                for (const sdk of _sdks) {
-                    sdk.init(config);
-                }
-                registerInstrumentations({instrumentations});
-                _sdkStarted = true;
-            },
-            forceFlush() {
-                return Promise.all(_sdks.map((sdk) => sdk.forceFlush())).then(
-                    () => {}
-                );
-            },
-        };
-    },
-};
+                    // Init the different SDKs and register instrumentations
+                    for (const sdk of _sdks) {
+                        sdk.init(config);
+                    }
+                    registerInstrumentations({instrumentations});
+                    _sdkStarted = true;
+                },
+                forceFlush() {
+                    return Promise.all(
+                        _sdks.map((sdk) => sdk.forceFlush())
+                    ).then(() => {});
+                },
+            };
+        },
+    };
+}
