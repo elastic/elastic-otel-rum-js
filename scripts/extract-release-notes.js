@@ -119,9 +119,9 @@ async function main() {
         chunks.push(stripDocsV3Syntax(relnotes));
 
         const branch = await getBranch();
-        const readmeUrl = `https://github.com/elastic/elastic-otel-browser/tree/${branch}/${pkgDir}#readme`;
-        const relnotesUrl = `https://github.com/elastic/elastic-otel-browser/blob/${branch}/docs/release-notes/index.md`;
-        const breakingUrl = `https://github.com/elastic/elastic-otel-browser/blob/${branch}/docs/release-notes/breaking-changes.md`;
+        const readmeUrl = `https://github.com/elastic/elastic-otel-rum-js/tree/${branch}/${pkgDir}#readme`;
+        const relnotesUrl = `https://github.com/elastic/elastic-otel-rum-js/blob/${branch}/docs/release-notes/index.md`;
+        const breakingUrl = `https://github.com/elastic/elastic-otel-rum-js/blob/${branch}/docs/release-notes/breaking-changes.md`;
         fs.writeFileSync(
             dest,
             `## Changelog
@@ -143,8 +143,8 @@ ${chunks.join('')}
         );
 
         const branch = await getBranch();
-        const readmeUrl = `https://github.com/elastic/elastic-otel-browser/tree/${branch}/${pkgDir}#readme`;
-        const changelogUrl = `https://github.com/elastic/elastic-otel-browser/blob/${branch}/${pkgDir}/CHANGELOG.md`;
+        const readmeUrl = `https://github.com/elastic/elastic-otel-rum-js/tree/${branch}/${pkgDir}#readme`;
+        const changelogUrl = `https://github.com/elastic/elastic-otel-rum-js/blob/${branch}/${pkgDir}/CHANGELOG.md`;
         fs.writeFileSync(
             dest,
             `## Changelog
