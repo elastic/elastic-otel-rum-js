@@ -14,7 +14,6 @@ import {appendPath} from './utils.js';
  * @property {string} otlpEndpoint
  * @property {Record<string, string>} exportHeaders
  * @property {import('@opentelemetry/resources').Resource} resource
- * @property {string} myLogconfig
  */
 
 /**
