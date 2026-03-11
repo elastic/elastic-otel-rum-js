@@ -1,4 +1,4 @@
-# Release a tagged version of the '@elastic/opentelemetry-node' package.
+# Release a tagged version of the '@elastic/opentelemetry-browser' package.
 name: release
 
 # Primarily this workflow is about doing a release for a *tag*. However, this is
