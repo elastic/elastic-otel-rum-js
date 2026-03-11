@@ -1,41 +1,19 @@
-/**
- * @param {BrowserSdkConfiguration} cfg
- * @returns {{
- *      providers: {
- *          tracer: import('@opentelemetry/api').TracerProvider;
- *          meter: import('@opentelemetry/api').MeterProvider;
- *          logger: import('@opentelemetry/api-logs').LoggerProvider;
- *      };
- *      flush: () => Promise<void>
- * }}
- */
-export function startBrowserSdk(cfg?: BrowserSdkConfiguration): {
-    providers: {
-        tracer: import('@opentelemetry/api').TracerProvider;
-        meter: import('@opentelemetry/api').MeterProvider;
-        logger: import('@opentelemetry/api-logs').LoggerProvider;
-    };
-    flush: () => Promise<void>;
+export type WebSdkBuilder<T> = {
+    with: <K>(sdk: WebSdk<K>) => WebSdkBuilder<T & Partial<K>>;
+    build: () => WebSdk<T>;
 };
-export type InstrumentationsConfigMap = {
-    "@opentelemetry/instrumentation-document-load": import('@opentelemetry/instrumentation-document-load').DocumentLoadInstrumentationConfig;
-    "@opentelemetry/instrumentation-fetch": import('@opentelemetry/instrumentation-fetch').FetchInstrumentationConfig;
-    "@opentelemetry/instrumentation-long-task": import('@opentelemetry/instrumentation-long-task').LongtaskInstrumentationConfig;
-    "@opentelemetry/instrumentation-user-interaction": import('@opentelemetry/instrumentation-user-interaction').UserInteractionInstrumentationConfig;
-    "@opentelemetry/instrumentation-xml-http-request": import('@opentelemetry/instrumentation-xml-http-request').XMLHttpRequestInstrumentationConfig;
-    "@opentelemetry/instrumentation-web-exception": import('@opentelemetry/instrumentation-web-exception').GlobalErrorsInstrumentationConfig;
-};
-export type BrowserSdkConfiguration = {
+/** @type {WebSdkBuilder<RootConfig>} */
+export const WebSdkBuilder: WebSdkBuilder<RootConfig>;
+export type RootConfig = {
     disabled?: boolean;
     serviceName?: string;
     serviceVersion?: string;
     logLevel?: string;
-    sampleRate?: number;
-    resourceAttributes?: Record<string, import('./detector.js').AttributeValue>;
     otlpEndpoint?: string;
-    /**
-     * // other options
-     */
-    exportHeaders?: Record<string, string>;
-    configInstrumentations?: Partial<InstrumentationsConfigMap>;
+    resourceAttributes?: Record<string, import('./detector.js').AttributeValue>;
+    instrumentations?: import('@opentelemetry/instrumentation').Instrumentation[];
+};
+export type WebSdk<T> = {
+    init: (config: T) => void;
+    forceFlush: () => Promise<void>;
 };
