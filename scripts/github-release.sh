@@ -86,5 +86,5 @@ gh release create "$TAG_NAME" \
 # Upload the build assets of the EDOT so user do not have to
 # dig into the zip file to get them
 if [[ "$PKG_DIR" == "packages/opentelemetry-browser" ]]; then
-  gh release upload "$TAG_NAME" "$PKG_DIR/build/*"
+  gh release upload "$TAG_NAME" $PKG_DIR/build/*
 fi
