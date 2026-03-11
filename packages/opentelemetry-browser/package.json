@@ -1,6 +1,6 @@
 {
   "name": "@elastic/opentelemetry-browser",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "type": "module",
   "publishConfig": {
     "access": "public",
@@ -24,6 +24,7 @@
   "main": "./lib/index.js",
   "types": "./types/index.d.ts",
   "scripts": {
+    "prepublishOnly": "npm run build",
     "clean": "rm -rf build",
     "watch": "node ../../scripts/watch.mjs ./lib npm run build",
     "build:iife": "esbuild ./lib/bundle.js --bundle --conditions=esnext,module --sourcemap --platform=browser --target=es2022 --outfile=build/elastic-otel-browser.js",

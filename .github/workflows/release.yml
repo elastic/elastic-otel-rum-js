@@ -8,10 +8,8 @@ on:
   push:
     tags:
       - v*.*.*
-    branches:
-      - main
     paths:
-      - 'packages/opentelemetry-node/**'
+      - 'packages/opentelemetry-browser/**'
       - '.github/workflows/release.yml'
 
 permissions:
@@ -36,14 +34,16 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
           package-manager-cache: false
 
-      - name: npm publish (only for tag releases)
-        if: startsWith(github.ref, 'refs/tags')
+      - name: npm ci
+        run: npm run ci-all
+
+      - name: npm publish
         working-directory: ./packages/opentelemetry-browser
         # https://docs.npmjs.com/trusted-publishers
         run: npm publish
 
-      - name: GitHub release (only for tag releases)
-        if: startsWith(github.ref, 'refs/tags')
+      - name: GitHub release
+        working-directory: ./packages/opentelemetry-browser
         run: |
           npm ci --ignore-scripts  # need top-level devDeps for github-release.sh script
           ./scripts/github-release.sh "packages/opentelemetry-browser" "${{ github.ref_name }}"

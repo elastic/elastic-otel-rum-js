@@ -4,7 +4,7 @@
 # (This is typically only run from the release.yml CI workflow.)
 #
 # The release will be marked as the "latest" if:
-# (a) PKG_DIR is "packages/opentelemetry-node", the primary package in this repo, and
+# (a) PKG_DIR is "packages/opentelemetry-browser", the primary package in this repo, and
 # (b) the given TAG_NAME is the *latest* "vX.Y.Z" tag, and is not a pre-release.
 #
 # - For auth, this expects the 'GH_TOKEN' envvar to have been set.
@@ -15,8 +15,7 @@
 # Usage:
 #   ./scripts/github-release.sh PKG_DIR TAG_NAME
 # Examples:
-#   ./scripts/github-release.sh packages/opentelemetry-node v0.1.0
-#   ./scripts/github-release.sh packages/mockotlpserver mockotlpserver-v0.2.0
+#   ./scripts/github-release.sh packages/opentelemetry-browser v0.1.0
 
 if [ "$TRACE" != "" ]; then
     export PS4='${BASH_SOURCE}:${LINENO}: ${FUNCNAME[0]:+${FUNCNAME[0]}(): }'
@@ -53,6 +52,10 @@ if [[ "$TAG_NAME" != "$EXPECTED_TAG_NAME" ]]; then
   fatal "TAG_NAME, '$TAG_NAME', does not match expected value, '$EXPECTED_TAG_NAME'"
 fi
 
+# Generate the notice file
+$TOP/scripts/gen-notice.sh $PKG_DIR > "$PKG_DIR/NOTICE2.md"
+mv "$PKG_DIR/NOTICE2.md" "$PKG_DIR/NOTICE.md"
+
 # Extract the changelog section for this version.
 $TOP/scripts/extract-release-notes.js $PKG_DIR
 echo "INFO: Extracted changelog"
@@ -80,5 +83,8 @@ gh release create "$TAG_NAME" \
   --notes-file build/release-notes.md \
   --latest=$IS_LATEST
 
-# TODO: upload the assets in the release for easier access
-# also generate notice???
+# Upload the build assets of the EDOT so user do not have to
+# dig into the zip file to get them
+if [[ "$PKG_DIR" == "packages/opentelemetry-browser" ]]; then
+  gh release upload "$TAG_NAME" "$PKG_DIR/build/*"
+fi

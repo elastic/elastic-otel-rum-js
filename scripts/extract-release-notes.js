@@ -16,11 +16,13 @@
 // Example:
 //   ./scripts/extract-release-notes.js packages/opentelemetry-browser
 
-const assert = require('assert/strict');
-const path = require('path');
-const fs = require('fs');
-const {exec} = require('child_process');
+import assert from 'assert/strict';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import fs from 'fs';
+import {exec} from 'child_process';
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const TOP = path.resolve(__dirname, '..');
 const BUILD_DIR = path.join(TOP, 'build');
 
@@ -89,7 +91,7 @@ async function main() {
     fs.mkdirSync(BUILD_DIR, {recursive: true});
 
     const dest = path.join(BUILD_DIR, 'release-notes.md');
-    if (path.posix.resolve(pkgDir).endsWith('/packages/opentelemetry-node')) {
+    if (path.posix.resolve(pkgDir).endsWith('/packages/opentelemetry-browser')) {
         // docsv3-syntax release notes in "docs/release-notes/..."
         const chunks = [];
         try {
@@ -115,9 +117,9 @@ async function main() {
         chunks.push(stripDocsV3Syntax(relnotes));
 
         const branch = await getBranch();
-        const readmeUrl = `https://github.com/elastic/elastic-otel-node/tree/${branch}/${pkgDir}#readme`;
-        const relnotesUrl = `https://github.com/elastic/elastic-otel-node/blob/${branch}/docs/release-notes/index.md`;
-        const breakingUrl = `https://github.com/elastic/elastic-otel-node/blob/${branch}/docs/release-notes/breaking-changes.md`;
+        const readmeUrl = `https://github.com/elastic/elastic-otel-browser/tree/${branch}/${pkgDir}#readme`;
+        const relnotesUrl = `https://github.com/elastic/elastic-otel-browser/blob/${branch}/docs/release-notes/index.md`;
+        const breakingUrl = `https://github.com/elastic/elastic-otel-browser/blob/${branch}/docs/release-notes/breaking-changes.md`;
         fs.writeFileSync(
             dest,
             `## Changelog
@@ -139,8 +141,8 @@ ${chunks.join('')}
         );
 
         const branch = await getBranch();
-        const readmeUrl = `https://github.com/elastic/elastic-otel-node/tree/${branch}/${pkgDir}#readme`;
-        const changelogUrl = `https://github.com/elastic/elastic-otel-node/blob/${branch}/${pkgDir}/CHANGELOG.md`;
+        const readmeUrl = `https://github.com/elastic/elastic-otel-browser/tree/${branch}/${pkgDir}#readme`;
+        const changelogUrl = `https://github.com/elastic/elastic-otel-browser/blob/${branch}/${pkgDir}/CHANGELOG.md`;
         fs.writeFileSync(
             dest,
             `## Changelog
