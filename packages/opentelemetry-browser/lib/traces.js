@@ -3,7 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import {trace, context} from '@opentelemetry/api';
+import {trace, context, propagation} from '@opentelemetry/api';
+import {CompositePropagator, W3CBaggagePropagator, W3CTraceContextPropagator} from '@opentelemetry/core';
 import {OTLPTraceExporter} from '@opentelemetry/exporter-trace-otlp-http';
 import {
     BatchSpanProcessor,
@@ -28,12 +29,6 @@ let _tracerProvider;
 /** @type {import('./sdk.js').WebSdk<TraceSdkConfig>} */
 export const TracesSdk = {
     init(config) {
-        // TODO: WebTracerProvider comes with
-        // - a composite propagator [W3C, Baggage]
-        // - a context manager (Stack, which has issues with exporters)
-        // Should we allow users to pass their own propagator, contextmanager?
-
-        // traces signal configuration
         const tracesEndpoint = appendPath(
             config.otlpEndpoint,
             'v1/traces'
@@ -49,9 +44,20 @@ export const TracesSdk = {
             sampler: new TraceIdRatioBasedSampler(config.sampleRate || 1),
             spanProcessors: [spanProcessor],
         });
-        _tracerProvider.register({
-            contextManager: AsyncApisContextManager,
-        });
+        trace.setGlobalTracerProvider(_tracerProvider);
+
+        // NOTE: although `WebTracerProvider#register` does set a context manager
+        // an propagators this for us we explicitly set them here so
+        // - they can be configured in the future
+        // - upstream can deprecate the method without impacting us
+        AsyncApisContextManager.enable();
+        context.setGlobalContextManager(AsyncApisContextManager);
+        propagation.setGlobalPropagator(new CompositePropagator({
+            propagators: [
+                new W3CTraceContextPropagator(),
+                new W3CBaggagePropagator(),
+            ],
+        }));
     },
     forceFlush() {
         return _tracerProvider?.forceFlush();
