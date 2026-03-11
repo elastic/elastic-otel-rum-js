@@ -6,6 +6,12 @@
     "access": "public",
     "provenance": true
   },
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/elastic/elastic-otel-rum-js.git",
+    "directory": "packages/opentelemetry-browser"
+  },
   "keywords": [
     "opentelemetry",
     "telemetry",
@@ -16,6 +22,7 @@
     "rum",
     "browser"
   ],
+  "author": "Elastic Observability <https://www.elastic.co/observability>",
   "files": [
     "lib",
     "build",
@@ -40,9 +47,6 @@
     "test:smoke": "npm run build && cp build/* ./test/smoke/assets && playwright test",
     "test:unit": "node --test test/unit/*.test.js"
   },
-  "author": "",
-  "license": "ISC",
-  "description": "",
   "dependencies": {
     "@opentelemetry/api": "^1.9.0",
     "@opentelemetry/api-logs": "^0.213.0",
