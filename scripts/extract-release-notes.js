@@ -18,7 +18,7 @@
 
 import assert from 'assert/strict';
 import path from 'path';
-import { fileURLToPath } from 'url';
+import {fileURLToPath} from 'url';
 import fs from 'fs';
 import {exec} from 'child_process';
 
@@ -91,7 +91,9 @@ async function main() {
     fs.mkdirSync(BUILD_DIR, {recursive: true});
 
     const dest = path.join(BUILD_DIR, 'release-notes.md');
-    if (path.posix.resolve(pkgDir).endsWith('/packages/opentelemetry-browser')) {
+    if (
+        path.posix.resolve(pkgDir).endsWith('/packages/opentelemetry-browser')
+    ) {
         // docsv3-syntax release notes in "docs/release-notes/..."
         const chunks = [];
         try {
