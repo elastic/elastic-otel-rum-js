@@ -4,7 +4,11 @@
  */
 
 import {trace, context, propagation} from '@opentelemetry/api';
-import {CompositePropagator, W3CBaggagePropagator, W3CTraceContextPropagator} from '@opentelemetry/core';
+import {
+    CompositePropagator,
+    W3CBaggagePropagator,
+    W3CTraceContextPropagator,
+} from '@opentelemetry/core';
 import {OTLPTraceExporter} from '@opentelemetry/exporter-trace-otlp-http';
 import {
     BatchSpanProcessor,
@@ -52,12 +56,14 @@ export const TracesSdk = {
         // - upstream can deprecate the method without impacting us
         AsyncApisContextManager.enable();
         context.setGlobalContextManager(AsyncApisContextManager);
-        propagation.setGlobalPropagator(new CompositePropagator({
-            propagators: [
-                new W3CTraceContextPropagator(),
-                new W3CBaggagePropagator(),
-            ],
-        }));
+        propagation.setGlobalPropagator(
+            new CompositePropagator({
+                propagators: [
+                    new W3CTraceContextPropagator(),
+                    new W3CBaggagePropagator(),
+                ],
+            })
+        );
     },
     forceFlush() {
         return _tracerProvider?.forceFlush();
