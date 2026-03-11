@@ -35,6 +35,9 @@ export const LogsSdk = {
         logs.setGlobalLoggerProvider(_loggerProvider);
     },
     forceFlush() {
-        return _loggerProvider.forceFlush();
+        if (_loggerProvider) {
+            return _loggerProvider.forceFlush();
+        }
+        return Promise.resolve();
     },
 };

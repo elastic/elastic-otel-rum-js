@@ -45,7 +45,9 @@ export const TracesSdk = {
         );
         _tracerProvider = new WebTracerProvider({
             resource: config.resource,
-            sampler: new TraceIdRatioBasedSampler(config.sampleRate || 1),
+            sampler: new TraceIdRatioBasedSampler(
+                typeof config.sampleRate === 'number' ? config.sampleRate : 1
+            ),
             spanProcessors: [spanProcessor],
         });
         trace.setGlobalTracerProvider(_tracerProvider);
@@ -66,6 +68,9 @@ export const TracesSdk = {
         );
     },
     forceFlush() {
-        return _tracerProvider?.forceFlush();
+        if (_tracerProvider) {
+            return _tracerProvider.forceFlush();
+        }
+        return Promise.resolve();
     },
 };

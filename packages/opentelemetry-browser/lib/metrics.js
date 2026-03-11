@@ -42,6 +42,9 @@ export const MetricsSdk = {
         metrics.setGlobalMeterProvider(_meterProvider);
     },
     forceFlush() {
-        return _meterProvider.forceFlush();
+        if (_meterProvider) {
+            return _meterProvider.forceFlush();
+        }
+        return Promise.resolve();
     },
 };
