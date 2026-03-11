@@ -34,4 +34,4 @@ To check for security updates, go to [Security announcements for the Elastic sta
 
 ## 0.1.0 [edot-node-0.1.0-release-notes]
 
-First release of the Elastic Distribution of OpenTelemetry Node.js.
+First release of the Elastic Distribution of OpenTelemetry Browser.
