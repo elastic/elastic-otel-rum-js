@@ -25,7 +25,7 @@
   "types": "./types/index.d.ts",
   "scripts": {
     "clean": "rm -rf build",
-    "build:version": "EDOT_VERSION=$(npx json -f package.json version); CODE=\"export const EDOT_VERSION='$EDOT_VERSION';\"; awk -v code=\"$CODE\" '/^export/ { print code; next } { print }' lib/version.js > tmp && mv tmp lib/version.js",
+    "build:version": "CODE=\"export const EDOT_VERSION='$(npx json -f package.json version)';\"; awk -v code=\"$CODE\" '/^export/ { print code; next } { print }' lib/version.js > tmp && mv tmp lib/version.js",
     "build:iife": "esbuild ./lib/bundle.js --bundle --conditions=esnext,module --sourcemap --platform=browser --target=es2022 --outfile=build/elastic-otel-browser.js",
     "build:min": "esbuild ./lib/bundle.js --bundle --conditions=esnext,module --minify --sourcemap --platform=browser --target=es2022 --outfile=build/elastic-otel-browser.min.js",
     "build": "npm run clean && npm run build:version && npm run build:iife && npm run build:min",
