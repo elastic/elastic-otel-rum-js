@@ -31,8 +31,8 @@ cross_links:
   - integration-docs
   - opentelemetry
 
-# toc:
-#   - toc: edot-browser
+toc:
+  - toc: edot-browser
 
 subs:
   motlp: Elastic Cloud Managed OTLP Endpoint
