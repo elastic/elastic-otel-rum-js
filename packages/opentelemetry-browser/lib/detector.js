@@ -5,6 +5,7 @@
 
 import {resourceFromAttributes} from '@opentelemetry/resources';
 import {SDK_INFO} from '@opentelemetry/core';
+
 import {
     ATTR_BROWSER_BRANDS,
     ATTR_BROWSER_LANGUAGE,
@@ -12,6 +13,7 @@ import {
     ATTR_BROWSER_PLATFORM,
     ATTR_USER_AGENT_ORIGINAL,
 } from './semconv.js';
+import {EDOT_VERSION} from './version.js';
 
 /**
  * @typedef {Object} UserAgentData
@@ -70,9 +72,7 @@ export function detectResource(attribs, serviceName, serviceVersion) {
     attribs[ATTR_BROWSER_LANGUAGE] = navigator.language;
     attribs[ATTR_USER_AGENT_ORIGINAL] = userAgent;
     attribs['telemetry.distro.name'] = 'elastic';
-    // TODO: check how to keep versions up to date
-    // [trent] create a lint rule to check if this is in sync with package.json
-    attribs['telemetry.distro.version'] = '0.1.0';
+    attribs['telemetry.distro.version'] = EDOT_VERSION;
 
     // This might be usefull info
     // ['browser.touch_screen_enabled']: navigator.maxTouchPoints > 0,
