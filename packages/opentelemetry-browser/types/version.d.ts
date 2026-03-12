@@ -1,0 +1,1 @@
+export const EDOT_VERSION: "1.0.1";
