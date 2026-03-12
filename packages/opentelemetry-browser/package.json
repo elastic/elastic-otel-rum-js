@@ -1,6 +1,6 @@
 {
   "name": "@elastic/opentelemetry-browser",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "type": "module",
   "publishConfig": {
     "access": "public",
@@ -34,7 +34,7 @@
     "lint:eslint": "eslint .",
     "lint:prettier": "(cd ../../; prettier --check $npm_config_local_prefix)",
     "lint:licenses": "../../scripts/gen-notice.sh --lint .",
-    "lint:version": "EDOT_VERSION=$(npx json -f package.json version); grep -Fq \"$EDOT_VERSION\" lib/version.js || { echo \"::error::Version $EDOT_VERSION not found\"; exit 1; }",
+    "lint:version": "EDOT_VERSION=$(npx json -f package.json version); grep -Fq \"$EDOT_VERSION\" lib/version.js || { echo \"::error::Version $EDOT_VERSION not set in lib/version.js\"; exit 1; }",
     "lint:types": "rm -rf build/lint-types && tsc --outDir build/lint-types && diff -ur types build/lint-types && rm -rf build/lint-types",
     "lint:fix": "eslint --fix . && (cd ../../; prettier --list-different --write $npm_config_local_prefix)",
     "lint:ci": " npm run lint:licenses && npm run lint:version && npm run lint:types # eslint/prettier ran in repo root",
