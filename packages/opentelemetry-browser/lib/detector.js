@@ -13,7 +13,7 @@ import {
     ATTR_BROWSER_PLATFORM,
     ATTR_USER_AGENT_ORIGINAL,
 } from './semconv.js';
-import { EDOT_VERSION } from './version.js';
+import {EDOT_VERSION} from './version.js';
 
 /**
  * @typedef {Object} UserAgentData
