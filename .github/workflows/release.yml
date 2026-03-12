@@ -19,8 +19,6 @@ jobs:
   release:
     runs-on: ubuntu-24.04
     permissions:
-      artifact-metadata: write
-      attestations: write
       contents: write
       id-token: write # Required for OIDC and provenance (npm publish)
       pull-requests: read
