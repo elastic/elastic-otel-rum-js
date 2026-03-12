@@ -25,10 +25,10 @@
   "types": "./types/index.d.ts",
   "scripts": {
     "clean": "rm -rf build",
-    "version": "EDOT_VERSION=$(npx json -f package.json version); awk '/^export/ { print \"export=\"ENVIRON[\"EDOT_VERSION\"]; next } { print }' lib/version.js > tmp && mv tmp lib/version.js",
+    "build:version": "EDOT_VERSION=$(npx json -f package.json version); awk '/^export/ { print \"export=\"ENVIRON[\"EDOT_VERSION\"]; next } { print }' lib/version.js > tmp && mv tmp lib/version.js",
     "build:iife": "esbuild ./lib/bundle.js --bundle --conditions=esnext,module --sourcemap --platform=browser --target=es2022 --outfile=build/elastic-otel-browser.js",
     "build:min": "esbuild ./lib/bundle.js --bundle --conditions=esnext,module --minify --sourcemap --platform=browser --target=es2022 --outfile=build/elastic-otel-browser.min.js",
-    "build": "npm run clean && npm run build:iife && npm run build:min",
+    "build": "npm run clean && npm run build:version && npm run build:iife && npm run build:min",
     "gen:types": "rm -rf types && tsc # TODO: would be nice to tree-shake the *.d.ts files",
     "lint": "npm run lint:eslint && npm run lint:prettier && npm run lint:licenses && npm run lint:version && npm run lint:types",
     "lint:eslint": "eslint .",
