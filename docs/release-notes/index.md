@@ -28,13 +28,10 @@ To check for security updates, go to [Security announcements for the Elastic sta
 %
 % ### Fixes [edot-browser-X.X.X-fixes]
 % *
+%
+% ### Chores [edot-browser-X.X.X-chores]
+% *
 
-## version.next [edot-browser-next-release-notes]
+## 0.1.0 [edot-browser-0.1.0-release-notes]
 
-### Features and enhancements [edot-browser-next-features-enhancements]
-
-*
-
-### Fixes [edot-browser-next-fixes]
-
-* 
+First release of the Elastic Distribution of OpenTelemetry Browser.

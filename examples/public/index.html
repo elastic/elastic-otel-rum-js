@@ -40,7 +40,7 @@
             exportHeaders: otelEnv.exportHeaders || {},
             // NOTE: uncomment this to avoid the export instrumentation issue
             // ref: https://github.com/open-telemetry/opentelemetry-js/issues/6339
-            configInstrumentations: {
+            instrumentations: {
                 '@opentelemetry/instrumentation-fetch': { enabled: false }
             }
         })

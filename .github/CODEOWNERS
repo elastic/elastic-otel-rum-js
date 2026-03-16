@@ -1,0 +1,4 @@
+*  @elastic/apm-agent-rum
+/.github/workflows/  @elastic/apm-agent-rum @elastic/observablt-ci
+*.md @elastic/ingest-docs 
+/docs/ @elastic/ingest-docs
