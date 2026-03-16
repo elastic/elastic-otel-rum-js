@@ -33,10 +33,6 @@ Ensure your reverse proxy and OTLP endpoint accept the `/v1/metrics` path.
 - Metrics are only sent when the SDK exports (for example on an interval or when the page is unloaded). Temporary or single-page sessions might produce few data points.
 - Browser environments vary (device, network, extensions). Metric values might be noisier or less consistent than server-side metrics.
 
-:::{note}
-Web Vitals instrumentation (LCP, FID, CLS, and related Core Web Vitals metrics) is planned. Until it's available, for Core Web Vitals data you can use classic Elastic {{product.apm}} browser agents or a dedicated Web Vitals library.
-:::
-
 ## Traces [traces]
 
 ### What EDOT Browser currently emits [traces-what-is-emitted]
