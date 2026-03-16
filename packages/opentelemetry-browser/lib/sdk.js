@@ -59,7 +59,7 @@ import {detectResource} from './detector.js';
  * @property {Partial<InstrumentationsConfigMap>} [instrumentations]
  */
 
-// To control multipla calls to `startBrowserSdk`
+// To control multiple calls to `startBrowserSdk`
 let sdkStarted = false;
 
 /** @type {BrowserSdkConfiguration} */

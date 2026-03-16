@@ -1,0 +1,60 @@
+# Release a tagged version of the '@elastic/opentelemetry-browser' package.
+name: release
+
+# Primarily this workflow is about doing a release for a *tag*. However, this is
+# also run for pushes to "main" to (a) go through some of the motions for
+# testing, and (b) publishing the Docker image with an "edge" label.
+on:
+  push:
+    tags:
+      - v*.*.*
+    paths:
+      - 'packages/opentelemetry-browser/**'
+      - '.github/workflows/release.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      id-token: write # Required for OIDC and provenance (npm publish)
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v6
+        with:
+          # Require npm 11.5.1 or later for https://docs.npmjs.com/trusted-publishers.
+          node-version: 'v24.8.0'
+          registry-url: 'https://registry.npmjs.org'
+          package-manager-cache: false
+
+      - name: npm ci
+        run: npm run ci-all
+
+      - name: npm publish
+        working-directory: ./packages/opentelemetry-browser
+        # https://docs.npmjs.com/trusted-publishers
+        run: npm publish
+
+      - name: GitHub release
+        run: |
+          ./scripts/github-release.sh "packages/opentelemetry-browser" "${{ github.ref_name }}"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Notify in Slack
+        # Only notify on failure, because on success the published GitHub
+        # Release will result in a notification from the GitHub Slack app
+        # (assuming '/github subscribe elastic/elastic-otel-browser').
+        if: ${{ failure() }}
+        uses: elastic/oblt-actions/slack/notify-result@v1.16.0
+        with:
+          bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
+          channel-id: "#apm-agent-js"
+          message: '[${{ github.repository }}] Release `@elastic/opentelemetry-browser` *${{ github.ref_name }}*'

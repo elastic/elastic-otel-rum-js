@@ -19,8 +19,8 @@ blob-report/
 playwright/.cache/
 playwright/.auth/
 
-# temporary
-# Ignore docs except docset and edot-browser (so draft docs/artifacts stay local)
+# Ignore docs except docset, edot-browser and release-notes (so draft docs/artifacts stay local)
 docs/*
 !docs/docset.yml
 !docs/edot-browser/
+!docs/release-notes/
