@@ -1,10 +1,16 @@
 {
   "name": "@elastic/opentelemetry-browser",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "type": "module",
   "publishConfig": {
     "access": "public",
     "provenance": true
+  },
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/elastic/elastic-otel-rum-js.git",
+    "directory": "packages/opentelemetry-browser"
   },
   "keywords": [
     "opentelemetry",
@@ -16,6 +22,7 @@
     "rum",
     "browser"
   ],
+  "author": "Elastic Observability <https://www.elastic.co/observability>",
   "files": [
     "lib",
     "build",
@@ -24,24 +31,24 @@
   "main": "./lib/index.js",
   "types": "./types/index.d.ts",
   "scripts": {
+    "prepublishOnly": "npm run build",
     "clean": "rm -rf build",
-    "watch": "node ../../scripts/watch.mjs ./lib npm run build",
+    "build:version": "CODE=\"export const EDOT_VERSION = '$(npx json -f package.json version)';\"; awk -v code=\"$CODE\" '/^export/ { print code; next } { print }' lib/version.js > tmp && mv tmp lib/version.js",
     "build:iife": "esbuild ./lib/bundle.js --bundle --conditions=esnext,module --sourcemap --platform=browser --target=es2022 --outfile=build/elastic-otel-browser.js",
     "build:min": "esbuild ./lib/bundle.js --bundle --conditions=esnext,module --minify --sourcemap --platform=browser --target=es2022 --outfile=build/elastic-otel-browser.min.js",
-    "build": "npm run build:iife && npm run build:min",
+    "build": "npm run clean && npm run build:version && npm run build:iife && npm run build:min",
     "gen:types": "rm -rf types && tsc # TODO: would be nice to tree-shake the *.d.ts files",
-    "lint": "npm run lint:eslint && npm run lint:prettier && npm run lint:licenses",
+    "lint": "npm run lint:eslint && npm run lint:prettier && npm run lint:licenses && npm run lint:version && npm run lint:types",
     "lint:eslint": "eslint .",
     "lint:prettier": "(cd ../../; prettier --check $npm_config_local_prefix)",
     "lint:licenses": "../../scripts/gen-notice.sh --lint .",
+    "lint:version": "EDOT_VERSION=$(npx json -f package.json version); grep -Fq \"$EDOT_VERSION\" lib/version.js || { echo \"::error::Version $EDOT_VERSION not set in lib/version.js\"; exit 1; }",
+    "lint:types": "rm -rf build/lint-types && tsc --outDir build/lint-types && diff -ur types build/lint-types && rm -rf build/lint-types",
     "lint:fix": "eslint --fix . && (cd ../../; prettier --list-different --write $npm_config_local_prefix)",
-    "lint:ci": " npm run lint:licenses # eslint/prettier ran in repo root",
+    "lint:ci": " npm run lint:licenses && npm run lint:version && npm run lint:types # eslint/prettier ran in repo root",
     "test:smoke": "npm run build && cp build/* ./test/smoke/assets && playwright test",
-    "test:unit": "node --test test/unit/*.test.js"
+    "test:unit": "node --test test/unit/*.spec.js"
   },
-  "author": "",
-  "license": "ISC",
-  "description": "",
   "dependencies": {
     "@opentelemetry/api": "^1.9.0",
     "@opentelemetry/api-logs": "^0.213.0",
@@ -49,11 +56,11 @@
     "@opentelemetry/exporter-metrics-otlp-http": "^0.213.0",
     "@opentelemetry/exporter-trace-otlp-http": "^0.213.0",
     "@opentelemetry/instrumentation": "^0.213.0",
-    "@opentelemetry/instrumentation-document-load": "^0.57.0",
+    "@opentelemetry/instrumentation-document-load": "^0.58.0",
     "@opentelemetry/instrumentation-fetch": "^0.213.0",
-    "@opentelemetry/instrumentation-long-task": "^0.56.0",
-    "@opentelemetry/instrumentation-user-interaction": "^0.56.0",
-    "@opentelemetry/instrumentation-web-exception": "^0.5.0",
+    "@opentelemetry/instrumentation-long-task": "^0.57.0",
+    "@opentelemetry/instrumentation-user-interaction": "^0.57.0",
+    "@opentelemetry/instrumentation-web-exception": "^0.6.0",
     "@opentelemetry/instrumentation-xml-http-request": "^0.213.0",
     "@opentelemetry/resources": "^2.2.0",
     "@opentelemetry/sdk-logs": "^0.213.0",

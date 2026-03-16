@@ -18,8 +18,6 @@
  */
 export function detectResource(attribs: Record<string, AttributeValue>, serviceName: string | undefined, serviceVersion: string | undefined): import('@opentelemetry/resources').Resource;
 /**
- * We can always pull something like https://www.npmjs.com/package/ua-parser-js
- * but not for now.
  * @param {string} userAgent
  * @returns {{name: string; version: string} | undefined}
  */
@@ -29,11 +27,11 @@ export function getPlatformInfo(userAgent: string): {
 } | undefined;
 /**
  * @param {string} userAgent
- * @returns {{name: string; version: string} | undefined}
+ * @returns {{name: string; version: string | undefined} | undefined}
  */
 export function getBrowserInfo(userAgent: string): {
     name: string;
-    version: string;
+    version: string | undefined;
 } | undefined;
 export type UserAgentData = {
     brands: {

@@ -1,21 +1,11 @@
 /**
  * @param {BrowserSdkConfiguration} cfg
  * @returns {{
- *      providers: {
- *          tracer: import('@opentelemetry/api').TracerProvider;
- *          meter: import('@opentelemetry/api').MeterProvider;
- *          logger: import('@opentelemetry/api-logs').LoggerProvider;
- *      };
- *      flush: () => Promise<void>
+ *      forceFlush: () => Promise<void>
  * }}
  */
 export function startBrowserSdk(cfg?: BrowserSdkConfiguration): {
-    providers: {
-        tracer: import('@opentelemetry/api').TracerProvider;
-        meter: import('@opentelemetry/api').MeterProvider;
-        logger: import('@opentelemetry/api-logs').LoggerProvider;
-    };
-    flush: () => Promise<void>;
+    forceFlush: () => Promise<void>;
 };
 export type InstrumentationsConfigMap = {
     "@opentelemetry/instrumentation-document-load": import('@opentelemetry/instrumentation-document-load').DocumentLoadInstrumentationConfig;
@@ -24,6 +14,7 @@ export type InstrumentationsConfigMap = {
     "@opentelemetry/instrumentation-user-interaction": import('@opentelemetry/instrumentation-user-interaction').UserInteractionInstrumentationConfig;
     "@opentelemetry/instrumentation-xml-http-request": import('@opentelemetry/instrumentation-xml-http-request').XMLHttpRequestInstrumentationConfig;
     "@opentelemetry/instrumentation-web-exception": import('@opentelemetry/instrumentation-web-exception').GlobalErrorsInstrumentationConfig;
+    "@opentelemetry/instrumentation-web-vitals": import('@opentelemetry/instrumentation').InstrumentationConfig & import('./instrumentations/web-vitals.js').WebVitalsInstrumentationConfig;
 };
 export type BrowserSdkConfiguration = {
     disabled?: boolean;
@@ -37,5 +28,5 @@ export type BrowserSdkConfiguration = {
      * // other options
      */
     exportHeaders?: Record<string, string>;
-    configInstrumentations?: Partial<InstrumentationsConfigMap>;
+    instrumentations?: Partial<InstrumentationsConfigMap>;
 };

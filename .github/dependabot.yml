@@ -1,0 +1,44 @@
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/packages/opentelemetry-browser"
+    schedule:
+      interval: "monthly"
+    cooldown:
+      default-days: 14
+    open-pull-requests-limit: 10
+    ignore:
+      # We should use "./scripts/update-otel-deps.js" for updating '@opentelemetry/*'.
+      - dependency-name: "@opentelemetry/*"
+
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    cooldown:
+      default-days: 14
+    open-pull-requests-limit: 10
+    ignore:
+    groups:
+      repo-root:
+        patterns:
+        - "*"
+
+  - package-ecosystem: "npm"
+    directory: "/examples"
+    schedule:
+      interval: "monthly"
+    cooldown:
+      default-days: 14
+    open-pull-requests-limit: 10
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+      day: "sunday"
+      time: "22:00"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
