@@ -52,10 +52,6 @@ if [[ "$TAG_NAME" != "$EXPECTED_TAG_NAME" ]]; then
   fatal "TAG_NAME, '$TAG_NAME', does not match expected value, '$EXPECTED_TAG_NAME'"
 fi
 
-# Generate the notice file
-$TOP/scripts/gen-notice.sh $PKG_DIR > "$PKG_DIR/NOTICE2.md"
-mv "$PKG_DIR/NOTICE2.md" "$PKG_DIR/NOTICE.md"
-
 # Extract the changelog section for this version.
 $TOP/scripts/extract-release-notes.js $PKG_DIR
 echo "INFO: Extracted changelog"

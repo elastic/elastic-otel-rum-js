@@ -37,6 +37,11 @@ jobs:
       - name: npm ci
         run: npm run ci-all
 
+      - name: generate notice
+        run: |
+          ./scripts/gen-notice.sh ./packages/opentelemetry-browser > ./packages/opentelemetry-browser/NOTICE_TEMP.md
+          mv ./packages/opentelemetry-browser/NOTICE_TEMP.md ./packages/opentelemetry-browser/NOTICE.md
+
       - name: npm publish
         working-directory: ./packages/opentelemetry-browser
         run: npm publish
