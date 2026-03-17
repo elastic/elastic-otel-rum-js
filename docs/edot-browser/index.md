@@ -2,9 +2,8 @@
 navigation_title: EDOT Browser
 description: Overview of the Elastic Distribution of OpenTelemetry Browser (EDOT Browser).
 applies_to:
-  stack: ga
-  serverless:
-    observability: ga
+  product:
+    edot_browser: preview
 products:
   - id: cloud-serverless
   - id: observability
