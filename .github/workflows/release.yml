@@ -39,8 +39,11 @@ jobs:
 
       - name: npm publish
         working-directory: ./packages/opentelemetry-browser
-        # https://docs.npmjs.com/trusted-publishers
         run: npm publish
+        env:
+          # TODO: remove after package is created and trusted publishign is set up
+          # https://docs.github.com/en/actions/publishing-packages/publishing-nodejs-packages#publishing-packages-to-the-npm-registry
+          NODE_AUTH_TOKEN: ${{ secrets.NPMJS_TOKEN }}
 
       - name: GitHub release
         run: |
