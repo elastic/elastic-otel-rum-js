@@ -49,7 +49,7 @@ Configuration is passed as an object to `startBrowserSdk`. The following options
 | `resourceAttributes` | Optional resource attributes to attach to telemetry. |
 | `exportHeaders` | Headers to send with export requests. Defaults to `{}`. The reverse proxy typically injects `Authorization`; do not put API keys here in browser code. |
 | `disabled` | If `true`, the SDK does not start. |
-| `configInstrumentations` | Per-instrumentation config. Set `enabled: false` for a key to turn off that instrumentation. |
+| `instrumentations` | Per-instrumentation config. Set `{ enabled: false }` for a key to turn off that instrumentation. |
 
 ## Minimal required configuration [minimal-required-configuration]
 
