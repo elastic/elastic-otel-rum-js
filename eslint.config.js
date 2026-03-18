@@ -1,3 +1,8 @@
+/*
+ * Copyright Elasticsearch B.V. and contributors
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 import baselinePlugin from 'eslint-plugin-baseline-js';
 import yalhPlugin from 'eslint-plugin-yet-another-license-header';
 
