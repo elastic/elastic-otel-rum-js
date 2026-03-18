@@ -1,0 +1,22 @@
+{
+  "name": "edot-webpack-5-bundle-test",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Test app for logs in webpack 5",
+  "type": "module",
+  "scripts": {
+    "test:bundle": "npm i && webpack --config webpack.config.mjs",
+    "start": "npm i && webpack serve --config webpack.config.mjs --open"
+  },
+  "author": "Elastic Observability <https://www.elastic.co/observability>",
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "html-webpack-plugin": "^5",
+    "webpack": "^5",
+    "webpack-cli": "^6",
+    "webpack-dev-server": "^5"
+  },
+  "dependencies": {
+    "@elastic/opentelemetry-browser": "file:../../../"
+  }
+}

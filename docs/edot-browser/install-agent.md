@@ -13,16 +13,16 @@ products:
 
 # Install the agent
 
-EDOT Browser is distributed in two ways. The choice affects how you install it, how much control you have over instrumentations and bundle size, and how updates might affect your application.
+EDOT Browser is distributed in two ways.
 
 ## Package versus bundle [package-vs-bundle]
 
 | Option | Best for | Trade-offs |
 |--------|----------|------------|
 | **Bundle** | Applications that don't use a bundler (single JS file loaded using script tag). | Works out of the box with no build step. Updating the bundle can introduce breaking changes when upstream instrumentations or configuration change. You have to absorb those changes when you upgrade. |
-| **Package** | Applications that use a bundler (for example: webpack, Vite, Rollup). | You choose which instrumentations to include, so you have more control and can achieve a smaller bundle size by installing only what you need. You control when to upgrade instrumentations and can pin versions to avoid breaking changes until you are ready. |
+| **Package** | Applications that use a bundler (for example: webpack, Vite, Rollup). | Uses your bundler so you control when to upgrade. Choosing which instrumentations to include for a smaller bundle is planned for a future release. Until then, the package includes the same instrumentations as the bundle. |
 
-Before installing, ensure you have [configured a reverse proxy and CORS](proxy-cors.md) so the browser can export telemetry securely.
+Before installing, consider [configuring a reverse proxy and CORS](proxy-cors.md) so the browser can export telemetry securely without exposing credentials.
 
 ## Install using the package [install-package]
 
@@ -32,7 +32,7 @@ Install EDOT Browser using your package manager:
 npm install @elastic/opentelemetry-browser
 ```
 
-When you use the package, your bundler includes only the code you import. You can control which instrumentations are enabled using configuration and, if the SDK supports it in the future, by passing only the instrumentation instances you need. This can reduce the final bundle size compared to the full bundle.
+When you use the package, your bundler includes the SDK and its instrumentations. You can control which instrumentations are enabled using configuration. Choosing which instrumentations to include for a smaller bundle is planned for a future release.
 
 For supported bundlers and browser requirements, refer to [Supported technologies](supported-technologies.md).
 

@@ -11,9 +11,9 @@ products:
   - id: edot-sdk
 ---
 
-# Elastic Distribution of OpenTelemetry Browser release notes [edot-browser-release-notes]
+# {{edot}} Browser release notes [edot-browser-release-notes]
 
-Review the changes, fixes, and more in each version of Elastic Distribution of OpenTelemetry Browser (EDOT Browser).
+Review the changes, fixes, and more in each version of {{edot}} Browser (EDOT Browser).
 
 To check for breaking changes, see [EDOT Browser Breaking Changes](./breaking-changes.md).
 
@@ -34,4 +34,4 @@ To check for security updates, go to [Security announcements for the Elastic sta
 
 ## 0.1.0 [edot-browser-0.1.0-release-notes]
 
-First release of the Elastic Distribution of OpenTelemetry Browser.
+First release of the {{edot}} Browser.

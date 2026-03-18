@@ -13,11 +13,11 @@ products:
 
 # Proxy and CORS configuration
 
-EDOT Browser exports telemetry from the user's browser to an OTLP endpoint. You must put a reverse proxy in front of your OTLP endpoint and configure it for authentication and Cross-Origin Resource Sharing (CORS).
+EDOT Browser exports telemetry from the user's browser to an OTLP endpoint. You can send data directly to an OTLP endpoint if you set the appropriate headers (for example `Authorization`). For security, Elastic recommends placing a reverse proxy in front of your OTLP endpoint and configuring it for authentication and Cross-Origin Resource Sharing (CORS) so that credentials are not exposed in the browser.
 
-## Why a reverse proxy is required [why-reverse-proxy]
+## Why a reverse proxy is recommended [why-reverse-proxy]
 
-Do not send telemetry directly from the browser to {{product.observability}} with an API key in client-side code. Any credentials in browser code are visible to end users and can be misused. EDOT Browser requires a reverse proxy in front of the OTLP endpoint for these reasons:
+Do not send telemetry directly from the browser to {{product.observability}} with an API key in client-side code. Any credentials in browser code are visible to end users and can be misused. A reverse proxy in front of the OTLP endpoint is recommended for these reasons:
 
 - **Authentication**: The EDOT Collector or {{ecloud}} Managed OTLP endpoint expects an `Authorization` header with an API key. The reverse proxy injects the header so the key stays on the server and is not exposed to the browser.
 - **Cross-origin requests**: Your web application and the OTLP endpoint often have different origins. Browsers enforce CORS, so without the right headers, export requests are blocked. A reverse proxy on the same origin as your app (or configured to allow it) can add the required CORS headers and handle preflight `OPTIONS` requests.

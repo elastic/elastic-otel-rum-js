@@ -11,11 +11,11 @@ products:
   - id: edot-sdk
 ---
 
-# Elastic Distribution of OpenTelemetry Browser deprecations [edot-browser-deprecations]
+# {{edot}} Browser deprecations [edot-browser-deprecations]
 
 Over time, certain Elastic functionality becomes outdated and is replaced or removed. To help with the transition, Elastic deprecates functionality for a period before removal, giving you time to update your applications.
 
-Review the deprecated functionality for Elastic Distribution of OpenTelemetry Browser. While deprecations have no immediate impact, we strongly encourage you update your implementation after you upgrade. To learn how to upgrade, check out [Upgrade](docs-content://deploy-manage/upgrade.md).
+Review the deprecated functionality for {{edot}} Browser. While deprecations have no immediate impact, we strongly encourage you update your implementation after you upgrade. To learn how to upgrade, check out [Upgrade](docs-content://deploy-manage/upgrade.md).
 
 % ## Next version [edot-browser-X.X.X-deprecations]
 

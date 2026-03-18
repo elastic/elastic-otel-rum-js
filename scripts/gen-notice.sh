@@ -1,4 +1,8 @@
 #!/bin/bash
+
+# Copyright Elasticsearch B.V. and contributors
+# SPDX-License-Identifier: Apache-2.0
+
 #
 # This script generates a NOTICE file for a distribution of a package in this
 # repo. It also supports running in lint mode, via `--lint`, where it will not
