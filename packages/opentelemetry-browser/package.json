@@ -52,7 +52,8 @@
     "lint:fix": "eslint --fix . && (cd ../../; prettier --list-different --write $npm_config_local_prefix)",
     "lint:ci": " npm run lint:licenses && npm run lint:version && npm run lint:types # eslint/prettier ran in repo root",
     "test:smoke": "npm run build && cp build/* ./test/smoke/assets && playwright test",
-    "test:unit": "node --test test/unit/*.spec.js"
+    "test:unit": "node --test test/unit/*.spec.js",
+    "test:bundle": "find ./test/bundle/ -mindepth 1 -maxdepth 1 -type d -exec sh -c 'cd \"$1\" && npm run test:bundle' sh {} \\;"
   },
   "dependencies": {
     "@opentelemetry/api": "^1.9.0",
