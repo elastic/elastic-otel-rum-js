@@ -24,9 +24,14 @@
   ],
   "author": "Elastic Observability <https://www.elastic.co/observability>",
   "files": [
-    "lib",
     "build",
-    "types"
+    "lib",
+    "types",
+    "CHANGELOG.md",
+    "LICENSE",
+    "NOTICE.md",
+    "README.md",
+    "package.json"
   ],
   "main": "./lib/index.js",
   "types": "./types/index.d.ts",

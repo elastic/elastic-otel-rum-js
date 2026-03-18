@@ -1,4 +1,8 @@
 #!/bin/bash
+
+# Copyright Elasticsearch B.V. and contributors
+# SPDX-License-Identifier: Apache-2.0
+
 #
 # This script runs the the given argv in each package dir in this repo.
 # Basically this is something of a replacement for `npm run --workspaces ...`

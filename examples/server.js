@@ -1,3 +1,8 @@
+/*
+ * Copyright Elasticsearch B.V. and contributors
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 import {createReadStream, existsSync, readFileSync} from 'fs';
 import {createServer} from 'http';
 import {createGzip} from 'zlib';
