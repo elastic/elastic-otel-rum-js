@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# Copyright Elasticsearch B.V. and contributors
+# SPDX-License-Identifier: Apache-2.0
+
 # Create a GitHub release.
 # (This is typically only run from the release.yml CI workflow.)
 #
