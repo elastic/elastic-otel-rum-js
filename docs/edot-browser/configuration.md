@@ -76,7 +76,7 @@ startBrowserSdk({
 
 ## Export endpoint configuration [export-endpoint-configuration]
 
-Configure `otlpEndpoint` to point to a server that accepts OTLP traffic. Use the base URL of the server only: do not include signal paths such as `/v1/traces`, `/v1/metrics`, or `/v1/logs`. The SDK appends these paths when exporting each signal. For security reasons Elastic recommends to configure a reverse proxy that forwards OTLP traffic to {{product.observability}}. Check [Proxy and CORS configuration](./proxy_cors.md) for more details.
+Configure `otlpEndpoint` to point to a server that accepts OTLP traffic. Use the base URL of the server only: do not include signal paths such as `/v1/traces`, `/v1/metrics`, or `/v1/logs`. The SDK appends these paths when exporting each signal. For security reasons Elastic recommends to configure a reverse proxy that forwards OTLP traffic to {{product.observability}}. Check [Proxy and CORS configuration](./proxy-cors.md) for more details.
 
 Use a service name that identifies your frontend application and doesn't contain special characters, so that data is correctly categorized in {{product.observability}}.
 
