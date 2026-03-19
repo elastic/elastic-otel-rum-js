@@ -28,6 +28,15 @@ EDOT Browser collects the following signals:
 
 For what each signal includes, known limitations, and what is not yet supported, refer to [Metrics, traces, and logs](telemetry.md).
 
+## Features [features]
+
+In addition to the features provided by OpenTelemetry Browser, EDOT Browser includes the following:
+
+* A single package that bundles multiple OpenTelemetry dependencies, so you can install and update one package for most use cases. This is similar to the `@opentelemetry/auto-instrumentations-web` package.
+* Improvements and bug fixes contributed by Elastic, available before they are released in contrib OpenTelemetry repositories.
+* Optional features that enhance the OpenTelemetry data sent to Elastic.
+* A preconfigured set of tracing and metric signals with opinionated defaults, including which sources are collected by default. This also includes additional metrics, such as `browser.web_vital.*` from the `instrumentation/web-vitals` package.
+
 ## How it works [how-it-works]
 
 EDOT Browser runs in the user's browser as part of your web application. When initialized, it instruments the page and captures telemetry such as document load, user interactions, network requests, and Core Web Vitals. For a full list of what is collected, refer to [Supported technologies](supported-technologies.md).
@@ -61,7 +70,7 @@ For reverse proxy and CORS configuration, refer to [Proxy and CORS](proxy-cors.m
 
 To get started with EDOT Browser:
 
-- Follow the setup instructions in [Set up EDOT Browser](setup.md): [Install the agent](install-agent.md) and [Configure proxy and CORS](proxy-cors.md)
-- Review configuration options in [Configure EDOT Browser](configuration.md)
-- Refer to [Supported technologies](supported-technologies.md) for details on browsers and instrumentations
-- If telemetry does not appear, refer to [Troubleshooting](troubleshooting.md)
+- Follow the setup instructions in [Set up EDOT Browser](setup.md): [Install the agent](install-agent.md) and [Configure proxy and CORS](proxy-cors.md).
+- Review configuration options in [Configure EDOT Browser](configuration.md).
+- Refer to [Supported technologies](supported-technologies.md) for details on browsers and instrumentations.
+- If telemetry does not appear, refer to [Troubleshooting](troubleshooting.md).

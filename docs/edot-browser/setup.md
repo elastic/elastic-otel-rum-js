@@ -15,7 +15,7 @@ products:
 
 This guide shows you how to set up the {{edot}} Browser (EDOT Browser) in a web application and export browser telemetry to {{product.observability}}.
 
-EDOT Browser runs directly in users' browsers. Because of browser security constraints, authentication and data export require a reverse proxy. When your OTLP endpoint is available ({{ecloud}} Managed OTLP or an EDOT Collector), do the following:
+EDOT Browser runs directly in users' browsers. Because source code is accessible in this environment, Elastic discourages setting tokens, API keys, or other authentication data directly in EDOT Browser. To send data securely without exposing secrets, use a reverse proxy. When your OTLP endpoint is available ({{ecloud}} managed OTLP or an EDOT Collector), do the following:
 
 - [Install the agent](install-agent.md): Add EDOT Browser to your application (package or bundle) and initialize it.
 - [Configure proxy and CORS](proxy-cors.md): Set up a reverse proxy in front of your OTLP endpoint and configure CORS so the browser can export telemetry securely.
@@ -33,7 +33,7 @@ Before you set up EDOT Browser, you need:
 
 ## How browser telemetry is exported [how-browser-telemetry-is-exported]
 
-EDOT Browser exports telemetry using the OpenTelemetry Protocol (OTLP) over HTTP. Data flows as follows:
+EDOT Browser exports telemetry using the OpenTelemetry Protocol (OTLP) over HTTP. Data flows as follows (assuming you set up the proxy as recommended):
 
 **Browser (EDOT Browser) → Reverse proxy → {{ecloud}} Managed OTLP endpoint or EDOT Collector → {{product.observability}}**
 
@@ -42,6 +42,12 @@ The browser sends OTLP data to the reverse proxy endpoint that you configure.
 ## What to expect in {{kib}} [what-to-expect-in-kibana]
 
 After EDOT Browser is sending telemetry to {{product.observability}}, you can inspect traces and spans in the Observability app. The following describes what you see and how to interpret it.
+
+### Document load spans [document-load-spans]
+
+EDOT Browser measures how long it takes a user's browser to fully load the initial HTML document served by your web server by creating document load spans. It also generates spans to measure the download time of additional resources (such as JavaScript, CSS, fonts, and images) referenced by the initial document.
+
+In the trace view, the `documentLoad` span appears as the root span, with resource spans as its children.
 
 ### Spans from browser fetch and XHR [spans-from-fetch-xhr]
 

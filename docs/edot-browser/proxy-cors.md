@@ -13,7 +13,7 @@ products:
 
 # Proxy and CORS configuration
 
-EDOT Browser exports telemetry from the user's browser to an OTLP endpoint. You can send data directly to an OTLP endpoint if you set the appropriate headers (for example `Authorization`). For security, Elastic recommends placing a reverse proxy in front of your OTLP endpoint and configuring it for authentication and Cross-Origin Resource Sharing (CORS) so that credentials are not exposed in the browser.
+EDOT Browser exports telemetry from the user's browser to an OTLP endpoint. You can send data directly to an OTLP endpoint if you set the appropriate headers (for example `Authorization`). For security, Elastic recommends placing a reverse proxy in front of your OTLP endpoint and configuring it for authentication and [Cross-Origin Resource Sharing (CORS)](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/CORS) so that credentials are not exposed in the browser.
 
 ## Why a reverse proxy is recommended [why-reverse-proxy]
 
