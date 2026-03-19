@@ -106,11 +106,11 @@ This section provides additional details about configuration settings that requi
 
 ### `instrumentations` details [otel_browser_instrumentations-details]
 
-An object whose keys are the names of the available instrumentations in EDOT and whose values are the corresponding configuration objects.
+An object whose keys are the scope names of the available instrumentations in EDOT and whose values are the corresponding configuration objects.
 
 The following keys are supported:
 
-| Instrumentation   | Key                                              | Configuration |
+| Instrumentation   | Key (scope name)                                 | Configuration |
 |-------------------|--------------------------------------------------|---------------|
 | Document load     | `@opentelemetry/instrumentation-document-load`   | [Reference](https://github.com/open-telemetry/opentelemetry-js-contrib/blob/main/packages/instrumentation-document-load/README.md#document-load-instrumentation-options) |
 | Fetch             | `@opentelemetry/instrumentation-fetch`           | [Reference](https://github.com/open-telemetry/opentelemetry-js/tree/main/experimental/packages/opentelemetry-instrumentation-fetch#fetch-instrumentation-options) |
