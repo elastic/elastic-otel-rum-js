@@ -84,6 +84,7 @@ npm ls --omit=dev --all --parseable \
         // We handle getting the license text for a few specific deps that
         // do not include one in their install.
         const licFileFromPkgName = {
+            "@opentelemetry/browser-instrumentation": "license.apache2.txt",
         }
         // Packages that have a license, but no "license" entry in package.json.
         const licTypeFromPkgName = {

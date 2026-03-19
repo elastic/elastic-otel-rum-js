@@ -7,19 +7,6 @@ import {test, expect} from '@playwright/test';
 import {createCollector} from './test-utils';
 
 test('should export fetch related spans', async ({page}) => {
-    // Disable `@opentelemetry/instrumentation-document-load` instrumentation to avoid a 1st export that
-    // creates a span due to https://github.com/open-telemetry/opentelemetry-js/issues/6339
-    // and gives us wrong data
-    const config = encodeURIComponent(
-        JSON.stringify({
-            instrumentations: {
-                '@opentelemetry/instrumentation-document-load': {
-                    enabled: false,
-                },
-            },
-        })
-    );
-
     const collector = createCollector(page);
     const sameOriginHeaders = {};
     const otherOriginHeaders = {};
@@ -40,7 +27,7 @@ test('should export fetch related spans', async ({page}) => {
         });
     });
 
-    await page.goto(`/fixtures/use-fetch.html?config=${config}`);
+    await page.goto('/fixtures/use-fetch.html');
     await page.click('#same-origin');
     await page.waitForFunction(
         () => document.getElementById('status').innerText === 'finished'
