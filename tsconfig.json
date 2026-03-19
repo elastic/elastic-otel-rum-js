@@ -7,7 +7,7 @@
     "emitDeclarationOnly": true,
     "target": "ESNext",
     "resolveJsonModule": true,
-    "moduleResolution": "node",
+    "moduleResolution": "nodenext",
     "module": "es2022",
     "allowSyntheticDefaultImports": true,
     "lib": ["ES2022", "DOM"]
