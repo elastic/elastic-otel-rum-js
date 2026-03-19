@@ -39,17 +39,17 @@ The best approach depends on your application architecture and build tooling.
 
 Configuration is passed as an object to `startBrowserSdk`. The following options are supported:
 
-| Option | Type | Description |
-|---|---|
-| `serviceName` | `string` | Logical name of the frontend service. Defaults to `unknown_service:web` if not set. |
-| `serviceVersion` | `string` | Version of the application. Optional. |
-| `logLevel` | `string` | Diagnostic log level (`error`, `warn`, `info`, `debug`, `verbose`). Defaults to `info`. |
-| `otlpEndpoint` | `string` | Base URL of the OTLP export endpoint (reverse proxy). Do not include signal paths such as `/v1/traces`. Defaults to `http://localhost:4318`. |
-| `sampleRate` | `number` | Trace sampling ratio (0–1). Defaults to `1` (100%). |
-| `resourceAttributes` | `Record<string, any>` | Optional resource attributes to attach to telemetry. |
-| `exportHeaders` | `Record<string, string>` | Optional headers to send with export requests. The reverse proxy typically injects `Authorization`; do not put API keys here in browser code. |
-| `disabled` | `boolean` | If `true`, the SDK does not start. Optional. |
-| `instrumentations` | `Record<string, Object>` | Per-instrumentation config. Set `{ enabled: false }` for a key to turn off that instrumentation. See the details section for more info. |
+| Option                | Type                     | Description |
+|-----------------------|--------------------------|-------------|
+| `serviceName`         | `string`                 | Logical name of the frontend service. Defaults to `unknown_service:web` if not set. |
+| `serviceVersion`      | `string`                 | Version of the application. Optional. |
+| `logLevel`            | `string`                 | Diagnostic log level (`error`, `warn`, `info`, `debug`, `verbose`). Defaults to `info`. |
+| `otlpEndpoint`        | `string`                 | Base URL of the OTLP export endpoint (reverse proxy). Do not include signal paths such as `/v1/traces`. Defaults to `http://localhost:4318`. |
+| `sampleRate`          | `number`                 | Trace sampling ratio (0–1). Defaults to `1` (100%). |
+| `resourceAttributes`  | `Record<string, any>`    | Optional resource attributes to attach to telemetry. |
+| `exportHeaders`       | `Record<string, string>` | Headers to send with export requests. Defaults to `{}`. The reverse proxy typically injects `Authorization`; do not put API keys here in browser code. |
+| `disabled`            | `boolean`                | If `true`, the SDK does not start. |
+| `instrumentations`    | `Record<string, Object>` | Per-instrumentation config. Set `{ enabled: false }` for a key to turn off that instrumentation. Refer to [instrumentations details](#otel_browser_instrumentations-details) for more information. |
 
 ## Minimal required configuration [minimal-required-configuration]
 
@@ -76,7 +76,7 @@ startBrowserSdk({
 
 ## Export endpoint configuration [export-endpoint-configuration]
 
-Configure `otlpEndpoint` to point to a server that accepts OTLP traffic. Use the base URL of the server only: do not include signal paths such as `/v1/traces`, `/v1/metrics`, or `/v1/logs`. The SDK appends these paths when exporting each signal. For security reasons we recommend to setup a reverse proxy that forwards OTLP traffic to {{product.observability}}. Check [Proxy and CORS configuration](./proxy_cors.md) for more details.
+Configure `otlpEndpoint` to point to a server that accepts OTLP traffic. Use the base URL of the server only: do not include signal paths such as `/v1/traces`, `/v1/metrics`, or `/v1/logs`. The SDK appends these paths when exporting each signal. For security reasons Elastic recommends to configure a reverse proxy that forwards OTLP traffic to {{product.observability}}. Check [Proxy and CORS configuration](./proxy_cors.md) for more details.
 
 Use a service name that identifies your frontend application and doesn't contain special characters, so that data is correctly categorized in {{product.observability}}.
 
@@ -102,22 +102,23 @@ Diagnostic logs are written to the browser console. For more information on usin
 
 ## EDOT configuration details
 
-This section includes additional details on some configuration settings that merit more explanation, or that have behavior that differs in EDOT Browser when compared to OpenTelemetry JS.
+This section provides additional details about configuration settings that require further explanation or behave differently in EDOT Browser compared to OpenTelemetry JS.
 
 ### `instrumentations` details [otel_browser_instrumentations-details]
 
-An record object whose keys are the names of the available instrumentations in EDOT and the values are the configuration object for the corresponding instrumentation. The possible keys are:
+An object whose keys are the names of the available instrumentations in EDOT and whose values are the corresponding configuration objects.
 
-| Instrumentation | Key | Configuration |
-|---|---|---|
-| Document Load | `@opentelemetry/instrumentation-document-load` | [Referece](https://github.com/open-telemetry/opentelemetry-js-contrib/blob/main/packages/instrumentation-document-load/README.md#document-load-instrumentation-options) |
-| Fetch | `@opentelemetry/instrumentation-fetch` | [Referece](https://github.com/open-telemetry/opentelemetry-js/tree/main/experimental/packages/opentelemetry-instrumentation-fetch#fetch-instrumentation-options) |
-| Long task | `@opentelemetry/instrumentation-long-task` | [Referece](https://github.com/open-telemetry/opentelemetry-js-contrib/tree/main/packages/instrumentation-long-task#longtask-instrumentation-options) |
-| User Interaction | `@opentelemetry/instrumentation-user-interaction` | [Referece](https://github.com/open-telemetry/opentelemetry-js-contrib/tree/main/packages/instrumentation-user-interaction#send-spans-for-different-events) |
-| XMLHttpRequest | `@opentelemetry/instrumentation-xml-http-request` | [Referece](https://github.com/open-telemetry/opentelemetry-js/tree/main/experimental/packages/opentelemetry-instrumentation-xml-http-request#xhr-instrumentation-options) |
-| Web Exception | `@opentelemetry/instrumentation-web-exception` | [Referece](https://github.com/open-telemetry/opentelemetry-js-contrib/tree/main/packages/instrumentation-web-exception#configuration) |
-| web Vitals | `@opentelemetry/instrumentation-web-vitals` | [Referece](https://github.com/open-telemetry/opentelemetry-browser/blob/main/packages/instrumentation/README.md#configuration-1) |
+The following keys are supported:
 
+| Instrumentation   | Key                                              | Configuration |
+|-------------------|--------------------------------------------------|---------------|
+| Document load     | `@opentelemetry/instrumentation-document-load`   | [Reference](https://github.com/open-telemetry/opentelemetry-js-contrib/blob/main/packages/instrumentation-document-load/README.md#document-load-instrumentation-options) |
+| Fetch             | `@opentelemetry/instrumentation-fetch`           | [Reference](https://github.com/open-telemetry/opentelemetry-js/tree/main/experimental/packages/opentelemetry-instrumentation-fetch#fetch-instrumentation-options) |
+| Long task         | `@opentelemetry/instrumentation-long-task`       | [Reference](https://github.com/open-telemetry/opentelemetry-js-contrib/tree/main/packages/instrumentation-long-task#longtask-instrumentation-options) |
+| User interaction  | `@opentelemetry/instrumentation-user-interaction`| [Reference](https://github.com/open-telemetry/opentelemetry-js-contrib/tree/main/packages/instrumentation-user-interaction#send-spans-for-different-events) |
+| XMLHttpRequest    | `@opentelemetry/instrumentation-xml-http-request`| [Reference](https://github.com/open-telemetry/opentelemetry-js/tree/main/experimental/packages/opentelemetry-instrumentation-xml-http-request#xhr-instrumentation-options) |
+| Web exception     | `@opentelemetry/instrumentation-web-exception`   | [Reference](https://github.com/open-telemetry/opentelemetry-js-contrib/tree/main/packages/instrumentation-web-exception#configuration) |
+| Web vitals        | `@opentelemetry/instrumentation-web-vitals`      | [Reference](https://github.com/open-telemetry/opentelemetry-browser/blob/main/packages/instrumentation/README.md#configuration-1) |
 
 ## Next steps [next-steps]
 

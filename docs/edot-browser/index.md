@@ -30,12 +30,12 @@ For what each signal includes, known limitations, and what is not yet supported,
 
 ## Features [features]
 
-In addition to all the features of OpenTelemetry Browser, with EDOT Browser you have access to the following:
+In addition to the features provided by OpenTelemetry Browser, EDOT Browser includes the following:
 
-* A single package that includes several OpenTelemetry packages as dependencies, so you only need to install and update a single package (for most use cases). This is similar to OpenTelemetry's `@opentelemetry/auto-instrumentations-web` package.
-* Improvements and bug fixes contributed by the Elastic team before the changes are available in OpenTelemetry repositories.
-* Optional features that can enhance OpenTelemetry data that is being sent to Elastic.
-* Pre-configured collection of tracing and metrics signals, applying some opinionated defaults, such as which sources are collected by default. Additional metrics are collected by default: `browser.web_vital.*` metrics from the [instrumentation/web-vitals package](https://github.com/open-telemetry/opentelemetry-browser/tree/main/packages/instrumentation/src/web-vitals).
+* A single package that bundles multiple OpenTelemetry dependencies, so you can install and update one package for most use cases. This is similar to the `@opentelemetry/auto-instrumentations-web` package.
+* Improvements and bug fixes contributed by Elastic, available before they are released in contrib OpenTelemetry repositories.
+* Optional features that enhance the OpenTelemetry data sent to Elastic.
+* A preconfigured set of tracing and metric signals with opinionated defaults, including which sources are collected by default. This also includes additional metrics, such as `browser.web_vital.*` from the `instrumentation/web-vitals` package.
 
 ## How it works [how-it-works]
 
@@ -70,7 +70,7 @@ For reverse proxy and CORS configuration, refer to [Proxy and CORS](proxy-cors.m
 
 To get started with EDOT Browser:
 
-- Follow the setup instructions in [Set up EDOT Browser](setup.md): [Install the agent](install-agent.md) and [Configure proxy and CORS](proxy-cors.md)
-- Review configuration options in [Configure EDOT Browser](configuration.md)
-- Refer to [Supported technologies](supported-technologies.md) for details on browsers and instrumentations
-- If telemetry does not appear, refer to [Troubleshooting](troubleshooting.md)
+- Follow the setup instructions in [Set up EDOT Browser](setup.md): [Install the agent](install-agent.md) and [Configure proxy and CORS](proxy-cors.md).
+- Review configuration options in [Configure EDOT Browser](configuration.md).
+- Refer to [Supported technologies](supported-technologies.md) for details on browsers and instrumentations.
+- If telemetry does not appear, refer to [Troubleshooting](troubleshooting.md).

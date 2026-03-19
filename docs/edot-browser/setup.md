@@ -15,7 +15,7 @@ products:
 
 This guide shows you how to set up the {{edot}} Browser (EDOT Browser) in a web application and export browser telemetry to {{product.observability}}.
 
-EDOT Browser runs directly in users' browsers. Because sources can be accessed in this environment Elastic discourages to set tokens, API keys or any other authentication data directly in the EDOT. To send data securely withouth exposing secrets a reverse proxy is required. When your OTLP endpoint is available ({{ecloud}} Managed OTLP or an EDOT Collector), do the following:
+EDOT Browser runs directly in users' browsers. Because source code is accessible in this environment, Elastic discourages setting tokens, API keys, or other authentication data directly in EDOT Browser. To send data securely without exposing secrets, use a reverse proxy. When your OTLP endpoint is available ({{ecloud}} managed OTLP or an EDOT Collector), do the following:
 
 - [Install the agent](install-agent.md): Add EDOT Browser to your application (package or bundle) and initialize it.
 - [Configure proxy and CORS](proxy-cors.md): Set up a reverse proxy in front of your OTLP endpoint and configure CORS so the browser can export telemetry securely.
@@ -45,7 +45,9 @@ After EDOT Browser is sending telemetry to {{product.observability}}, you can in
 
 ### Document load spans [document-load-spans]
 
-EDOT Browser measures how long it takes for a user's browser to fully load the initial HTML document served by your web server by creating document load spans. It also generates spans to measure the download time for other resources (like JavaScript, CSS, fonts, or images) if the initial HTML file includes them. Inthe trace vew, you see `documentLoad` span as root of the trace and the resource spans as child spans.
+EDOT Browser measures how long it takes a user's browser to fully load the initial HTML document served by your web server by creating document load spans. It also generates spans to measure the download time of additional resources (such as JavaScript, CSS, fonts, and images) referenced by the initial document.
+
+In the trace view, the `documentLoad` span appears as the root span, with resource spans as its children.
 
 ### Spans from browser fetch and XHR [spans-from-fetch-xhr]
 

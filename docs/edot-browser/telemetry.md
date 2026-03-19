@@ -50,7 +50,7 @@ EDOT Browser initializes tracing and registers instrumentations that produce spa
 - Spans for the initial document load and related navigation timing (document load instrumentation is turned on by default).
 - Each outgoing request using `fetch` or `XMLHttpRequest` is captured as an `external.http` span with attributes such as URL, HTTP method, and status code. These spans represent the client-side portion of the request.
 - Spans for user actions such as "click" and "submit". These interaction spans group the subsequent work (for example `external.http` requests) so you can attribute frontend and backend activity to a specific user action in {{product.observability}}.
-- Spans for task executions that take longer than 50ms and may impact the user experience. [Reference](https://developer.mozilla.org/en-US/docs/Web/API/PerformanceLongTaskTiming).
+- Spans for task executions that take longer than 50ms and might impact the user experience. For more information, refer to [PerformanceLongTaskTiming](https://developer.mozilla.org/en-US/docs/Web/API/PerformanceLongTaskTiming).
 
 When your backend is instrumented with OpenTelemetry and trace context (trace ID, span ID) is propagated in HTTP headers, the browser’s `external.http` span and the backend spans appear in the same trace, giving you end-to-end visibility in Discover and Service Maps. Refer to [What to expect in {{kib}}](setup.md#what-to-expect-in-kibana) for how these traces appear in the Observability app.
 

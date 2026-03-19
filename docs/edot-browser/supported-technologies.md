@@ -19,14 +19,14 @@ This page lists supported browser versions, included instrumentations and their 
 
 At a minimum, the runtime environment must support:
 
-- ES2022 (the SDK bundle is built with this target)
-- `fetch` API
+- ES2022 (the SDK bundle targets this version)
+- The `fetch` API
 - `Promise`
-- `Performance` and `PerformanceObserver` APIs
+- The `Performance` and `PerformanceObserver` APIs
 
 ### Supported browsers [supported-browsers]
 
-EDOT Browser is designed to run in modern evergreen browsers that have the requirements mentioned above. 
+EDOT Browser is designed to run in modern evergreen browsers that meet these requirements. 
 
 | Browser | Supported versions |
 |----------|--------------------|
@@ -39,18 +39,18 @@ EDOT Browser is designed to run in modern evergreen browsers that have the requi
 Internet Explorer is not supported.
 :::
 
-If your application targets older browsers, you might need to downlevel the sources with a bundler and to provide polyfills. EDOT Browser does not ship with built-in polyfills. This documentaiton does not cover downleveling 
+If your application targets older browsers, you might need to downlevel the code with a bundler and provide polyfills. EDOT Browser doesn't include built-in polyfills.
 
 ## Bundlers [bundlers]
 
-When you install EDOT Browser as a package (see [Install the agent](install-agent.md)), you use a JavaScript bundler to build your application. The following bundlers are supported for use with the EDOT Browser package:
+When you install EDOT Browser as a package (refer to [Install the agent](install-agent.md)), you build your application with a JavaScript bundler. The following bundlers are supported:
 
-| Bundler | Notes |
-|---------|-------|
-| Webpack 4 | Supported. You can check this [sample configuration](https://github.com/elastic/elastic-otel-rum-js/blob/main/packages/opentelemetry-browser/test/bundle/webpack4/webpack.config.mjs) and adapt to yours. |
-| Webpack 5 | Supported. You can check this [sample configuration](https://github.com/elastic/elastic-otel-rum-js/blob/main/packages/opentelemetry-browser/test/bundle/webpack5/webpack.config.mjs) and adapt to yours. |
-| Rollup | Supported. You can check this [sample configuration](https://github.com/elastic/elastic-otel-rum-js/blob/main/packages/opentelemetry-browser/test/bundle/rollup/rollup.config.js) and adapt to yours. |
-| eslint | Supported. EDOT uses it with no plugins needed, ([see](https://github.com/elastic/elastic-otel-rum-js/blob/55f0dec911286208a104e8282aa16665c0de68e4/packages/opentelemetry-browser/package.json#L42)). |
+| Bundler   | Notes |
+|-----------|-------|
+| Webpack 4 | Supported. Refer to this [sample configuration](https://github.com/elastic/elastic-otel-rum-js/blob/main/packages/opentelemetry-browser/test/bundle/webpack4/webpack.config.mjs) and adapt it to your setup. |
+| Webpack 5 | Supported. Refer to this [sample configuration](https://github.com/elastic/elastic-otel-rum-js/blob/main/packages/opentelemetry-browser/test/bundle/webpack5/webpack.config.mjs) and adapt it to your setup. |
+| Rollup    | Supported. Refer to this [sample configuration](https://github.com/elastic/elastic-otel-rum-js/blob/main/packages/opentelemetry-browser/test/bundle/rollup/rollup.config.js) and adapt it to your setup. |
+| esbuild   | Supported. No plugins are required. Refer to the [example configuration](https://github.com/elastic/elastic-otel-rum-js/blob/55f0dec911286208a104e8282aa16665c0de68e4/packages/opentelemetry-browser/package.json#L42). |
 
 
 ## TypeScript versions
@@ -59,6 +59,7 @@ Usage of `@elastic/opentelemetry-browser` in TypeScript code requires:
 
 - TypeScript 5.0.4 or later
 - Using `"module": "node16"` or "nodenext" in "tsconfig.json" to get support for handling the "exports" entry in package.json. This is so entry points like `@opentelemetry/browser-instrumentation/experimental/web-vitals` can be used.
+
 
 
 ## Included instrumentations [included-instrumentations]
