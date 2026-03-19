@@ -24,7 +24,6 @@ At a minimum, the runtime environment must support:
 - `Promise`
 - `Performance` and `PerformanceObserver` APIs
 
-
 ### Supported browsers [supported-browsers]
 
 EDOT Browser is designed to run in modern evergreen browsers that have the requirements mentioned above. 
@@ -53,8 +52,13 @@ When you install EDOT Browser as a package (see [Install the agent](install-agen
 | Rollup | Supported. You can check this [sample configuration](https://github.com/elastic/elastic-otel-rum-js/blob/main/packages/opentelemetry-browser/test/bundle/rollup/rollup.config.js) and adapt to yours. |
 | eslint | Supported. EDOT uses it with no plugins needed, ([see](https://github.com/elastic/elastic-otel-rum-js/blob/55f0dec911286208a104e8282aa16665c0de68e4/packages/opentelemetry-browser/package.json#L42)). |
 
-<!-- TODO: decide if we want to change API -->
-Your bundler includes only the EDOT Browser code (and instrumentations) that you import, so you can control the final bundle size. If you don't use a bundler, use the [EDOT Browser bundle](install-agent.md#install-bundle) instead (single JS file loaded using a script tag).
+
+## TypeScript versions
+
+Usage of `@elastic/opentelemetry-browser` in TypeScript code requires:
+
+- TypeScript 5.0.4 or later
+<!-- TODO: in future versions we shouls require some tsconfig.json options for "exports" entries in pacakge.json -->
 
 ## Included instrumentations [included-instrumentations]
 
