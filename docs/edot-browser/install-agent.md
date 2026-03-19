@@ -17,12 +17,16 @@ EDOT Browser is distributed in two ways.
 
 ## Package versus bundle [package-vs-bundle]
 
-<!-- TODO: review this -->
+:::{note}
+Status of the upstream instrumentations included in EDOT Browser is experimental. This means they may introduce breaking changes in their configuration or APIs. For that reason EDOT Browser keeps a "development" version (`0.x` range) and will bump the minor when any of the instrumentations contain a breaking change or EDOT provides a new feature.
+:::
+
 
 | Option | Best for | Trade-offs |
 |--------|----------|------------|
-| **Bundle** | Applications that don't use a bundler (single JS file loaded using script tag). | Works out of the box with no build step. Updating the bundle can introduce breaking changes when upstream instrumentations or configuration change. You have to absorb those changes when you upgrade. |
-| **Package** | Applications that use a bundler (for example: webpack, Vite, Rollup). | Uses your bundler so you control when to upgrade. Choosing which instrumentations to include for a smaller bundle is planned for a future release. Until then, the package includes the same instrumentations as the bundle. |
+| **Package** | Applications that use a bundler (for example: webpack, esbuild, Rollup). | Uses your bundler so EDOT is shipped with your application code, making it bigger. It provides type definitions so your build step probably will catch breaking changes at the types level. |
+| **Bundle** | Applications that don't use a bundler (single JS file loaded using script tag). | Works out of the box with no build step and does not increase your application size. You have to check manually for breaking changes in the configuration. |
+
 
 Before installing, consider [configuring a reverse proxy and CORS](proxy-cors.md) so the browser can export telemetry securely without exposing credentials.
 
