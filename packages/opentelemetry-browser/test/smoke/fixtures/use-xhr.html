@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta name="traceparent" content="00-ab42124a3c573678d4d8b21ba52df3bf-d21f7bc17caa5aba-01">
+        <title>XHR Instrumentation Test</title>
+        <!-- EDOT_PLACEHOLDER (DO NOT REMOVE)-->
+    </head>
+    <body>
+        <h1>XHR Instrumentation Test</h1>
+        <button id="same-origin">XHR Same Origin</button>
+        <button id="other-origin">XHR Same Origin</button>
+        <!-- The test file will look here to wait for the completion of the handlers -->
+        <p id="status"></p>
+        <script>
+            const statusElem = document.getElementById('status');
+            const xhrPromise = (url, options) => {
+                return new Promise((res, rej) => {
+                    const xhr = new XMLHttpRequest();
+                    xhr.open('GET', url, true);
+                    for (const [n,v] of Object.entries(options.headers)) {
+                        xhr.setRequestHeader(n, v);
+                    }
+                    xhr.onload = function () {
+                        if (xhr.status >= 200 && xhr.status < 300) {
+                            res(xhr);
+                        } else {
+                            rej(`HTTP ${xhr.status}: ${xhr.responseText}`);
+                        }
+                    };
+                    xhr.onerror = rej;
+                    xhr.send();
+                });
+            }
+            document.getElementById('same-origin').addEventListener('click', () => {
+                statusElem.innerText = 'started';
+                xhrPromise('/api/method', { headers: { foo: 'bar' } })
+                    .then(() => {
+                        statusElem.innerText = 'finished';
+                    });
+            });
+            document.getElementById('other-origin').addEventListener('click', () => {
+                statusElem.innerText = 'started';
+                xhrPromise('http://www.example.com', { headers: { bar: 'baz' } })
+                    .then(() => {
+                        statusElem.innerText = 'finished';
+                    });
+            });
+        </script>
+    </body>
+</html>
