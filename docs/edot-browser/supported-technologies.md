@@ -58,7 +58,8 @@ When you install EDOT Browser as a package (see [Install the agent](install-agen
 Usage of `@elastic/opentelemetry-browser` in TypeScript code requires:
 
 - TypeScript 5.0.4 or later
-<!-- TODO: in future versions we shouls require some tsconfig.json options for "exports" entries in pacakge.json -->
+- Using `"module": "node16"` or "nodenext" in "tsconfig.json" to get support for handling the "exports" entry in package.json. This is so entry points like `@opentelemetry/browser-instrumentation/experimental/web-vitals` can be used.
+
 
 ## Included instrumentations [included-instrumentations]
 
