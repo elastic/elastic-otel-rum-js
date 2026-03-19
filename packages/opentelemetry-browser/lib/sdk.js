@@ -164,8 +164,8 @@ export function startBrowserSdk(cfg = {}) {
     });
     logs.setGlobalLoggerProvider(loggerProvider);
 
-    // Resgister instrumentations. The `registerInstrumentations` enabled al of them
-    // regardles of the configuration so EDOT only add the ones that are not disabled
+    // Resgister instrumentations. The `registerInstrumentations` enabled all of them
+    // regardless of the configuration so EDOT only add the ones that are not disabled
     // by configuration
     /** @type {Record<keyof InstrumentationsConfigMap, (cfg: any) => any>} */
     const instrFactories = {
@@ -184,10 +184,19 @@ export function startBrowserSdk(cfg = {}) {
         '@opentelemetry/instrumentation-web-vitals': (cfg) =>
             new WebVitalsInstrumentation(cfg),
     };
-    const {instrumentations} = config;
+
+    const httpSemconvConfig = {semconvStabilityOptIn: 'http'};
+    const instrumentations = config.instrumentations || {};
     const enabledInstrumentations = [];
     for (const key of Object.keys(instrFactories)) {
-        const instrConfig = instrumentations?.[key];
+        let instrConfig = instrumentations[key];
+        if (
+            key === '@opentelemetry/instrumentation-fetch' ||
+            key === '@opentelemetry/instrumentation-xml-http-request'
+        ) {
+            instrConfig = {...httpSemconvConfig, ...instrConfig};
+        }
+
         const isDisabled = instrConfig?.enabled === false;
         if (!isDisabled) {
             enabledInstrumentations.push(instrFactories[key](instrConfig));
