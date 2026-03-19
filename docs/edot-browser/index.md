@@ -28,6 +28,15 @@ EDOT Browser collects the following signals:
 
 For what each signal includes, known limitations, and what is not yet supported, refer to [Metrics, traces, and logs](telemetry.md).
 
+## Features [features]
+
+In addition to all the features of OpenTelemetry Browser, with EDOT Browser you have access to the following:
+
+* A single package that includes several OpenTelemetry packages as dependencies, so you only need to install and update a single package (for most use cases). This is similar to OpenTelemetry's `@opentelemetry/auto-instrumentations-web` package.
+* Improvements and bug fixes contributed by the Elastic team before the changes are available in OpenTelemetry repositories.
+* Optional features that can enhance OpenTelemetry data that is being sent to Elastic.
+* Pre-configured collection of tracing and metrics signals, applying some opinionated defaults, such as which sources are collected by default. Additional metrics are collected by default: `browser.web_vital.*` metrics from the [instrumentation/web-vitals package](https://github.com/open-telemetry/opentelemetry-browser/tree/main/packages/instrumentation/src/web-vitals).
+
 ## How it works [how-it-works]
 
 EDOT Browser runs in the user's browser as part of your web application. When initialized, it instruments the page and captures telemetry such as document load, user interactions, network requests, and Core Web Vitals. For a full list of what is collected, refer to [Supported technologies](supported-technologies.md).
