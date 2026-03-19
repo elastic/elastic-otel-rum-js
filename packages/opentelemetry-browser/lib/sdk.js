@@ -185,7 +185,7 @@ export function startBrowserSdk(cfg = {}) {
             new WebVitalsInstrumentation(cfg),
     };
 
-    const httpSemconvConfig = { semconvStabilityOptIn: 'http' };
+    const httpSemconvConfig = {semconvStabilityOptIn: 'http'};
     const instrumentations = config.instrumentations || {};
     const enabledInstrumentations = [];
     for (const key of Object.keys(instrFactories)) {
@@ -194,9 +194,9 @@ export function startBrowserSdk(cfg = {}) {
             key === '@opentelemetry/instrumentation-fetch' ||
             key === '@opentelemetry/instrumentation-xml-http-request'
         ) {
-            instrConfig = { ...httpSemconvConfig, ...instrConfig };
+            instrConfig = {...httpSemconvConfig, ...instrConfig};
         }
-        
+
         const isDisabled = instrConfig?.enabled === false;
         if (!isDisabled) {
             enabledInstrumentations.push(instrFactories[key](instrConfig));

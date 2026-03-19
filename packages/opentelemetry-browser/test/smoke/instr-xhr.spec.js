@@ -52,7 +52,8 @@ test.only('should export XMLHttpRequest related spans', async ({page}) => {
 
     const spans = await collector.getSpans({flush: false});
     const fetchSpans = spans.filter(
-        (s) => s.scope.name === '@opentelemetry/instrumentation-xml-http-request'
+        (s) =>
+            s.scope.name === '@opentelemetry/instrumentation-xml-http-request'
     );
 
     // We got spans
