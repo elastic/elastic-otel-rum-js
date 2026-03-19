@@ -34,6 +34,15 @@ Ensure your reverse proxy and OTLP endpoint accept the `/v1/metrics` path.
 
 ## Traces [traces]
 
+### Context Manager [traces-cntext-manager]
+
+In certain scenarios, a trace may occur asynchronously. For instance, a user interaction that initiates an HTTP request to a downstream service and subsequently updates the User Interface with the service response. To maintain context across these asynchronous functions, EDOT incorporates a ContextManager that patches several asynchronous browser APIs, including:
+- setTimeout and setImmediate
+- Promise methods: then, catch, and finally
+- XMLHttpRequest event handlers
+
+This mechanism ensures that when these asynchronous operations execute, they do so within the same context that was active at the time of their scheduling. Consequently, distributed tracing and context values (such as trace IDs and spans) are accurately preserved across asynchronous boundaries in web applications.
+
 ### What EDOT Browser currently emits [traces-what-is-emitted]
 
 EDOT Browser initializes tracing and registers instrumentations that produce spans:
@@ -51,6 +60,9 @@ When your backend is instrumented with OpenTelemetry and trace context (trace ID
 - Only requests that go through the instrumented `fetch` and `XMLHttpRequest` APIs are captured. Requests made by other mechanisms (for example some third-party scripts, WebSockets, or non-instrumented clients) do not produce spans unless you add custom instrumentation.
 - Sampling is applied in the browser. High traffic can lead to large trace volume, so configure sampling or export options appropriately.
 - Traces are tied to the page. Cross-tab or cross-origin flows might not form a single trace unless you implement custom context propagation.
+
+
+Also current limitation of the Context Manager, and other implementations, is the unavailability of [AsyncContext](https://github.com/tc39/proposal-async-context/tree/master) in browsers, which prevents the preservation of context when utilizing the async/await syntax. Should this situation arise, developers may use tools such as Babel to down-compile their code, transforming it into Promise-based code.
 
 :::{note}
 Full feature parity with classic Elastic {{product.apm}} RUM agents for tracing (for example, certain automatic instrumentations or span types) is not yet available.
