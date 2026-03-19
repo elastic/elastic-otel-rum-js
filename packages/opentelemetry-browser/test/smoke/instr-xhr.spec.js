@@ -6,7 +6,7 @@
 import {test, expect} from '@playwright/test';
 import {createCollector} from './test-utils';
 
-test('should export fetch related spans', async ({page}) => {
+test.only('should export XMLHttpRequest related spans', async ({page}) => {
     // Disable `@opentelemetry/instrumentation-document-load` instrumentation to avoid a 1st export that
     // creates a span due to https://github.com/open-telemetry/opentelemetry-js/issues/6339
     // and gives us wrong data
@@ -40,7 +40,7 @@ test('should export fetch related spans', async ({page}) => {
         });
     });
 
-    await page.goto(`/fixtures/use-fetch.html?config=${config}`);
+    await page.goto(`/fixtures/use-xhr.html?config=${config}`);
     await page.click('#same-origin');
     await page.waitForFunction(
         () => document.getElementById('status').innerText === 'finished'
@@ -52,7 +52,7 @@ test('should export fetch related spans', async ({page}) => {
 
     const spans = await collector.getSpans({flush: false});
     const fetchSpans = spans.filter(
-        (s) => s.scope.name === '@opentelemetry/instrumentation-fetch'
+        (s) => s.scope.name === '@opentelemetry/instrumentation-xml-http-request'
     );
 
     // We got spans
@@ -61,12 +61,12 @@ test('should export fetch related spans', async ({page}) => {
 
     // A span for each fetch request, using stable semvconv
     expect(fetchSpans[0].kind).toStrictEqual('SPAN_KIND_CLIENT');
-    expect(fetchSpans[0].attributes['http.url']).not.toBeDefined()
+    expect(fetchSpans[0].attributes['http.url']).not.toBeDefined();
     expect(fetchSpans[0].attributes['url.full']).toStrictEqual(
         'http://localhost:3000/api/method'
     );
     expect(fetchSpans[1].kind).toStrictEqual('SPAN_KIND_CLIENT');
-    expect(fetchSpans[1].attributes['http.url']).not.toBeDefined()
+    expect(fetchSpans[1].attributes['http.url']).not.toBeDefined();
     expect(fetchSpans[1].attributes['url.full']).toStrictEqual(
         'http://www.example.com/'
     );
