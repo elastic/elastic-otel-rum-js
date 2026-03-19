@@ -35,6 +35,16 @@ Ensure your reverse proxy and OTLP endpoint accept the `/v1/metrics` path.
 
 ## Traces [traces]
 
+In certain scenarios, a trace may occur asynchronously. For instance, a user interaction that initiates an HTTP request to a downstream service and subsequently updates the User Interface with the service response. To maintain context across these asynchronous functions, EDOT incorporates a ContextManager that patches several asynchronous browser APIs, including:
+- setTimeout and setImmediate
+- Promise methods: then, catch, and finally
+- XMLHttpRequest event handlers
+
+This mechanism ensures that when these asynchronous operations execute, they do so within the same context that was active at the time of their scheduling. Consequently, distributed tracing and context values (such as trace IDs and spans) are accurately preserved across asynchronous boundaries in web applications.
+
+A current limitation of this approach and others is the unavailability of[AsyncContext](https://github.com/tc39/proposal-async-context/tree/master) in browsers, which prevents the preservation of context when utilizing the async/await syntax. Should this situation arise, developers may use tools such as Babel to down-compile their code, transforming it into Promise-based code.
+
+
 ### What EDOT Browser currently emits [traces-what-is-emitted]
 
 EDOT Browser initializes tracing and registers instrumentations that produce spans:
