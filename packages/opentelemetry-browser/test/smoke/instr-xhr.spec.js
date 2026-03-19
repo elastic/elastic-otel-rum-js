@@ -6,7 +6,7 @@
 import {test, expect} from '@playwright/test';
 import {createCollector} from './test-utils';
 
-test.only('should export XMLHttpRequest related spans', async ({page}) => {
+test('should export XMLHttpRequest related spans', async ({page}) => {
     // Disable `@opentelemetry/instrumentation-document-load` instrumentation to avoid a 1st export that
     // creates a span due to https://github.com/open-telemetry/opentelemetry-js/issues/6339
     // and gives us wrong data
