@@ -17,4 +17,6 @@ Some direct links:
 EDOT Browser is very similar to the `@opentelemetry/auto-instrumentations-web` package from OpenTelemetry in its usage goal: a single-dependency that provides a simple path to zero-code instrumentation of web applications. In general, Elastic's goal is to contribute all SDK improvements upstream. That said, there are sometimes differences that are specific to Elastic (e.g. Elastic-authored additional instrumentations or specific configurations). Here is a concise list of differences:
 
 - EDOT Browser, being a [distribution](https://opentelemetry.io/docs/concepts/distributions/) of the OpenTelemetry JS SDK, always adds the [`telemetry.distro.*`](https://opentelemetry.io/docs/specs/semconv/attributes-registry/telemetry/) resource attributes to identify itself.
+
+<!-- TODO: this is valid after https://github.com/elastic/elastic-otel-rum-js/pull/44 is merged -->
 - EDOT Browser defaults to [`OTEL_SEMCONV_STABILITY_OPT_IN=http`](https://opentelemetry.io/docs/specs/semconv/non-normative/http-migration/) such that telemetry from the `@opentelemetry/instrumentation-http` package will use stable HTTP semantic conventions by default. Upstream OpenTelemetry JS has [a tracking issue for the migration to newer HTTP semantic conventions](https://github.com/open-telemetry/opentelemetry-js/issues/5646) in its instrumentations.

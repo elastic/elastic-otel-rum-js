@@ -15,22 +15,7 @@ products:
 
 This page lists supported browser versions, included instrumentations and their default behavior.
 
-## Supported browsers [supported-browsers]
-
-EDOT Browser is designed to run in modern evergreen browsers.
-
-| Browser | Supported versions |
-|----------|--------------------|
-| Chrome   | TODO |
-| Edge     | TODO |
-| Firefox  | TODO |
-| Safari   | TODO |
-
-:::{note}
-Internet Explorer is not supported.
-:::
-
-### Browser requirements
+## Browser requirements
 
 At a minimum, the runtime environment must support:
 
@@ -39,7 +24,23 @@ At a minimum, the runtime environment must support:
 - `Promise`
 - `Performance` and `PerformanceObserver` APIs
 
-If your application targets older browsers, you might need to provide polyfills. EDOT Browser does not ship with built-in polyfills.
+
+### Supported browsers [supported-browsers]
+
+EDOT Browser is designed to run in modern evergreen browsers that have the requirements mentioned above. 
+
+| Browser | Supported versions |
+|----------|--------------------|
+| Chrome   | 94+ |
+| Edge     | 94+ |
+| Firefox  | 93+ |
+| Safari   | 15.4+ |
+
+:::{note}
+Internet Explorer is not supported.
+:::
+
+If your application targets older browsers, you might need to downlevel the sources with a bundler and to provide polyfills. EDOT Browser does not ship with built-in polyfills. This documentaiton does not cover downleveling 
 
 ## Bundlers [bundlers]
 
@@ -47,10 +48,12 @@ When you install EDOT Browser as a package (see [Install the agent](install-agen
 
 | Bundler | Notes |
 |---------|-------|
-| Example 1 | Supported. Use with your existing webpack configuration. |
-| 2   | Supported. |
-| 3 | Supported. |
+| Webpack 4 | Supported. You can check this [sample configuration](https://github.com/elastic/elastic-otel-rum-js/blob/main/packages/opentelemetry-browser/test/bundle/webpack4/webpack.config.mjs) and adapt to yours. |
+| Webpack 5 | Supported. You can check this [sample configuration](https://github.com/elastic/elastic-otel-rum-js/blob/main/packages/opentelemetry-browser/test/bundle/webpack5/webpack.config.mjs) and adapt to yours. |
+| Rollup | Supported. You can check this [sample configuration](https://github.com/elastic/elastic-otel-rum-js/blob/main/packages/opentelemetry-browser/test/bundle/rollup/rollup.config.js) and adapt to yours. |
+| eslint | Supported. EDOT uses it with no plugins needed, ([see](https://github.com/elastic/elastic-otel-rum-js/blob/55f0dec911286208a104e8282aa16665c0de68e4/packages/opentelemetry-browser/package.json#L42)). |
 
+<!-- TODO: decide if we want to change API -->
 Your bundler includes only the EDOT Browser code (and instrumentations) that you import, so you can control the final bundle size. If you don't use a bundler, use the [EDOT Browser bundle](install-agent.md#install-bundle) instead (single JS file loaded using a script tag).
 
 ## Included instrumentations [included-instrumentations]
@@ -79,14 +82,16 @@ By default, EDOT Browser:
 
 <!-- TODO: document actual defaults once finalized -->
 
-To turn off an instrumentation, pass `configInstrumentations` to `startBrowserSdk` with the instrumentation key and `enabled: false` (for example, `configInstrumentations: { '@opentelemetry/instrumentation-long-task': { enabled: false } }`).
+To turn off an instrumentation, pass `instrumentations` to `startBrowserSdk` with the instrumentation key and `{ enabled: false }` (for example, `instrumentations: { '@opentelemetry/instrumentation-long-task': { enabled: false } }`).
 
 ## Version compatibility [version-compatibility]
 
 | Component | Version |
 |----------|---------|
-| OpenTelemetry JS API | TODO |
-| OpenTelemetry JS SDK | TODO |
+| OpenTelemetry JS API | ^1.9.0 |
+| OpenTelemetry JS Trace SDK | ^2.2.0 |
+| OpenTelemetry JS Metrics SDK | ^2.2.0 |
+| OpenTelemetry JS Logs SDK | ^0.213.0 |
 
 <!-- TODO: document compatibility matrix once versioning strategy is defined -->
 

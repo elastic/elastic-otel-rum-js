@@ -33,7 +33,7 @@ Before you set up EDOT Browser, you need:
 
 ## How browser telemetry is exported [how-browser-telemetry-is-exported]
 
-EDOT Browser exports telemetry using the OpenTelemetry Protocol (OTLP) over HTTP. Data flows as follows:
+EDOT Browser exports telemetry using the OpenTelemetry Protocol (OTLP) over HTTP. Data flows as follows (assuming you set up the proxy as recommended):
 
 **Browser (EDOT Browser) → Reverse proxy → {{ecloud}} Managed OTLP endpoint or EDOT Collector → {{product.observability}}**
 
@@ -42,6 +42,10 @@ The browser sends OTLP data to the reverse proxy endpoint that you configure.
 ## What to expect in {{kib}} [what-to-expect-in-kibana]
 
 After EDOT Browser is sending telemetry to {{product.observability}}, you can inspect traces and spans in the Observability app. The following describes what you see and how to interpret it.
+
+### Document load spans [document-load-spans]
+
+EDOT Browser measures how long it takes for a user's browser to fully load the initial HTML document served by your web server by creating document load spans. It also generates spans to measure the download time for other resources (like JavaScript, CSS, fonts, or images) if the initial HTML file includes them. Inthe trace vew, you see `documentLoad` span as root of the trace and the resource spans as child spans.
 
 ### Spans from browser fetch and XHR [spans-from-fetch-xhr]
 

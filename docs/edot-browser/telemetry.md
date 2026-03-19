@@ -21,7 +21,6 @@ EDOT Browser can export all three OpenTelemetry signals (metrics, traces, and lo
 
 EDOT Browser configures the OpenTelemetry MeterProvider and exports metrics over OTLP to the `/v1/metrics` path. Metrics can be produced by:
 
-- **Long task instrumentation**: When long task instrumentation is turned on (it can be turned off using instrumentation configuration), it can report observations related to main-thread blocking (for example long tasks exceeding a threshold). The names and attributes depend on the instrumentation implementation.
 - **Custom metrics**: Your application can create meters and instruments (counters, histograms, and so on) using the OpenTelemetry Metrics API. EDOT Browser exports those metrics along with any SDK-provided ones.
 
 Ensure your reverse proxy and OTLP endpoint accept the `/v1/metrics` path.
@@ -42,6 +41,7 @@ EDOT Browser initializes tracing and registers instrumentations that produce spa
 - Spans for the initial document load and related navigation timing (document load instrumentation is turned on by default).
 - Each outgoing request using `fetch` or `XMLHttpRequest` is captured as an `external.http` span with attributes such as URL, HTTP method, and status code. These spans represent the client-side portion of the request.
 - Spans for user actions such as "click" and "submit". These interaction spans group the subsequent work (for example `external.http` requests) so you can attribute frontend and backend activity to a specific user action in {{product.observability}}.
+- Spans for task executions that take longer than 50ms and may impact the user experience. [Reference](https://developer.mozilla.org/en-US/docs/Web/API/PerformanceLongTaskTiming).
 
 When your backend is instrumented with OpenTelemetry and trace context (trace ID, span ID) is propagated in HTTP headers, the browser’s `external.http` span and the backend spans appear in the same trace, giving you end-to-end visibility in Discover and Service Maps. Refer to [What to expect in {{kib}}](setup.md#what-to-expect-in-kibana) for how these traces appear in the Observability app.
 
@@ -50,7 +50,7 @@ When your backend is instrumented with OpenTelemetry and trace context (trace ID
 - Frontend-to-backend trace continuity depends on your backend and HTTP client propagating the W3C Trace Context headers. If propagation is not configured, browser and backend spans appear as separate traces.
 - Only requests that go through the instrumented `fetch` and `XMLHttpRequest` APIs are captured. Requests made by other mechanisms (for example some third-party scripts, WebSockets, or non-instrumented clients) do not produce spans unless you add custom instrumentation.
 - Sampling is applied in the browser. High traffic can lead to large trace volume, so configure sampling or export options appropriately.
-- Traces are tied to the page and session. Cross-tab or cross-origin flows might not form a single trace unless you implement custom context propagation.
+- Traces are tied to the page. Cross-tab or cross-origin flows might not form a single trace unless you implement custom context propagation.
 
 :::{note}
 Full feature parity with classic Elastic {{product.apm}} RUM agents for tracing (for example, certain automatic instrumentations or span types) is not yet available.
