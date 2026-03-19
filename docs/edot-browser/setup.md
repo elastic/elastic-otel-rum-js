@@ -15,7 +15,7 @@ products:
 
 This guide shows you how to set up the {{edot}} Browser (EDOT Browser) in a web application and export browser telemetry to {{product.observability}}.
 
-EDOT Browser runs directly in users' browsers. Because of browser security constraints, authentication and data export require a reverse proxy. When your OTLP endpoint is available ({{ecloud}} Managed OTLP or an EDOT Collector), do the following:
+EDOT Browser runs directly in users' browsers. Because sources can be accessed in this environment Elastic discourages to set tokens, API keys or any other authentication data directly in the EDOT. To send data securely withouth exposing secrets a reverse proxy is required. When your OTLP endpoint is available ({{ecloud}} Managed OTLP or an EDOT Collector), do the following:
 
 - [Install the agent](install-agent.md): Add EDOT Browser to your application (package or bundle) and initialize it.
 - [Configure proxy and CORS](proxy-cors.md): Set up a reverse proxy in front of your OTLP endpoint and configure CORS so the browser can export telemetry securely.
