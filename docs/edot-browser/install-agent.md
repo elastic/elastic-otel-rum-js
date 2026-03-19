@@ -38,7 +38,7 @@ Install EDOT Browser using your package manager:
 npm install @elastic/opentelemetry-browser
 ```
 
-Then the EDOT is available to your codebase and can be initialized when your application starts. We recommend to start the EDOT before you application code does. Otherwise it is possible your application keeps references to some APIs before being instrumented therefore the EDOT won't be able to detect activity.
+Then the EDOT is available to your codebase and can be initialized when your application starts. We recommend to start the EDOT Browser before you application code does. Otherwise it is possible your application keeps references to some APIs before being instrumented therefore the EDOT Browser won't be able to detect activity.
 
 The entry point of your application should import and start EDOT.
 ```js
@@ -53,7 +53,7 @@ startBrowserSdk({
 // you application bootstrap code
 ```
 
-When you use the package, your bundler includes the SDK and its instrumentations. You can control which instrumentations are enabled using configuration. Choosing which instrumentations to include for a smaller bundle is planned for a future release.
+When you use the package, your bundler includes the SDK and its instrumentations. You can control which instrumentations are enabled using configuration.
 
 For supported bundlers and browser requirements, refer to [Supported technologies](supported-technologies.md).
 
@@ -64,6 +64,7 @@ A single JS bundle is available for script-tag usage (for example, from a CDN or
 The following example shows how to install and intialize the latest version using a public CDN. 
 
 ```html
+<!-- Place these scripts in the HTML <head> section preferably before any other script -->
 <script src="https://unpkg.com/@elastic/opentelemetry-browser/build/elastic-otel-browser.min.js" crossorigin></script>
 <script>
   startBrowserSdk({
@@ -73,9 +74,9 @@ The following example shows how to install and intialize the latest version usin
 </script>
 ```
 
-The bundle works out of the box: you add a script tag and initialize the SDK. The instrumentations included in the bundle are in "development" status (`0.x` version). This means a new version of the bundle may include instrumentation or configuration changes might introduce breaking changes. You must test upgrades in a non-production environment.
+The bundle works out of the box: you add a script tag and initialize the SDK. The EDOT Browser starts synchronously which ensures the instrumentations are initialized before any activity ocurs. This is likely to impact the load time of your web application.
 
-The example above loads and configures the EDOT synchronously which ensures the instrumentations are initialized before any activity ocurs. This is likely to impact the load time of your web application. If that's a concern you may load the bundle asynchronously.
+Loading the script asynchronously ensures the EDOT Browser bundle will not block other resources on the page, however, it will still block browsers onload event.
 
 ```html
 <script>
@@ -89,6 +90,8 @@ The example above loads and configures the EDOT synchronously which ensures the 
   })(document, 'script', {serviceName: 'my-web-app', otlpEndpoint: 'https://telemetry.example.com'})
 </script>
 ```
+
+Even though this is the recommended pattern, there is a caveat to be aware of. Because the downloading and initializing of the EDOT Browser happens asynchronously, distributed tracing will not work for requests that occur before the agent is initialized.
 
 ## Initialize EDOT Browser [initialize]
 
