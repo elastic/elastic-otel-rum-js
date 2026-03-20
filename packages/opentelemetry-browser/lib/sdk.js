@@ -26,7 +26,7 @@ import {LongTaskInstrumentation} from '@opentelemetry/instrumentation-long-task'
 import {UserInteractionInstrumentation} from '@opentelemetry/instrumentation-user-interaction';
 import {XMLHttpRequestInstrumentation} from '@opentelemetry/instrumentation-xml-http-request';
 import {ExceptionInstrumentation} from '@opentelemetry/instrumentation-web-exception';
-import {WebVitalsInstrumentation} from './instrumentations/web-vitals.js';
+import {WebVitalsInstrumentation} from '@opentelemetry/browser-instrumentation/experimental/web-vitals';
 
 import {AsyncApisContextManager} from './context.js';
 import {createLogger} from './logging.js';
@@ -40,7 +40,7 @@ import {detectResource} from './detector.js';
  *  "@opentelemetry/instrumentation-user-interaction": import('@opentelemetry/instrumentation-user-interaction').UserInteractionInstrumentationConfig;
  *  "@opentelemetry/instrumentation-xml-http-request": import('@opentelemetry/instrumentation-xml-http-request').XMLHttpRequestInstrumentationConfig;
  *  "@opentelemetry/instrumentation-web-exception": import('@opentelemetry/instrumentation-web-exception').GlobalErrorsInstrumentationConfig;
- *  "@opentelemetry/instrumentation-web-vitals": import('@opentelemetry/instrumentation').InstrumentationConfig & import('./instrumentations/web-vitals.js').WebVitalsInstrumentationConfig
+ *  "@opentelemetry/instrumentation-web-vitals": import('@opentelemetry/browser-instrumentation/experimental/web-vitals').WebVitalsInstrumentationConfig;
  * }} InstrumentationsConfigMap
  */
 
