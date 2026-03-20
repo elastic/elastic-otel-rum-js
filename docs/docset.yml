@@ -33,7 +33,7 @@ cross_links:
 
 toc:
   - toc: release-notes
-  - toc: edot-browser
+  - toc: reference/edot-browser
 
 subs:
   motlp: Elastic Cloud Managed OTLP Endpoint
