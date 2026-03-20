@@ -34,7 +34,7 @@ Ensure your reverse proxy and OTLP endpoint accept the `/v1/metrics` path.
 
 ## Traces [traces]
 
-### Context Manager [traces-cntext-manager]
+### Context Manager [traces-context-manager]
 
 In certain scenarios, a trace may occur asynchronously. For instance, a user interaction that initiates an HTTP request to a downstream service and subsequently updates the User Interface with the service response. To maintain context across these asynchronous functions, EDOT incorporates a ContextManager that patches several asynchronous browser APIs, including:
 - setTimeout and setImmediate
