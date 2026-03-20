@@ -66,7 +66,7 @@ Usage of `@elastic/opentelemetry-browser` in TypeScript code requires:
 
 EDOT Browser bundles a curated set of OpenTelemetry JS instrumentations suitable for browser environments. This list is being reviewed and might change in future releases.
 
-The following instrumentations are included and turned on by default. You can turn off any of them using `configInstrumentations` by setting `enabled: false` for the corresponding key when calling `startBrowserSdk`:
+The following instrumentations are included and turned on by default. You can turn off any of them using `instrumentations` by setting `{ enabled: false }` for the corresponding key when calling `startBrowserSdk`:
 
 | Instrumentation | Package | On by default |
 |-----------------|---------|----------------|
