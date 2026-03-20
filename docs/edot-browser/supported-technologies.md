@@ -76,6 +76,7 @@ The following instrumentations are included and turned on by default. You can tu
 | User interaction| `@opentelemetry/instrumentation-user-interaction` | Yes |
 | Long tasks      | `@opentelemetry/instrumentation-long-task` | Yes |
 | Web exception   | `@opentelemetry/instrumentation-web-exception` | Yes |
+| Web vitals   | `@opentelemetry/instrumentation-web-vitals` | Yes |
 | Web vitals   | `@opentelemetry/browser-instrumentation` | Yes |
 
 ### Default behavior
