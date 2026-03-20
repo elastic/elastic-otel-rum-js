@@ -39,11 +39,11 @@ EDOT Browser exports telemetry using the OpenTelemetry Protocol (OTLP) over HTTP
 
 ```mermaid
 flowchart LR
-    A["Browser\n(EDOT Browser)"]
+    A["Browser<br/>(EDOT Browser)"]
     B["Reverse Proxy"]
-    C["Elastic Cloud\nManaged OTLP Endpoint"]
+    C["Elastic Cloud<br/>Managed OTLP Endpoint"]
     D["EDOT Collector"]
-    E["Elastic\nObservability"]
+    E["Elastic<br/>Observability"]
     A --> B
     B --> C
     B --> D
