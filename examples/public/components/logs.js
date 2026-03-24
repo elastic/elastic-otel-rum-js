@@ -26,7 +26,7 @@ export function Component(target) {
     function getLogger(name) {
         const API_MAJOR = 1; // TODO: check when update the major version
         const otelApiSymbol = Symbol.for('io.opentelemetry.js.api.logs');
-        const loggerProvider = globalThis[otelApiSymbol](API_MAJOR);
+        const loggerProvider = globalThis[otelApiSymbol]?.(API_MAJOR);
         return loggerProvider?.getLogger(name);
     }
 
