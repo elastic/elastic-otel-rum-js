@@ -23,9 +23,12 @@ const template = `
  * @param {HTMLElement} target
  */
 export function Component(target) {
-    // TODO: create a logger here using the API
-    const logger =
-        globalThis.edotBrowser.providers.logger.getLogger('log-view');
+    function getLogger(name) {
+        const API_MAJOR = 1; // TODO: check when update the major version
+        const otelApiSymbol = Symbol.for('io.opentelemetry.js.api.logs');
+        const loggerProvider = globalThis[otelApiSymbol]?.(API_MAJOR);
+        return loggerProvider?.getLogger(name);
+    }
 
     // Render
     target.innerHTML = template;
@@ -40,7 +43,7 @@ export function Component(target) {
         const message = data.get('message').toString().trim();
 
         if (message) {
-            logger.emit({
+            getLogger('log-view')?.emit({
                 eventName: 'custom-log',
                 body: message,
             });
