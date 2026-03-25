@@ -11,6 +11,6 @@ products:
   - id: edot-sdk
 ---
 
-# Elastic Distribution of OpenTelemetry Browser known issues
+# {{edot}} Browser known issues
 
 No known issues.

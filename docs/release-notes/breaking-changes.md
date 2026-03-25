@@ -11,9 +11,9 @@ products:
   - id: edot-sdk
 ---
 
-# Elastic Distribution of OpenTelemetry Browser breaking changes [edot-browser-breaking-changes]
+# {{edot}} Browser breaking changes [edot-browser-breaking-changes]
 
-Breaking changes can impact your Elastic applications, potentially disrupting normal operations. Before you upgrade, carefully review the Elastic Distribution of OpenTelemetry  breaking changes and take the necessary steps to mitigate any issues.
+Breaking changes can impact your applications, potentially disrupting normal operations. Before you upgrade, carefully review the {{edot}} breaking changes and take the necessary steps to mitigate any issues.
 
 % ## Next version [edot-browser-X.X.X-breaking-changes]
 
