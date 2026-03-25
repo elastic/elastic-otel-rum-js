@@ -66,7 +66,7 @@ When your backend is instrumented with OpenTelemetry and trace context (trace ID
 Also current limitation of the Context Manager, and other implementations, is the unavailability of [AsyncContext](https://github.com/tc39/proposal-async-context/tree/master) in browsers, which prevents the preservation of context when utilizing the async/await syntax. Should this situation arise, developers may use tools such as Babel to down-compile their code, transforming it into Promise-based code.
 
 :::{note}
-Full feature parity with classic Elastic {{product.apm}} RUM agents for tracing (for example, certain automatic instrumentations or span types) is not yet available.
+Full feature parity with classic Elastic {{product.apm}} RUM agents for tracing (for example, certain automatic instrumentations or span types) is not available.
 :::
 
 ## Logs [logs]

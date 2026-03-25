@@ -51,7 +51,7 @@ flowchart LR
     D --> E
 ```
 
-The browser sends OTLP data to the reverse proxy endpoint that you configure.
+The browser sends OTLP data to the reverse proxy endpoint that you configure. The reverse proxy then forwards data either to the {{ecloud}} Managed OTLP endpoint or to an EDOT Collector, depending on your chosen ingest path.
 
 ## What to expect in {{kib}} [what-to-expect-in-kibana]
 

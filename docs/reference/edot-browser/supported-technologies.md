@@ -89,8 +89,6 @@ By default, EDOT Browser:
 - Configures an OTLP exporter
 - Applies Elastic-specific defaults (for example, resource detection or attribute normalization)
 
-<!-- TODO: document actual defaults once finalized -->
-
 To turn off an instrumentation, pass `instrumentations` to `startBrowserSdk` with the instrumentation key and `{ enabled: false }` (for example, `instrumentations: { '@opentelemetry/instrumentation-long-task': { enabled: false } }`).
 
 ## Version compatibility [version-compatibility]
