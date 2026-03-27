@@ -5,8 +5,6 @@ The Elastic Distribution of OpenTelemetry Browser (EDOT Browser) is a lightweigh
 **See [the EDOT Browser docs](https://www.elastic.co/docs/reference/opentelemetry/edot-sdks/browser) for details.**
 Some direct links:
 
-<!-- TODO: put the right URLs once we have them -->
-
 * [Get started](https://www.elastic.co/docs/reference/opentelemetry/edot-sdks/browser/setup)
 * [Configuration](https://www.elastic.co/docs/reference/opentelemetry/edot-sdks/browser/configuration)
 * [Changelog / Release Notes](https://www.elastic.co/docs/release-notes/edot/sdks/rum)
