@@ -2,14 +2,12 @@
 
 The Elastic Distribution of OpenTelemetry Browser (EDOT Browser) is a lightweight wrapper around the [OpenTelemetry SDK](https://opentelemetry.io/docs/languages/js) that makes it easy to get started using OpenTelemetry in your web applications, especially if you are using [Elastic Observability](https://www.elastic.co/observability) as your observability solution.
 
-**See [the EDOT Browser docs](https://www.elastic.co/docs/reference/opentelemetry/edot-sdks/xxxxx) for details.**
+**See [the EDOT Browser docs](https://www.elastic.co/docs/reference/opentelemetry/edot-sdks/browser) for details.**
 Some direct links:
 
-<!-- TODO: put the right URLs once we have them -->
-
-* [Get started](https://www.elastic.co/docs/reference/opentelemetry/edot-sdks/xxxxx/setup)
-* [Configuration](https://www.elastic.co/docs/reference/opentelemetry/edot-sdks/xxxxx/configuration)
-* [Changelog / Release Notes](https://www.elastic.co/docs/release-notes/edot/sdks/xxxx)
+* [Get started](https://www.elastic.co/docs/reference/opentelemetry/edot-sdks/browser/setup)
+* [Configuration](https://www.elastic.co/docs/reference/opentelemetry/edot-sdks/browser/configuration)
+* [Changelog / Release Notes](https://www.elastic.co/docs/release-notes/edot/sdks/rum)
 * [Elastic Discuss forum](https://discuss.elastic.co/tags/c/observability/apm/58/rum) | [GitHub issue tracker](https://github.com/elastic/elastic-otel-rum-js/issues)
 
 ## How does EDOT Browser differ from the OpenTelemetry JS SDK?
@@ -18,5 +16,4 @@ EDOT Browser is very similar to the `@opentelemetry/auto-instrumentations-web` p
 
 - EDOT Browser, being a [distribution](https://opentelemetry.io/docs/concepts/distributions/) of the OpenTelemetry JS SDK, always adds the [`telemetry.distro.*`](https://opentelemetry.io/docs/specs/semconv/attributes-registry/telemetry/) resource attributes to identify itself.
 
-<!-- TODO: this is valid after https://github.com/elastic/elastic-otel-rum-js/pull/44 is merged -->
-- EDOT Browser defaults to [`OTEL_SEMCONV_STABILITY_OPT_IN=http`](https://opentelemetry.io/docs/specs/semconv/non-normative/http-migration/) such that telemetry from the `@opentelemetry/instrumentation-http` package will use stable HTTP semantic conventions by default. Upstream OpenTelemetry JS has [a tracking issue for the migration to newer HTTP semantic conventions](https://github.com/open-telemetry/opentelemetry-js/issues/5646) in its instrumentations.
+- EDOT Browser defaults to [`OTEL_SEMCONV_STABILITY_OPT_IN=http`](https://opentelemetry.io/docs/specs/semconv/non-normative/http-migration/) such that telemetry from the `@opentelemetry/instrumentation-fetch` and `@opentelemetry/instrumentation-xml-http-request` package will use stable HTTP semantic conventions by default. Upstream OpenTelemetry JS has [a tracking issue for the migration to newer HTTP semantic conventions](https://github.com/open-telemetry/opentelemetry-js/issues/5646) in its instrumentations.
