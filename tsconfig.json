@@ -8,7 +8,7 @@
     "target": "ESNext",
     "resolveJsonModule": true,
     "moduleResolution": "nodenext",
-    "module": "es2022",
+    "module": "nodenext",
     "allowSyntheticDefaultImports": true,
     "lib": ["ES2022", "DOM"]
   },

@@ -7,10 +7,10 @@ import assert from 'node:assert';
 import {test} from 'node:test';
 
 import { RawSourceMap } from 'source-map';
-import {retraceWeb} from '../dist/web.js';
+import {retraceWeb} from '../build/web.js';
 
 test(`web works`, async () => {
     const result = await retraceWeb('', {} as RawSourceMap);
 
-    assert.equal
+    assert.equal(result, 'foo');
 });

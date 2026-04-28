@@ -5,8 +5,7 @@
     "outDir": "build",
     "declaration": true,
     "emitDeclarationOnly": false,
-    "lib": ["ES2022"],
-    "types": ["node"]
+    "lib": ["ES2022"]
   },
   "include": ["src"],
 }
