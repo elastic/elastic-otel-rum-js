@@ -13,7 +13,12 @@
   "scripts": {
     "build": "tsc",
     "test": "npm run build && npm run test:tsx",
-    "test:tsx": "for f in ./test/*.spec.ts; do tsx \"$f\"; done"
+    "test:tsx": "for f in ./test/*.spec.ts; do tsx \"$f\"; done",
+    "lint": "npm run lint:eslint && npm run lint:prettier && npm run lint:licenses",
+    "lint:eslint": "eslint .",
+    "lint:prettier": "(cd ../../; prettier --check $npm_config_local_prefix)",
+    "lint:licenses": "../../scripts/gen-notice.sh --lint .",
+    "lint:fix": "eslint --fix . && (cd ../../; prettier --list-different --write $npm_config_local_prefix)"
   },
   "dependencies": {
     "source-map": "^0.7.6"

@@ -6,7 +6,7 @@
 import assert from 'node:assert';
 import {test} from 'node:test';
 
-import { RawSourceMap } from 'source-map';
+import {RawSourceMap} from 'source-map';
 import {retraceWeb} from '../build/web.js';
 
 test(`web works`, async () => {
