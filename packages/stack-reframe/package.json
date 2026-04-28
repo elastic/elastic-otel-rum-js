@@ -1,0 +1,24 @@
+{
+  "name": "@elastic/stack-reframe",
+  "version": "0.1.0",
+  "description": "",
+  "type": "module",
+  "private": true,
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/elastic/elastic-otel-rum-js.git",
+    "directory": "packages/stack-reframe"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "npm run build && node --test test/*.spec.js"
+  },
+  "dependencies": {
+    "source-map": "^0.7.6"
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.0",
+    "typescript": "5.0.4"
+  }
+}
