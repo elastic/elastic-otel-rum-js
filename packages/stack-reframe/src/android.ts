@@ -7,7 +7,7 @@ export interface AndroidSourceMap {}
 
 export async function retraceAndroid(
     stackTrace: string,
-    sourceMap: AndroidSourceMap
+    sourceMaps: AndroidSourceMap[]
 ): Promise<string> {
     return Promise.resolve('foo');
 }

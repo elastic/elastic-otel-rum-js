@@ -21,7 +21,8 @@
     "lint:fix": "eslint --fix . && (cd ../../; prettier --list-different --write $npm_config_local_prefix)"
   },
   "dependencies": {
-    "source-map": "^0.7.6"
+    "source-map": "^0.7.6",
+    "stacktrace-parser": "^0.1.11"
   },
   "devDependencies": {
     "tsx": "^4.21.0",
