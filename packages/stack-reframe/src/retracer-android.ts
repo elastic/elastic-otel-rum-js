@@ -15,11 +15,3 @@ export class RetracerAndroid extends Retracer<AndroidSourceMap> {
         return '';
     }
 }
-
-
-export async function retraceAndroid(
-    stackTrace: string,
-    sourceMaps: AndroidSourceMap[]
-): Promise<string> {
-    return Promise.resolve('foo');
-}
