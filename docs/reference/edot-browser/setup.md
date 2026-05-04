@@ -87,9 +87,11 @@ The following {{kib}} features work with EDOT Browser data:
 | **{{product.apm}} Service Inventory** | Your browser app appears as a service. |
 | **{{product.apm}} trace view** | Distributed traces including browser spans are visible. |
 | **Service Maps** | Frontend-to-backend service dependencies are shown. |
-| **Discover** | All signals (traces, metrics, logs) are indexed and queryable. |
+| **Discover** | Traces, metrics, and (when configured) logs are indexed and queryable. |
 
-The **User Experience** app currently shows only data from classic Elastic {{product.apm}} Browser agents and does not display EDOT Browser data. For RUM-style dashboards compatible with EDOT Browser, install the [OTel RUM Dashboards](https://github.com/elastic/integrations/tree/main/packages/otel_rum_dashboards) integration from the {{kib}} {{integrations}} catalog.
+Logs are only present in **Discover** if your application uses the OpenTelemetry Logs API to emit them. Refer to [Logs](telemetry.md#logs) for more information on what EDOT Browser emits and how to configure log export.
+
+The **User Experience** app currently shows only data from classic Elastic {{product.apm}} Browser agents and does not display EDOT Browser data. For RUM-style dashboards compatible with EDOT Browser, install the [RUM OpenTelemetry Assets](https://www.elastic.co/docs/reference/integrations/otel_rum_dashboards) integration from the {{kib}} Integrations catalog. The integration is currently in preview, requires {{kib}} 9.2.1 or later, and you must enable **Display beta integrations** on the Integrations page to find it.
 
 ## Next steps [next-steps]
 
