@@ -78,7 +78,18 @@ Traces that start in the browser (from a user interaction) and continue to your 
 - **Discover**: When you search or filter by your frontend service name or by trace ID, you see trace documents that include both browser-originated spans (for example, user interaction, `external.http`) and backend service spans, as long as trace context is propagated from the browser to the server. You can inspect the full path of a request from the user action through the frontend to backend services.
 - **Service Maps**: Your frontend application appears as a service node. Connections from that node to backend services are derived from the same trace data: when a browser `external.http` span targets a backend that is also instrumented and reported to {{product.observability}}, a dependency link is shown between the frontend and that backend service. This gives you a map of how browser traffic flows to your backend services.
 
-For more on how RUM and distributed traces appear in the Observability app, refer to [User experience (RUM)](docs-content://solutions/observability/applications/user-experience.md).
+### {{kib}} features available with EDOT Browser [kibana-features-available]
+
+The following {{kib}} features work with EDOT Browser data:
+
+| Feature | Notes |
+|---------|-------|
+| **{{product.apm}} Service Inventory** | Your browser app appears as a service. |
+| **{{product.apm}} trace view** | Distributed traces including browser spans are visible. |
+| **Service Maps** | Frontend-to-backend service dependencies are shown. |
+| **Discover** | All signals (traces, metrics, logs) are indexed and queryable. |
+
+The **User Experience** app currently shows only data from classic Elastic {{product.apm}} Browser agents and does not display EDOT Browser data. For RUM-style dashboards compatible with EDOT Browser, install the [OTel RUM Dashboards](https://github.com/elastic/integrations/tree/main/packages/otel_rum_dashboards) integration from the {{kib}} {{integrations}} catalog.
 
 ## Next steps [next-steps]
 
