@@ -1,0 +1,23 @@
+{
+  "name": "edot-webpack-4-bundle-test",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Test EDOT in webpack 4",
+  "type": "module",
+  "scripts": {
+    "test:bundle": "npm i && webpack --config webpack.config.mjs"
+  },
+  "author": "Elastic Observability <https://www.elastic.co/observability>",
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "@babel/core": "^7.28.5",
+    "@babel/preset-env": "^7.28.5",
+    "babel-loader": "^8.0.0",
+    "html-webpack-plugin": "^4.5.2",
+    "webpack": "^4",
+    "webpack-cli": "^4"
+  },
+  "dependencies": {
+    "@elastic/opentelemetry-browser": "file:../../../"
+  }
+}

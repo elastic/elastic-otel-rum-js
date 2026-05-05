@@ -7,19 +7,6 @@ import {test, expect} from '@playwright/test';
 import {createCollector} from './test-utils';
 
 test('should export fetch related spans', async ({page}) => {
-    // Disable `@opentelemetry/instrumentation-document-load` instrumentation to avoid a 1st export that
-    // creates a span due to https://github.com/open-telemetry/opentelemetry-js/issues/6339
-    // and gives us wrong data
-    const config = encodeURIComponent(
-        JSON.stringify({
-            configInstrumentations: {
-                '@opentelemetry/instrumentation-document-load': {
-                    enabled: false,
-                },
-            },
-        })
-    );
-
     const collector = createCollector(page);
     const sameOriginHeaders = {};
     const otherOriginHeaders = {};
@@ -40,11 +27,17 @@ test('should export fetch related spans', async ({page}) => {
         });
     });
 
-    await page.goto(`/fixtures/use-fetch.html?config=${config}`);
+    await page.goto('/fixtures/use-fetch.html');
     await page.click('#same-origin');
+    await page.waitForFunction(
+        () => document.getElementById('status').innerText === 'finished'
+    );
     await page.click('#other-origin');
+    await page.waitForFunction(
+        () => document.getElementById('status').innerText === 'finished'
+    );
 
-    const spans = await collector.getSpans();
+    const spans = await collector.getSpans({flush: false});
     const fetchSpans = spans.filter(
         (s) => s.scope.name === '@opentelemetry/instrumentation-fetch'
     );
@@ -53,13 +46,15 @@ test('should export fetch related spans', async ({page}) => {
     expect(spans.length).toBeGreaterThan(0);
     expect(fetchSpans.length).toStrictEqual(2);
 
-    // A span for each fetch request
+    // A span for each fetch request, using stable semvconv
     expect(fetchSpans[0].kind).toStrictEqual('SPAN_KIND_CLIENT');
-    expect(fetchSpans[0].attributes['http.url']).toStrictEqual(
+    expect(fetchSpans[0].attributes['http.url']).not.toBeDefined();
+    expect(fetchSpans[0].attributes['url.full']).toStrictEqual(
         'http://localhost:3000/api/method'
     );
     expect(fetchSpans[1].kind).toStrictEqual('SPAN_KIND_CLIENT');
-    expect(fetchSpans[1].attributes['http.url']).toStrictEqual(
+    expect(fetchSpans[1].attributes['http.url']).not.toBeDefined();
+    expect(fetchSpans[1].attributes['url.full']).toStrictEqual(
         'http://www.example.com/'
     );
 

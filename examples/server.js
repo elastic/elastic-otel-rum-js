@@ -1,3 +1,8 @@
+/*
+ * Copyright Elasticsearch B.V. and contributors
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 import {createReadStream, existsSync, readFileSync} from 'fs';
 import {createServer} from 'http';
 import {createGzip} from 'zlib';
@@ -44,7 +49,7 @@ const server = createServer((req, res) => {
             try {
                 const text = Buffer.concat(chunks).toString('utf-8');
                 const pretty = JSON.stringify(JSON.parse(text), null, 4);
-                // TODO: offer summay option ???
+                // TODO: offer summary option ???
                 console.log(`Data in ${signal} => ${pretty}`);
             } catch (error) {
                 console.log(`Error in ${signal} => ${error}`);

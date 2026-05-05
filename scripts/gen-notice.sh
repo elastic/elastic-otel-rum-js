@@ -1,4 +1,8 @@
 #!/bin/bash
+
+# Copyright Elasticsearch B.V. and contributors
+# SPDX-License-Identifier: Apache-2.0
+
 #
 # This script generates a NOTICE file for a distribution of a package in this
 # repo. It also supports running in lint mode, via `--lint`, where it will not
@@ -80,6 +84,7 @@ npm ls --omit=dev --all --parseable \
         // We handle getting the license text for a few specific deps that
         // do not include one in their install.
         const licFileFromPkgName = {
+            "@opentelemetry/browser-instrumentation": "license.apache2.txt",
         }
         // Packages that have a license, but no "license" entry in package.json.
         const licTypeFromPkgName = {

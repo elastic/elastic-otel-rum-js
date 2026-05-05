@@ -55,6 +55,32 @@ const server = createServer((req, res) => {
         }
         fileStream.pipe(res);
     } else {
+        // sanitize the path
+        const url = new URL(`http://localhost${req.url}`);
+        const [_, firstSegment, secondSegment] = url.pathname.split('/');
+
+        // anythign starting with "/v1/*" will be dumped here
+        // to show the traces, metrics & logs exports
+        if (firstSegment === 'v1') {
+            const signal = secondSegment;
+            const chunks = [];
+            req.on('data', (chunk) => chunks.push(chunk));
+            req.on('end', () => {
+                try {
+                    const text = Buffer.concat(chunks).toString('utf-8');
+                    const pretty = JSON.stringify(JSON.parse(text), null, 4);
+                    // TODO: offer summary option ???
+                    console.log(`Data in ${signal} => ${pretty}`);
+                } catch (error) {
+                    console.log(`Error in ${signal} => ${error}`);
+                }
+            });
+            res.writeHead(200, 'OK', {'content-type': 'application/json'});
+            res.end(JSON.stringify({ok: 1}));
+            return;
+        }
+
+        // Not found
         res.writeHead(404, 'Not Found');
         res.end();
     }

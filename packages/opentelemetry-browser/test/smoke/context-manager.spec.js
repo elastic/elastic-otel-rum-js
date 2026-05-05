@@ -9,18 +9,8 @@ import {createCollector} from './test-utils';
 test('should carry context on different async operations and functions', async ({
     page,
 }) => {
-    // Disabling `@opentelemetry/instrumentation-fetch` to avoid extra exports
-    // because of the export instrumentation issue
-    // ref: https://github.com/open-telemetry/opentelemetry-js/issues/6339
-    const config = encodeURIComponent(
-        JSON.stringify({
-            configInstrumentations: {
-                fetch: {enabled: false},
-            },
-        })
-    );
     const collector = createCollector(page);
-    await page.goto(`/fixtures/use-context.html?config=${config}`);
+    await page.goto('/fixtures/use-context.html');
 
     // Discard all telemetry related to page load
     let spans = await collector.getSpans();

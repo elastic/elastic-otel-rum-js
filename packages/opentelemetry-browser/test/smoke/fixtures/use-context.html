@@ -23,7 +23,9 @@
             <script>
                 const statusElem = document.querySelector('#status');
                 function getTracer(name) {
-                    return edotBrowser.providers.tracer.getTracer(name);
+                    const otelApiSymbol = Symbol.for('opentelemetry.js.api.1'); // TODO: check when update the major version
+                    const traceApi = globalThis[otelApiSymbol].trace;
+                    return traceApi.getTracer(name);
                 }
                 // NOTE: we wait until document loaded to make sure EDOT is started
                 // We do this because we want `@opentelemetry/instrumentation-user-interaction`

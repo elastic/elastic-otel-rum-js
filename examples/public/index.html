@@ -38,11 +38,6 @@
             serviceVersion: '0.0.1',
             otlpEndpoint: otelEnv.otlpEndpoint || `${location.protocol}//${location.host}`,
             exportHeaders: otelEnv.exportHeaders || {},
-            // NOTE: uncomment this to avoid the export instrumentation issue
-            // ref: https://github.com/open-telemetry/opentelemetry-js/issues/6339
-            configInstrumentations: {
-                '@opentelemetry/instrumentation-fetch': { enabled: false }
-            }
         })
     </script>
 </head>

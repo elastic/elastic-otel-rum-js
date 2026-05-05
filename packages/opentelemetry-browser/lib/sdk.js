@@ -27,6 +27,7 @@ import {LongTaskInstrumentation} from '@opentelemetry/instrumentation-long-task'
 import {UserInteractionInstrumentation} from '@opentelemetry/instrumentation-user-interaction';
 import {XMLHttpRequestInstrumentation} from '@opentelemetry/instrumentation-xml-http-request';
 import {ExceptionInstrumentation} from '@opentelemetry/instrumentation-web-exception';
+import {WebVitalsInstrumentation} from '@opentelemetry/browser-instrumentation/experimental/web-vitals';
 
 import {AsyncApisContextManager} from './context.js';
 import {createLogger} from './logging.js';
@@ -41,6 +42,7 @@ import {detectResource} from './detector.js';
  *  "@opentelemetry/instrumentation-user-interaction": import('@opentelemetry/instrumentation-user-interaction').UserInteractionInstrumentationConfig;
  *  "@opentelemetry/instrumentation-xml-http-request": import('@opentelemetry/instrumentation-xml-http-request').XMLHttpRequestInstrumentationConfig;
  *  "@opentelemetry/instrumentation-web-exception": import('@opentelemetry/instrumentation-web-exception').GlobalErrorsInstrumentationConfig;
+ *  "@opentelemetry/instrumentation-web-vitals": import('@opentelemetry/browser-instrumentation/experimental/web-vitals').WebVitalsInstrumentationConfig;
  * }} InstrumentationsConfigMap
  */
 
@@ -56,10 +58,10 @@ import {detectResource} from './detector.js';
  * @property {Record<string, string>} [exportHeaders] // defaults to {}
  *
  * // other options
- * @property {Partial<InstrumentationsConfigMap>} [configInstrumentations]
+ * @property {Partial<InstrumentationsConfigMap>} [instrumentations]
  */
 
-// To control multipla calls to `startBrowserSdk`
+// To control multiple calls to `startBrowserSdk`
 let sdkStarted = false;
 
 /** @type {BrowserSdkConfiguration} */
@@ -75,12 +77,7 @@ const defaultConfig = {
 /**
  * @param {BrowserSdkConfiguration} cfg
  * @returns {{
- *      providers: {
- *          tracer: import('@opentelemetry/api').TracerProvider;
- *          meter: import('@opentelemetry/api').MeterProvider;
- *          logger: import('@opentelemetry/api-logs').LoggerProvider;
- *      };
- *      flush: () => Promise<void>
+ *      forceFlush: () => Promise<void>
  * }}
  */
 export function startBrowserSdk(cfg = {}) {
@@ -169,8 +166,8 @@ export function startBrowserSdk(cfg = {}) {
     });
     logs.setGlobalLoggerProvider(loggerProvider);
 
-    // Resgister instrumentations. The `registerInstrumentations` enabled al of them
-    // regardles of the configuration so EDOT only add the ones that are not disabled
+    // Resgister instrumentations. The `registerInstrumentations` enabled all of them
+    // regardless of the configuration so EDOT only add the ones that are not disabled
     // by configuration
     /** @type {Record<keyof InstrumentationsConfigMap, (cfg: any) => any>} */
     const instrFactories = {
@@ -188,35 +185,39 @@ export function startBrowserSdk(cfg = {}) {
             new XMLHttpRequestInstrumentation(cfg),
         '@opentelemetry/instrumentation-web-exception': (cfg) =>
             new ExceptionInstrumentation(cfg),
+        '@opentelemetry/instrumentation-web-vitals': (cfg) =>
+            new WebVitalsInstrumentation(cfg),
     };
-    const {configInstrumentations} = config;
-    const instrumentations = [];
+
+    const httpSemconvConfig = {semconvStabilityOptIn: 'http'};
+    const instrumentations = config.instrumentations || {};
+    const enabledInstrumentations = [];
     for (const key of Object.keys(instrFactories)) {
-        const instrConfig = configInstrumentations?.[key];
+        let instrConfig = instrumentations[key];
+        if (
+            key === '@opentelemetry/instrumentation-fetch' ||
+            key === '@opentelemetry/instrumentation-xml-http-request'
+        ) {
+            instrConfig = {...httpSemconvConfig, ...instrConfig};
+        }
+
         const isDisabled = instrConfig?.enabled === false;
         if (!isDisabled) {
-            instrumentations.push(instrFactories[key](instrConfig));
+            enabledInstrumentations.push(instrFactories[key](instrConfig));
         }
     }
-    registerInstrumentations({instrumentations});
+    registerInstrumentations({instrumentations: enabledInstrumentations});
 
     // Flag as started
     sdkStarted = true;
 
     return {
-        providers: {
-            tracer: tracerProvider,
-            meter: meterProvider,
-            logger: loggerProvider,
-        },
-        flush() {
+        forceFlush() {
             return Promise.all([
-                spanProcessor.forceFlush(),
-                metricsReader.forceFlush(),
-                logsProcessor.forceFlush(),
-            ]).then(() => {
-                return;
-            });
+                tracerProvider.forceFlush(),
+                meterProvider.forceFlush(),
+                loggerProvider.forceFlush(),
+            ]).then(() => {});
         },
     };
 }

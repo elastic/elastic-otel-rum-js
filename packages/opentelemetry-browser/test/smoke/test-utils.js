@@ -6,9 +6,9 @@
 /**
  * @typedef {{
  *  getRequests: () => any[];
- *  getSpans: () => Promise<any[]>;
- *  getMetrics: () => Promise<any[]>;
- *  getLogs: () => Promise<any[]>;
+ *  getSpans: (options?: {flush: boolean}) => Promise<any[]>;
+ *  getMetrics: (options?: {flush: boolean}) => Promise<any[]>;
+ *  getLogs: (options?: {flush: boolean}) => Promise<any[]>;
  *  clear: () => void;
  * }} Collector
  */
@@ -44,11 +44,15 @@ export function createCollector(page) {
     /**
      *
      * @param {'traces' | 'metrics' | 'logs'} signal
+     * @param {boolean} flush
      * @returns {Promise<any[]>}
      */
-    const waitForData = async (signal) => {
+    const waitForData = async (signal, flush) => {
         // Is there any situation we prefer to wait?
-        await page.evaluate(() => globalThis.edotBrowser.flush());
+        // - yes, for fetch instrumentation tests
+        if (flush) {
+            await page.evaluate(() => globalThis.edotBrowser.forceFlush());
+        }
 
         return new Promise((resolve, reject) => {
             // The default export interval is 5secs. Although we flushed we wait for a little longer to
@@ -78,8 +82,8 @@ export function createCollector(page) {
         getRequests() {
             return raw.requests;
         },
-        async getSpans() {
-            const rawTraces = await waitForData('traces');
+        async getSpans(options = {flush: true}) {
+            const rawTraces = await waitForData('traces', options.flush);
             const spans = [];
             rawTraces.forEach((trace) => {
                 trace.resourceSpans.forEach((resourceSpan) => {
@@ -97,14 +101,14 @@ export function createCollector(page) {
             // TODO: sort spans?
             return spans;
         },
-        async getMetrics() {
-            const rawMetrics = await waitForData('metrics');
+        async getMetrics(options = {flush: true}) {
+            const rawMetrics = await waitForData('metrics', options.flush);
             // TODO: normalization
             const metrics = [];
             return metrics;
         },
-        async getLogs() {
-            const rawLogs = await waitForData('logs');
+        async getLogs(options = {flush: true}) {
+            const rawLogs = await waitForData('logs', options.flush);
             const records = [];
             rawLogs.forEach((logs) => {
                 logs.resourceLogs.forEach((resourceLogs) => {
