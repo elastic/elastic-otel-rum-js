@@ -14,7 +14,9 @@ test('should export browser navigation related events', async ({page}) => {
     await page.evaluate(() => history.pushState({}, '', '/with-push.html'));
 
     const scopeName = '@opentelemetry/instrumentation-browser-navigation';
-    const logs = (await collector.getLogs()).filter(l => l.scope.name === scopeName);
+    const logs = (await collector.getLogs()).filter(
+        (l) => l.scope.name === scopeName
+    );
 
     // 1st is a hard navigation
     expect(logs[0].eventName).toEqual('browser.navigation');
