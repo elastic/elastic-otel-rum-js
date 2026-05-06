@@ -59,8 +59,8 @@ After EDOT Browser is sending telemetry to {{product.observability}}, your brows
 
 - **{{product.apm}} Service Inventory**: Your browser app appears as a service.
 - **{{product.apm}} trace view**: Distributed traces including browser spans are visible.
-- **Service Maps**: Frontend-to-backend service dependencies are shown.
-- **Discover**: Traces, metrics, and (when configured) logs are indexed and queryable. 
+- **Service Maps**: Frontend-to-backend service dependencies are shown when your backend services are also instrumented and reporting telemetry to {{product.observability}}.
+- **Discover**: Traces, metrics, and (when configured) logs are indexed and queryable.
 
   :::{note}
   Logs are only present in **Discover** if your application uses the OpenTelemetry Logs API to emit them. Refer to [Logs](telemetry.md#logs) for more information on what EDOT Browser emits and how to configure log export.
