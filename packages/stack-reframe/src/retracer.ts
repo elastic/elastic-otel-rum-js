@@ -4,7 +4,7 @@
  */
 
 export interface SourceMapFetcher<SourceMapType> {
-  fetch: (sources: string[]) => Promise<SourceMapType[]>
+    fetch: (sources: string[]) => Promise<SourceMapType[]>;
 }
 
 /**
@@ -13,27 +13,29 @@ export interface SourceMapFetcher<SourceMapType> {
  * can pass their own logger to integrate with their logging stack.
  */
 export interface Logger {
-  warn: (message: string) => void;
+    warn: (message: string) => void;
 }
 
 export interface RetracerOptions {
-  logger?: Logger;
+    logger?: Logger;
 }
 
 export abstract class Retracer<SourceMapType> {
-  protected _stackTrace: string;
-  protected _fetcher: SourceMapFetcher<SourceMapType>;
-  protected _logger: Logger;
+    protected _stackTrace: string;
+    protected _fetcher: SourceMapFetcher<SourceMapType>;
+    protected _logger: Logger;
 
-  constructor(
-    stackTrace: string,
-    sourceMapFetcher: SourceMapFetcher<SourceMapType>,
-    options: RetracerOptions = {},
-  ) {
-    this._stackTrace = stackTrace;
-    this._fetcher = sourceMapFetcher;
-    this._logger = options.logger ?? { warn: (message) => console.warn(message) };
-  }
+    constructor(
+        stackTrace: string,
+        sourceMapFetcher: SourceMapFetcher<SourceMapType>,
+        options: RetracerOptions = {}
+    ) {
+        this._stackTrace = stackTrace;
+        this._fetcher = sourceMapFetcher;
+        this._logger = options.logger ?? {
+            warn: (message) => console.warn(message),
+        };
+    }
 
-  abstract retrace(): Promise<string | undefined>;
+    abstract retrace(): Promise<string | undefined>;
 }

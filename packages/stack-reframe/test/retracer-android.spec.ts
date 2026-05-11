@@ -10,41 +10,52 @@ import type {AndroidClassMap} from '../src/retracer-android.js';
 import {RetracerAndroid} from '../src/retracer-android.js';
 import type {Logger} from '../src/retracer.js';
 
-import { androidMapFixtures } from './fixtures/androidmaps.js';
+import {androidMapFixtures} from './fixtures/androidmaps.js';
 
 test(`Android - when has the class maps`, async () => {
     for (const fixture of androidMapFixtures) {
-        const {expected, classMaps, stacktrace } = fixture;
-        const maps = classMaps.map((s: any) => JSON.parse(s.content)) as AndroidClassMap[];
+        const {expected, classMaps, stacktrace} = fixture;
+        const maps = classMaps.map((s: any) =>
+            JSON.parse(s.content)
+        ) as AndroidClassMap[];
         const retracer = new RetracerAndroid(stacktrace, {
-            fetch: (sources) => Promise.resolve(maps.filter(map => sources.includes(map.obfuscated_class))),
-        })
+            fetch: (sources) =>
+                Promise.resolve(
+                    maps.filter((map) => sources.includes(map.obfuscated_class))
+                ),
+        });
         const result = await retracer.retrace();
 
-        assert.strictEqual(result, expected, `${fixture.name} retraces correctly`);
+        assert.strictEqual(
+            result,
+            expected,
+            `${fixture.name} retraces correctly`
+        );
     }
 });
 
 async function retraceWith(
     stacktrace: string,
     maps: AndroidClassMap[],
-    logger?: Logger,
+    logger?: Logger
 ): Promise<string | undefined> {
     const retracer = new RetracerAndroid(
         stacktrace,
         {
             fetch: (sources) =>
-                Promise.resolve(maps.filter(map => sources.includes(map.obfuscated_class))),
+                Promise.resolve(
+                    maps.filter((map) => sources.includes(map.obfuscated_class))
+                ),
         },
-        { logger },
+        {logger}
     );
     return retracer.retrace();
 }
 
 /** Captures `logger.warn` calls so tests can assert on the messages. */
-function recordingLogger(): { logger: Logger; warnings: string[] } {
+function recordingLogger(): {logger: Logger; warnings: string[]} {
     const warnings: string[] = [];
-    return { logger: { warn: (msg) => warnings.push(msg) }, warnings };
+    return {logger: {warn: (msg) => warnings.push(msg)}, warnings};
 }
 
 test('Android - outline callsite falls back to identity when carry position is missing from positions', async () => {
@@ -65,7 +76,7 @@ test('Android - outline callsite falls back to identity when carry position is m
                         obf_range: [1, 1],
                         orig_range: [0, 0],
                         method: 'outlinedBody',
-                        extras: [{ id: 'com.android.tools.r8.outline' }],
+                        extras: [{id: 'com.android.tools.r8.outline'}],
                     },
                 ],
             },
@@ -92,7 +103,7 @@ test('Android - outline callsite falls back to identity when carry position is m
                                 id: 'com.android.tools.r8.outlineCallsite',
                                 // Map only knows "2" — the carry "1" must fall
                                 // back to identity per R8 semantics.
-                                positions: { '2': 99 },
+                                positions: {'2': 99},
                                 outline: 'Ls2;a()V',
                             },
                         ],
@@ -124,7 +135,7 @@ test('Android - outline callsite falls back to identity when carry position is m
             // Caller frame is rewritten using the identity-fallback line 1
             // → entry [1,1] → original line 42.
             '\tat com.example.Caller.caller(Caller.kt:42)',
-        ].join('\n'),
+        ].join('\n')
     );
 });
 
@@ -141,18 +152,18 @@ test('Android - only the outermost synthesized frame is stripped from an inline 
         methods: {
             m: {
                 mappings: [
-                    { obf_range: [5, 5], orig_range: [10, 10], method: 'real' },
+                    {obf_range: [5, 5], orig_range: [10, 10], method: 'real'},
                     {
                         obf_range: [5, 5],
                         orig_range: [20, 20],
                         method: 'synth1',
-                        extras: [{ id: 'com.android.tools.r8.synthesized' }],
+                        extras: [{id: 'com.android.tools.r8.synthesized'}],
                     },
                     {
                         obf_range: [5, 5],
                         orig_range: [30, 30],
                         method: 'synth2',
-                        extras: [{ id: 'com.android.tools.r8.synthesized' }],
+                        extras: [{id: 'com.android.tools.r8.synthesized'}],
                     },
                 ],
             },
@@ -173,7 +184,7 @@ test('Android - only the outermost synthesized frame is stripped from an inline 
             '\tat com.example.Foo.real(Foo.kt:10)',
             '\tat com.example.Foo.synth1(Foo.kt:20)',
         ].join('\n'),
-        'second-outermost synthesized frame must be retained',
+        'second-outermost synthesized frame must be retained'
     );
 });
 
@@ -186,25 +197,33 @@ test('Android - documents with a newer map_version are retraced best-effort with
     // to upgrade.
     const map: AndroidClassMap = {
         schema_version: 1,
-        map_version: "9.9",
+        map_version: '9.9',
         obfuscated_class: 'a',
         original_class: 'com.example.Foo',
         source_file: 'Foo.kt',
         methods: {
-            m: { mappings: [{ obf_range: [1, 1], orig_range: [42, 42], method: 'foo' }] },
+            m: {
+                mappings: [
+                    {obf_range: [1, 1], orig_range: [42, 42], method: 'foo'},
+                ],
+            },
         },
     };
     const stacktrace = '\tat a.m(SourceFile:1)';
 
-    const { logger, warnings } = recordingLogger();
+    const {logger, warnings} = recordingLogger();
     const result = await retraceWith(stacktrace, [map], logger);
 
     assert.strictEqual(
         result,
         '\tat com.example.Foo.foo(Foo.kt:42)',
-        'frame must be retraced even when map_version > MAX (best-effort)',
+        'frame must be retraced even when map_version > MAX (best-effort)'
     );
-    assert.strictEqual(warnings.length, 1, 'exactly one mismatch warning expected');
+    assert.strictEqual(
+        warnings.length,
+        1,
+        'exactly one mismatch warning expected'
+    );
     assert.match(warnings[0], /\[stack-reframe\] R8 map_version mismatch/);
     assert.match(warnings[0], /9\.9/);
     assert.match(warnings[0], /MAX_KNOWN_MAP_VERSION \(2\.2\)/);
@@ -216,24 +235,46 @@ test('Android - the map_version warning is emitted once per retrace, listing eve
     // single message (one log line per retrace, so callers can grep
     // and count cleanly).
     const docA: AndroidClassMap = {
-        schema_version: 1, map_version: "9.9",
-        obfuscated_class: 'a', original_class: 'com.example.Foo', source_file: 'Foo.kt',
-        methods: { m: { mappings: [{ obf_range: [1, 1], orig_range: [42, 42], method: 'foo' }] } },
+        schema_version: 1,
+        map_version: '9.9',
+        obfuscated_class: 'a',
+        original_class: 'com.example.Foo',
+        source_file: 'Foo.kt',
+        methods: {
+            m: {
+                mappings: [
+                    {obf_range: [1, 1], orig_range: [42, 42], method: 'foo'},
+                ],
+            },
+        },
     };
     const docB: AndroidClassMap = {
-        schema_version: 1, map_version: "10.0",
-        obfuscated_class: 'b', original_class: 'com.example.Bar', source_file: 'Bar.kt',
-        methods: { m: { mappings: [{ obf_range: [1, 1], orig_range: [99, 99], method: 'bar' }] } },
+        schema_version: 1,
+        map_version: '10.0',
+        obfuscated_class: 'b',
+        original_class: 'com.example.Bar',
+        source_file: 'Bar.kt',
+        methods: {
+            m: {
+                mappings: [
+                    {obf_range: [1, 1], orig_range: [99, 99], method: 'bar'},
+                ],
+            },
+        },
     };
     const stacktrace = [
         '\tat a.m(SourceFile:1)',
         '\tat b.m(SourceFile:1)',
     ].join('\n');
 
-    const { logger, warnings } = recordingLogger();
+    const {logger, warnings} = recordingLogger();
     await retraceWith(stacktrace, [docA, docB], logger);
 
-    assert.strictEqual(warnings.length, 1, 'exactly one summary warning expected');
+    assert.strictEqual(
+        warnings.length,
+        1,
+        'exactly one summary warning expected'
+    );
     assert.match(warnings[0], /2 document\(s\)/);
     assert.match(warnings[0], /9\.9, 10\.0/);
 });
@@ -241,21 +282,29 @@ test('Android - the map_version warning is emitted once per retrace, listing eve
 test('Android - documents whose map_version equals the retracer max are accepted with no warning', async () => {
     const map: AndroidClassMap = {
         schema_version: 1,
-        map_version: "2.2",
+        map_version: '2.2',
         obfuscated_class: 'a',
         original_class: 'com.example.Foo',
         source_file: 'Foo.kt',
         methods: {
-            m: { mappings: [{ obf_range: [1, 1], orig_range: [42, 42], method: 'foo' }] },
+            m: {
+                mappings: [
+                    {obf_range: [1, 1], orig_range: [42, 42], method: 'foo'},
+                ],
+            },
         },
     };
     const stacktrace = '\tat a.m(SourceFile:1)';
 
-    const { logger, warnings } = recordingLogger();
+    const {logger, warnings} = recordingLogger();
     const result = await retraceWith(stacktrace, [map], logger);
 
     assert.strictEqual(result, '\tat com.example.Foo.foo(Foo.kt:42)');
-    assert.deepStrictEqual(warnings, [], 'no warning expected when version equals MAX');
+    assert.deepStrictEqual(
+        warnings,
+        [],
+        'no warning expected when version equals MAX'
+    );
 });
 
 test('Android - documents without map_version are accepted with no warning (legacy R8)', async () => {
@@ -269,16 +318,24 @@ test('Android - documents without map_version are accepted with no warning (lega
         original_class: 'com.example.Foo',
         source_file: 'Foo.kt',
         methods: {
-            m: { mappings: [{ obf_range: [1, 1], orig_range: [42, 42], method: 'foo' }] },
+            m: {
+                mappings: [
+                    {obf_range: [1, 1], orig_range: [42, 42], method: 'foo'},
+                ],
+            },
         },
     };
     const stacktrace = '\tat a.m(SourceFile:1)';
 
-    const { logger, warnings } = recordingLogger();
+    const {logger, warnings} = recordingLogger();
     const result = await retraceWith(stacktrace, [map], logger);
 
     assert.strictEqual(result, '\tat com.example.Foo.foo(Foo.kt:42)');
-    assert.deepStrictEqual(warnings, [], 'no warning expected for legacy/null map_version');
+    assert.deepStrictEqual(
+        warnings,
+        [],
+        'no warning expected for legacy/null map_version'
+    );
 });
 
 test('Android - documents with a malformed map_version are retraced best-effort with a warning', async () => {
@@ -288,17 +345,21 @@ test('Android - documents with a malformed map_version are retraced best-effort 
     // warning path as a too-new numeric version.
     const map: AndroidClassMap = {
         schema_version: 1,
-        map_version: "experimental-build",
+        map_version: 'experimental-build',
         obfuscated_class: 'a',
         original_class: 'com.example.Foo',
         source_file: 'Foo.kt',
         methods: {
-            m: { mappings: [{ obf_range: [1, 1], orig_range: [42, 42], method: 'foo' }] },
+            m: {
+                mappings: [
+                    {obf_range: [1, 1], orig_range: [42, 42], method: 'foo'},
+                ],
+            },
         },
     };
     const stacktrace = '\tat a.m(SourceFile:1)';
 
-    const { logger, warnings } = recordingLogger();
+    const {logger, warnings} = recordingLogger();
     const result = await retraceWith(stacktrace, [map], logger);
 
     assert.strictEqual(result, '\tat com.example.Foo.foo(Foo.kt:42)');
@@ -322,7 +383,7 @@ test('Android - rewriteFrame is fail-closed for unknown condition kinds', async 
         methods: {
             m: {
                 mappings: [
-                    { obf_range: [1, 1], orig_range: [10, 10], method: 'inner' },
+                    {obf_range: [1, 1], orig_range: [10, 10], method: 'inner'},
                     {
                         obf_range: [1, 1],
                         orig_range: [20, 20],
@@ -358,7 +419,7 @@ test('Android - rewriteFrame is fail-closed for unknown condition kinds', async 
             // is NOT applied.
             '\tat com.example.Foo.inner(Foo.kt:10)',
             '\tat com.example.Foo.outer(Foo.kt:20)',
-        ].join('\n'),
+        ].join('\n')
     );
 });
 
@@ -374,7 +435,7 @@ test('Android - rewriteFrame still applies when only known conditions match', as
         methods: {
             m: {
                 mappings: [
-                    { obf_range: [1, 1], orig_range: [10, 10], method: 'inner' },
+                    {obf_range: [1, 1], orig_range: [10, 10], method: 'inner'},
                     {
                         obf_range: [1, 1],
                         orig_range: [20, 20],
@@ -382,7 +443,9 @@ test('Android - rewriteFrame still applies when only known conditions match', as
                         extras: [
                             {
                                 id: 'com.android.tools.r8.rewriteFrame',
-                                conditions: ['throws(Ljava/lang/NullPointerException;)'],
+                                conditions: [
+                                    'throws(Ljava/lang/NullPointerException;)',
+                                ],
                                 actions: ['removeInnerFrames(1)'],
                             },
                         ],
@@ -404,7 +467,7 @@ test('Android - rewriteFrame still applies when only known conditions match', as
             'java.lang.NullPointerException: x',
             // Inner frame removed by `removeInnerFrames(1)`.
             '\tat com.example.Foo.outer(Foo.kt:20)',
-        ].join('\n'),
+        ].join('\n')
     );
 });
 
@@ -447,7 +510,9 @@ test('Android - a corrupt extras object falls back to the original frame, the re
                 ],
             },
             n: {
-                mappings: [{ obf_range: [2, 2], orig_range: [20, 20], method: 'second' }],
+                mappings: [
+                    {obf_range: [2, 2], orig_range: [20, 20], method: 'second'},
+                ],
             },
         },
     };
@@ -467,7 +532,7 @@ test('Android - a corrupt extras object falls back to the original frame, the re
             '\tat a.m(SourceFile:1)',
             // Frame 2: healthy, retraces normally.
             '\tat com.example.Foo.second(Foo.kt:20)',
-        ].join('\n'),
+        ].join('\n')
     );
 });
 
@@ -483,7 +548,9 @@ test('Android - interpolated line is clamped to orig_range when spans differ', a
         source_file: 'Foo.kt',
         methods: {
             m: {
-                mappings: [{ obf_range: [1, 10], orig_range: [100, 105], method: 'foo' }],
+                mappings: [
+                    {obf_range: [1, 10], orig_range: [100, 105], method: 'foo'},
+                ],
             },
         },
     };
@@ -501,7 +568,15 @@ test('Android - Native Method source-file is preserved when class is in the mapp
         original_class: 'com.example.NativeHolder',
         source_file: 'NativeHolder.kt',
         methods: {
-            a: { mappings: [{ obf_range: [1, 1], orig_range: [10, 10], method: 'nativePollOnce' }] },
+            a: {
+                mappings: [
+                    {
+                        obf_range: [1, 1],
+                        orig_range: [10, 10],
+                        method: 'nativePollOnce',
+                    },
+                ],
+            },
         },
     };
     const stacktrace = ['\tat l8.a(Native Method)'].join('\n');
@@ -510,7 +585,7 @@ test('Android - Native Method source-file is preserved when class is in the mapp
 
     assert.strictEqual(
         result,
-        '\tat com.example.NativeHolder.nativePollOnce(Native Method)',
+        '\tat com.example.NativeHolder.nativePollOnce(Native Method)'
     );
 });
 
@@ -529,7 +604,11 @@ test('Android - source-file is inferred as .kt when document has none and class 
         original_class: 'com.example.FooKt',
         // No `source_file` field at all.
         methods: {
-            m: { mappings: [{ obf_range: [1, 1], orig_range: [42, 42], method: 'greet' }] },
+            m: {
+                mappings: [
+                    {obf_range: [1, 1], orig_range: [42, 42], method: 'greet'},
+                ],
+            },
         },
     };
     const stacktrace = '\tat a.m(SourceFile:1)';
@@ -547,7 +626,11 @@ test('Android - source-file is inferred as .java when document has none and clas
         obfuscated_class: 'a',
         original_class: 'com.example.Foo',
         methods: {
-            m: { mappings: [{ obf_range: [1, 1], orig_range: [42, 42], method: 'greet' }] },
+            m: {
+                mappings: [
+                    {obf_range: [1, 1], orig_range: [42, 42], method: 'greet'},
+                ],
+            },
         },
     };
     const stacktrace = '\tat a.m(SourceFile:1)';
@@ -574,7 +657,8 @@ test('Android - cross-class entry without source_file override infers from the i
             m: {
                 mappings: [
                     {
-                        obf_range: [1, 1], orig_range: [42, 42],
+                        obf_range: [1, 1],
+                        orig_range: [42, 42],
                         method: 'first',
                         class: 'kotlin.collections.ArraysKt',
                         // No `source_file` override.
@@ -586,7 +670,10 @@ test('Android - cross-class entry without source_file override infers from the i
     const stacktrace = '\tat a.m(SourceFile:1)';
 
     const result = await retraceWith(stacktrace, [map]);
-    assert.strictEqual(result, '\tat kotlin.collections.ArraysKt.first(Arrays.kt:42)');
+    assert.strictEqual(
+        result,
+        '\tat kotlin.collections.ArraysKt.first(Arrays.kt:42)'
+    );
 });
 
 // -----------------------------------------------------------------
@@ -611,9 +698,9 @@ test('Android - two entries at the same obfuscated line expand to two output fra
             m: {
                 mappings: [
                     // Innermost: the inlined helper.
-                    { obf_range: [5, 5], orig_range: [12, 12], method: 'helper' },
+                    {obf_range: [5, 5], orig_range: [12, 12], method: 'helper'},
                     // Outermost: the source-level caller.
-                    { obf_range: [5, 5], orig_range: [20, 20], method: 'caller' },
+                    {obf_range: [5, 5], orig_range: [20, 20], method: 'caller'},
                 ],
             },
         },
@@ -633,7 +720,7 @@ test('Android - two entries at the same obfuscated line expand to two output fra
             // (helper) first, outermost (caller) last.
             '\tat com.example.Foo.helper(Foo.kt:12)',
             '\tat com.example.Foo.caller(Foo.kt:20)',
-        ].join('\n'),
+        ].join('\n')
     );
 });
 
@@ -658,13 +745,14 @@ test('Android - inline frame expansion composes with cross-class inlining', asyn
                     // Innermost: inlined from another class — entry
                     // overrides apply.
                     {
-                        obf_range: [5, 5], orig_range: [12, 12],
+                        obf_range: [5, 5],
+                        orig_range: [12, 12],
                         method: 'helper',
                         class: 'com.example.Inlinee',
                         source_file: 'Inlinee.kt',
                     },
                     // Outermost: the caller in the document's own class.
-                    { obf_range: [5, 5], orig_range: [20, 20], method: 'caller' },
+                    {obf_range: [5, 5], orig_range: [20, 20], method: 'caller'},
                 ],
             },
         },
@@ -682,6 +770,6 @@ test('Android - inline frame expansion composes with cross-class inlining', asyn
             'java.lang.RuntimeException: x',
             '\tat com.example.Inlinee.helper(Inlinee.kt:12)',
             '\tat com.example.Caller.caller(Caller.kt:20)',
-        ].join('\n'),
+        ].join('\n')
     );
 });

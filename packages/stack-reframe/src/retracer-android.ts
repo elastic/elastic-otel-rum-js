@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { Retracer } from "./retracer.js";
+import {Retracer} from './retracer.js';
 
 /**
  * One Elasticsearch document per obfuscated R8 class. The fetcher
@@ -180,7 +180,7 @@ const SUPPORTED_SCHEMA_VERSION = 1;
  * "Updating `MAX_KNOWN_MAP_VERSION`" section in `README.md` for the
  * full procedure.
  */
-const MAX_KNOWN_MAP_VERSION = "2.2";
+const MAX_KNOWN_MAP_VERSION = '2.2';
 
 /**
  * Compares two R8 map-version strings (dotted decimals like
@@ -198,8 +198,8 @@ const MAX_KNOWN_MAP_VERSION = "2.2";
  */
 function compareMapVersion(a: string, b: string): number {
     const parse = (v: string): number[] | null => {
-        if (!/^\d+(\.\d+)*$/.test(v)) return null;
-        return v.split(".").map(part => Number.parseInt(part, 10));
+        if (!MAP_VERSION_PARTS_RE.test(v)) return null;
+        return v.split('.').map((part) => Number.parseInt(part, 10));
     };
     const aParts = parse(a);
     const bParts = parse(b);
@@ -254,8 +254,8 @@ interface OriginalCall {
 }
 
 const ParsedLineType = {
-    Frame: "frame",
-    Text: "text",
+    Frame: 'frame',
+    Text: 'text',
 } as const;
 type ParsedLineType = (typeof ParsedLineType)[keyof typeof ParsedLineType];
 
@@ -284,16 +284,24 @@ interface ResolvedFrame {
     entry?: MappingEntry;
 }
 
-const OUTLINE_ID = "com.android.tools.r8.outline";
-const OUTLINE_CALLSITE_ID = "com.android.tools.r8.outlineCallsite";
-const REWRITE_FRAME_ID = "com.android.tools.r8.rewriteFrame";
-const SYNTHESIZED_ID = "com.android.tools.r8.synthesized";
+const OUTLINE_ID = 'com.android.tools.r8.outline';
+const OUTLINE_CALLSITE_ID = 'com.android.tools.r8.outlineCallsite';
+const REWRITE_FRAME_ID = 'com.android.tools.r8.rewriteFrame';
+const SYNTHESIZED_ID = 'com.android.tools.r8.synthesized';
 /**
  * Source-file values that should pass through retracing unchanged,
  * so native frames stay `(Native Method)` even when their class is
  * in the mapping.
  */
-const KEEP_SOURCE_INFO = new Set<string>(["Native Method"]);
+const KEEP_SOURCE_INFO = new Set<string>(['Native Method']);
+
+/** Precompiled patterns used on every stack line or hot merge paths. */
+const MAP_VERSION_PARTS_RE = /^\d+(\.\d+)*$/;
+const STACK_FRAME_LINE_RE = /^(\s*)at\s+(.+)\((.*)\)$/;
+const THROWABLE_CLASS_NAME_RE =
+    /^(\s*(?:Caused by:\s+|Suppressed:\s+)?)([A-Za-z_$][\w.$]*)(?::|$)/;
+const REMOVE_INNER_FRAMES_RE = /^removeInnerFrames\((\d+)\)$/;
+const THROWS_CONDITION_RE = /^throws\((.*)\)$/;
 
 export class RetracerAndroid extends Retracer<AndroidClassMap> {
     async retrace(): Promise<string | undefined> {
@@ -313,7 +321,9 @@ export class RetracerAndroid extends Retracer<AndroidClassMap> {
         // Get the mappings
         let classMaps: AndroidClassMap[];
         try {
-            classMaps = await this._fetcher.fetch(Array.from(obfuscatedClasses));
+            classMaps = await this._fetcher.fetch(
+                Array.from(obfuscatedClasses)
+            );
         } catch {
             return this._stackTrace;
         }
@@ -336,8 +346,11 @@ export class RetracerAndroid extends Retracer<AndroidClassMap> {
             // operators know an update may be needed. A null version
             // means there was no version comment, which R8 treats as
             // 1.0 — no warning needed.
-            if (classMap.map_version != null
-                && compareMapVersion(classMap.map_version, MAX_KNOWN_MAP_VERSION) > 0) {
+            if (
+                classMap.map_version != null &&
+                compareMapVersion(classMap.map_version, MAX_KNOWN_MAP_VERSION) >
+                    0
+            ) {
                 unrecognizedVersions.add(classMap.map_version);
                 unrecognizedDocCount++;
             }
@@ -351,12 +364,12 @@ export class RetracerAndroid extends Retracer<AndroidClassMap> {
             // wrong). Malformed values are grouped at the end.
             const versions = Array.from(unrecognizedVersions)
                 .sort((a, b) => compareMapVersion(a, b))
-                .join(", ");
+                .join(', ');
             this._logger.warn(
-                `[stack-reframe] R8 map_version mismatch: ${unrecognizedDocCount} document(s) `
-                + `declare versions [${versions}] which exceed MAX_KNOWN_MAP_VERSION `
-                + `(${MAX_KNOWN_MAP_VERSION}). Retracing best-effort; results may be `
-                + `inaccurate. Update the retracer to extend MAX_KNOWN_MAP_VERSION.`,
+                `[stack-reframe] R8 map_version mismatch: ${unrecognizedDocCount} document(s) ` +
+                    `declare versions [${versions}] which exceed MAX_KNOWN_MAP_VERSION ` +
+                    `(${MAX_KNOWN_MAP_VERSION}). Retracing best-effort; results may be ` +
+                    `inaccurate. Update the retracer to extend MAX_KNOWN_MAP_VERSION.`
             );
         }
 
@@ -373,7 +386,12 @@ export class RetracerAndroid extends Retracer<AndroidClassMap> {
                 // falling back to the original line keeps the rest
                 // of the trace usable.
                 try {
-                    output.push(deobfuscateExceptionClassName(line.originalLine, documents));
+                    output.push(
+                        deobfuscateExceptionClassName(
+                            line.originalLine,
+                            documents
+                        )
+                    );
                 } catch {
                     output.push(line.originalLine);
                 }
@@ -394,7 +412,7 @@ export class RetracerAndroid extends Retracer<AndroidClassMap> {
                     documents,
                     consumedCarry,
                     frameIndex,
-                    exceptionType,
+                    exceptionType
                 );
                 output.push(...result.output);
                 carryOutlinePosition = result.nextCarryOutlinePosition;
@@ -418,7 +436,7 @@ function retraceFrame(
     documents: Map<string, ClassDocument>,
     carryOutlinePosition: number | undefined,
     frameIndex: number,
-    exceptionType: string | undefined,
+    exceptionType: string | undefined
 ): FrameResult {
     const document = documents.get(line.className);
     const method = document?.methods.get(line.methodName);
@@ -434,27 +452,41 @@ function retraceFrame(
         // If the outline callsite map has no entry for this carry
         // position, use the carry position as-is so range lookups
         // can still find a matching entry.
-        lineNumber = findOutlineCallsiteLine(method, carryOutlinePosition) ?? carryOutlinePosition;
+        lineNumber =
+            findOutlineCallsiteLine(method, carryOutlinePosition) ??
+            carryOutlinePosition;
     }
 
     // A few special source-file strings (like `Native Method`)
     // should pass through unchanged even when the class is in the
     // mapping. Forward the original `sourceInfo` so the formatter
     // can keep it.
-    const keepSourceInfo = KEEP_SOURCE_INFO.has(line.sourceInfo) ? line.sourceInfo : undefined;
+    const keepSourceInfo = KEEP_SOURCE_INFO.has(line.sourceInfo)
+        ? line.sourceInfo
+        : undefined;
 
     const matchedEntries = findMatchingEntries(method.mappings, lineNumber);
     if (matchedEntries.length > 0) {
-        const outlineEntries = matchedEntries.filter(entry => hasExtra(entry, OUTLINE_ID));
-        if (outlineEntries.length > 0) {
-            const nextCarry = line.lineNumber;
+        let hasOutline = false;
+        const nonOutlineEntries: MappingEntry[] = [];
+        for (let i = 0; i < matchedEntries.length; i++) {
+            const entry = matchedEntries[i]!;
+            if (hasExtra(entry, OUTLINE_ID)) {
+                hasOutline = true;
+            } else {
+                nonOutlineEntries.push(entry);
+            }
+        }
+        if (hasOutline) {
             const nonOutlineFrames = resolveEntries(
-                matchedEntries.filter(entry => !hasExtra(entry, OUTLINE_ID)),
-                lineNumber,
+                nonOutlineEntries,
+                lineNumber
             );
             return {
-                output: nonOutlineFrames.map(frame => formatResolvedFrame(line.indent, frame, keepSourceInfo)),
-                nextCarryOutlinePosition: nextCarry,
+                output: nonOutlineFrames.map((frame) =>
+                    formatResolvedFrame(line.indent, frame, keepSourceInfo)
+                ),
+                nextCarryOutlinePosition: line.lineNumber,
             };
         }
 
@@ -466,7 +498,9 @@ function retraceFrame(
         }
 
         return {
-            output: resolvedFrames.map(frame => formatResolvedFrame(line.indent, frame, keepSourceInfo)),
+            output: resolvedFrames.map((frame) =>
+                formatResolvedFrame(line.indent, frame, keepSourceInfo)
+            ),
             nextCarryOutlinePosition: undefined,
         };
     }
@@ -476,15 +510,18 @@ function retraceFrame(
     // ranged entries but none matched, the frame is left unchanged —
     // defaults aren't checked because the ranged entries already
     // describe what the method covers, and this line is outside it.
-    const defaultFrames = method.mappings.length === 0
-        ? method.defaultMappings.map(mapping => ({
-            call: mapping.originalCall,
-            lineNumber: mapping.lineNumber,
-        }))
-        : [];
+    const defaultFrames =
+        method.mappings.length === 0
+            ? method.defaultMappings.map((mapping) => ({
+                  call: mapping.originalCall,
+                  lineNumber: mapping.lineNumber,
+              }))
+            : [];
     if (defaultFrames.length > 0) {
         return {
-            output: defaultFrames.map(frame => formatResolvedFrame(line.indent, frame, keepSourceInfo)),
+            output: defaultFrames.map((frame) =>
+                formatResolvedFrame(line.indent, frame, keepSourceInfo)
+            ),
             nextCarryOutlinePosition: undefined,
         };
     }
@@ -492,7 +529,9 @@ function retraceFrame(
         const ambiguousFrames = resolveUniqueOriginalCalls(method.mappings);
         if (ambiguousFrames.length > 0) {
             return {
-                output: ambiguousFrames.map(frame => formatResolvedFrame(line.indent, frame, keepSourceInfo)),
+                output: ambiguousFrames.map((frame) =>
+                    formatResolvedFrame(line.indent, frame, keepSourceInfo)
+                ),
                 nextCarryOutlinePosition: undefined,
             };
         }
@@ -504,7 +543,7 @@ function retraceFrame(
 }
 
 function parseStackTraceLine(line: string): ParsedLine {
-    const match = line.match(/^(\s*)at\s+(.+)\((.*)\)$/);
+    const match = line.match(STACK_FRAME_LINE_RE);
     if (!match) {
         return {
             type: ParsedLineType.Text,
@@ -537,7 +576,14 @@ function parseClassDocument(classMap: AndroidClassMap): ClassDocument {
     const docSourceFile = classMap.source_file;
     const methods = new Map<string, MethodDocument>();
     for (const [obfMethod, methodDoc] of Object.entries(classMap.methods)) {
-        methods.set(obfMethod, parseMethodDocument(methodDoc, classMap.original_class, docSourceFile));
+        methods.set(
+            obfMethod,
+            parseMethodDocument(
+                methodDoc,
+                classMap.original_class,
+                docSourceFile
+            )
+        );
     }
     return {
         obfuscatedClass: classMap.obfuscated_class,
@@ -550,17 +596,19 @@ function parseClassDocument(classMap: AndroidClassMap): ClassDocument {
 function parseMethodDocument(
     methodDoc: AndroidMethodDocument,
     docOriginalClass: string,
-    docSourceFile: string | undefined,
+    docSourceFile: string | undefined
 ): MethodDocument {
     return {
-        mappings: methodDoc.mappings.map(entry => parseMappingEntry(entry, docOriginalClass, docSourceFile)),
-        defaultMappings: (methodDoc.default_mappings ?? []).map(entry => ({
+        mappings: methodDoc.mappings.map((entry) =>
+            parseMappingEntry(entry, docOriginalClass, docSourceFile)
+        ),
+        defaultMappings: (methodDoc.default_mappings ?? []).map((entry) => ({
             originalCall: resolveOriginalCall(
                 entry.method,
                 entry.class,
                 entry.source_file,
                 docOriginalClass,
-                docSourceFile,
+                docSourceFile
             ),
             lineNumber: entry.orig_range?.[0],
         })),
@@ -570,7 +618,7 @@ function parseMethodDocument(
 function parseMappingEntry(
     entry: AndroidMappingEntry,
     docOriginalClass: string,
-    docSourceFile: string | undefined,
+    docSourceFile: string | undefined
 ): MappingEntry {
     return {
         obfStart: entry.obf_range[0],
@@ -582,7 +630,7 @@ function parseMappingEntry(
             entry.class,
             entry.source_file,
             docOriginalClass,
-            docSourceFile,
+            docSourceFile
         ),
         extras: entry.extras ?? [],
     };
@@ -606,7 +654,7 @@ function resolveOriginalCall(
     entryClass: string | undefined,
     entrySourceFile: string | undefined,
     docOriginalClass: string,
-    docSourceFile: string | undefined,
+    docSourceFile: string | undefined
 ): OriginalCall {
     const originalClass = entryClass ?? docOriginalClass;
     const call = `${originalClass}.${method}`;
@@ -615,7 +663,8 @@ function resolveOriginalCall(
     if (!resolvedSourceFile && entryClass === undefined) {
         resolvedSourceFile = docSourceFile;
     }
-    resolvedSourceFile = resolvedSourceFile ?? inferSourceFile(originalClass, call);
+    resolvedSourceFile =
+        resolvedSourceFile ?? inferSourceFile(originalClass, call);
 
     return {
         call,
@@ -625,16 +674,20 @@ function resolveOriginalCall(
     };
 }
 
-function findExceptionType(parsedLines: ParsedLine[], documents: Map<string, ClassDocument>): string | undefined {
+function findExceptionType(
+    parsedLines: ParsedLine[],
+    documents: Map<string, ClassDocument>
+): string | undefined {
     for (const line of parsedLines) {
-        if (line.type === 'frame') {
+        if (line.type === ParsedLineType.Frame) {
             continue;
         }
         const className = line.className;
         if (!className) {
             continue;
         }
-        const deobfuscated = documents.get(className)?.originalClass ?? className;
+        const deobfuscated =
+            documents.get(className)?.originalClass ?? className;
         if (deobfuscated.includes('.') || documents.has(className)) {
             return `L${deobfuscated.replace(/\./g, '/')};`;
         }
@@ -642,7 +695,10 @@ function findExceptionType(parsedLines: ParsedLine[], documents: Map<string, Cla
     return undefined;
 }
 
-function deobfuscateExceptionClassName(line: string, documents: Map<string, ClassDocument>): string {
+function deobfuscateExceptionClassName(
+    line: string,
+    documents: Map<string, ClassDocument>
+): string {
     const className = extractThrowableClassName(line);
     if (!className) {
         return line;
@@ -652,32 +708,53 @@ function deobfuscateExceptionClassName(line: string, documents: Map<string, Clas
 }
 
 function extractThrowableClassName(line: string): string | undefined {
-    const match = line.match(/^(\s*(?:Caused by:\s+|Suppressed:\s+)?)([A-Za-z_$][\w.$]*)(?::|$)/);
+    const match = line.match(THROWABLE_CLASS_NAME_RE);
     return match ? match[2] : undefined;
 }
 
-function findOutlineCallsiteLine(method: MethodDocument, outlinePosition: number): number | undefined {
-    for (const entry of method.mappings) {
-        const extra = entry.extras.find(extra => extra.id === OUTLINE_CALLSITE_ID);
-        const position = extra?.positions?.[String(outlinePosition)];
-        if (position !== undefined) {
-            return position;
+function findOutlineCallsiteLine(
+    method: MethodDocument,
+    outlinePosition: number
+): number | undefined {
+    const key = String(outlinePosition);
+    for (let mi = 0; mi < method.mappings.length; mi++) {
+        const extras = method.mappings[mi]!.extras;
+        for (let ei = 0; ei < extras.length; ei++) {
+            const extra = extras[ei]!;
+            if (extra.id === OUTLINE_CALLSITE_ID) {
+                const position = extra.positions?.[key];
+                if (position !== undefined) {
+                    return position;
+                }
+                break;
+            }
         }
     }
     return undefined;
 }
 
-function findMatchingEntries(entries: MappingEntry[], lineNumber: number | undefined): MappingEntry[] {
+function findMatchingEntries(
+    entries: MappingEntry[],
+    lineNumber: number | undefined
+): MappingEntry[] {
     if (lineNumber === undefined) {
         return [];
     }
-    return entries.filter(entry => lineNumber >= entry.obfStart && lineNumber <= entry.obfEnd);
+    return entries.filter(
+        (entry) => lineNumber >= entry.obfStart && lineNumber <= entry.obfEnd
+    );
 }
 
-function resolveEntries(entries: MappingEntry[], lineNumber: number | undefined): ResolvedFrame[] {
-    return entries.map(entry => ({
+function resolveEntries(
+    entries: MappingEntry[],
+    lineNumber: number | undefined
+): ResolvedFrame[] {
+    return entries.map((entry) => ({
         call: entry.originalCall,
-        lineNumber: lineNumber === undefined ? undefined : interpolateLineNumber(entry, lineNumber),
+        lineNumber:
+            lineNumber === undefined
+                ? undefined
+                : interpolateLineNumber(entry, lineNumber),
         entry,
     }));
 }
@@ -691,12 +768,15 @@ function resolveUniqueOriginalCalls(entries: MappingEntry[]): ResolvedFrame[] {
             continue;
         }
         seen.add(key);
-        frames.push({ call: entry.originalCall });
+        frames.push({call: entry.originalCall});
     }
     return frames;
 }
 
-function interpolateLineNumber(entry: MappingEntry, obfuscatedLineNumber: number): number {
+function interpolateLineNumber(
+    entry: MappingEntry,
+    obfuscatedLineNumber: number
+): number {
     if (entry.origStart === entry.origEnd) {
         return entry.origEnd;
     }
@@ -704,7 +784,8 @@ function interpolateLineNumber(entry: MappingEntry, obfuscatedLineNumber: number
     // different sizes, so the simple formula can give a line outside
     // the original range. Keep the result inside `[origStart, origEnd]`
     // so we never report a line that doesn't exist in the source.
-    const interpolated = entry.origStart + (obfuscatedLineNumber - entry.obfStart);
+    const interpolated =
+        entry.origStart + (obfuscatedLineNumber - entry.obfStart);
     if (interpolated < entry.origStart) return entry.origStart;
     if (interpolated > entry.origEnd) return entry.origEnd;
     return interpolated;
@@ -715,7 +796,9 @@ function interpolateLineNumber(entry: MappingEntry, obfuscatedLineNumber: number
  * outermost is removed — taking out more would wrongly prune chains
  * where two outer frames in a row happen to be compiler-added.
  */
-function stripOutermostSynthesizedFrame(frames: ResolvedFrame[]): ResolvedFrame[] {
+function stripOutermostSynthesizedFrame(
+    frames: ResolvedFrame[]
+): ResolvedFrame[] {
     if (frames.length === 0) {
         return frames;
     }
@@ -727,26 +810,39 @@ function stripOutermostSynthesizedFrame(frames: ResolvedFrame[]): ResolvedFrame[
 }
 
 function isSynthesizedFrame(entry: MappingEntry): boolean {
-    return hasExtra(entry, SYNTHESIZED_ID)
-        || entry.originalCall.call.includes("$$ExternalSynthetic");
+    return (
+        hasExtra(entry, SYNTHESIZED_ID) ||
+        entry.originalCall.call.includes('$$ExternalSynthetic')
+    );
 }
 
-function applyRewriteFrame(frames: ResolvedFrame[], exceptionType: string | undefined): ResolvedFrame[] {
+function applyRewriteFrame(
+    frames: ResolvedFrame[],
+    exceptionType: string | undefined
+): ResolvedFrame[] {
     const outermost = frames[frames.length - 1]?.entry;
     if (!outermost || !exceptionType) {
         return frames;
     }
 
     let rewrittenFrames = [...frames];
-    for (const extra of outermost.extras.filter(extra => extra.id === REWRITE_FRAME_ID)) {
+    const extras = outermost.extras;
+    for (let i = 0; i < extras.length; i++) {
+        const extra = extras[i]!;
+        if (extra.id !== REWRITE_FRAME_ID) {
+            continue;
+        }
         if (!rewriteConditionsMatch(extra.conditions ?? [], exceptionType)) {
             continue;
         }
-        for (const action of extra.actions ?? []) {
-            const match = action.match(/^removeInnerFrames\((\d+)\)$/);
+        const actions = extra.actions ?? [];
+        for (let a = 0; a < actions.length; a++) {
+            const match = actions[a]!.match(REMOVE_INNER_FRAMES_RE);
             if (match) {
                 const count = Number.parseInt(match[1], 10);
-                rewrittenFrames = rewrittenFrames.slice(Math.min(count, rewrittenFrames.length));
+                rewrittenFrames = rewrittenFrames.slice(
+                    Math.min(count, rewrittenFrames.length)
+                );
             }
         }
     }
@@ -762,9 +858,12 @@ function applyRewriteFrame(frames: ResolvedFrame[], exceptionType: string | unde
  * Treating unknowns as not-matching skips the action — the safer
  * choice.
  */
-function rewriteConditionsMatch(conditions: string[], exceptionType: string): boolean {
-    return conditions.every(condition => {
-        const throwsMatch = condition.match(/^throws\((.*)\)$/);
+function rewriteConditionsMatch(
+    conditions: string[],
+    exceptionType: string
+): boolean {
+    return conditions.every((condition) => {
+        const throwsMatch = condition.match(THROWS_CONDITION_RE);
         if (throwsMatch) {
             return throwsMatch[1] === exceptionType;
         }
@@ -773,23 +872,43 @@ function rewriteConditionsMatch(conditions: string[], exceptionType: string): bo
 }
 
 function hasExtra(entry: MappingEntry, id: string): boolean {
-    return entry.extras.some(extra => extra.id === id);
+    const extras = entry.extras;
+    for (let i = 0; i < extras.length; i++) {
+        if (extras[i]!.id === id) {
+            return true;
+        }
+    }
+    return false;
 }
 
-function formatResolvedFrame(indent: string, frame: ResolvedFrame, keepSourceInfo?: string): string {
+function formatResolvedFrame(
+    indent: string,
+    frame: ResolvedFrame,
+    keepSourceInfo?: string
+): string {
     if (keepSourceInfo !== undefined) {
         return `${indent}at ${frame.call.call}(${keepSourceInfo})`;
     }
     return `${indent}at ${formatCall(frame.call, frame.lineNumber)}`;
 }
 
-function formatUnmappedFrame(frame: ParsedFrame, document: ClassDocument | undefined): string {
+function formatUnmappedFrame(
+    frame: ParsedFrame,
+    document: ClassDocument | undefined
+): string {
     if (!document) {
         return frame.originalLine;
     }
-    const sourceFile = document.sourceFile
-        ?? inferSourceFile(document.originalClass, `${document.originalClass}.${frame.methodName}`);
-    const sourceInfo = frame.lineNumber === undefined ? frame.sourceInfo : `${sourceFile}:${frame.lineNumber}`;
+    const sourceFile =
+        document.sourceFile ??
+        inferSourceFile(
+            document.originalClass,
+            `${document.originalClass}.${frame.methodName}`
+        );
+    const sourceInfo =
+        frame.lineNumber === undefined
+            ? frame.sourceInfo
+            : `${sourceFile}:${frame.lineNumber}`;
     return `${frame.indent}at ${document.originalClass}.${frame.methodName}(${sourceInfo})`;
 }
 
@@ -804,17 +923,14 @@ function formatCall(call: OriginalCall, lineNumber?: number): string {
 }
 
 function inferSourceFile(className: string, call: string): string {
-    const outerClass = className.split('$')[0];
+    const dollar = className.indexOf('$');
+    const outerClass = dollar === -1 ? className : className.slice(0, dollar);
     const simpleName = outerClass.slice(outerClass.lastIndexOf('.') + 1);
-    if (simpleName.endsWith("Kt")) {
+    if (simpleName.endsWith('Kt')) {
         return `${simpleName.slice(0, -2)}.kt`;
     }
-    if (className.includes('$') || call.includes('$')) {
+    if (dollar !== -1 || call.includes('$')) {
         return `${simpleName}.kt`;
     }
     return `${simpleName}.java`;
-}
-
-function unique<T>(values: T[]): T[] {
-    return [...new Set(values)];
 }
