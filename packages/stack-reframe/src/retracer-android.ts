@@ -272,6 +272,7 @@ interface ParsedFrame {
 
 interface ParsedTextLine {
     type: typeof ParsedLineType.Text;
+    className?: string;
     originalLine: string;
 }
 
@@ -297,18 +298,22 @@ const KEEP_SOURCE_INFO = new Set<string>(["Native Method"]);
 export class RetracerAndroid extends Retracer<AndroidClassMap> {
     async retrace(): Promise<string | undefined> {
         const lines = this._stackTrace.split('\n');
-        const parsedLines = lines.map(parseStackTraceLine);
+        const parsedLines: ParsedLine[] = [];
+        const obfuscatedClasses = new Set<string>();
 
-        const obfuscatedClasses = unique([
-            ...parsedLines
-                .filter((line): line is ParsedFrame => line.type === ParsedLineType.Frame)
-                .map(line => line.className),
-            ...collectExceptionClasses(lines),
-        ]);
+        // Parse lines and extract class names
+        for (const line of lines) {
+            const parsedLine = parseStackTraceLine(line);
+            if (parsedLine.className) {
+                obfuscatedClasses.add(parsedLine.className);
+            }
+            parsedLines.push(parsedLine);
+        }
 
+        // Get the mappings
         let classMaps: AndroidClassMap[];
         try {
-            classMaps = await this._fetcher.fetch(obfuscatedClasses);
+            classMaps = await this._fetcher.fetch(Array.from(obfuscatedClasses));
         } catch {
             return this._stackTrace;
         }
@@ -355,7 +360,7 @@ export class RetracerAndroid extends Retracer<AndroidClassMap> {
             );
         }
 
-        const exceptionType = findExceptionType(lines, documents);
+        const exceptionType = findExceptionType(parsedLines, documents);
         const output: string[] = [];
         let carryOutlinePosition: number | undefined;
         let frameIndex = 0;
@@ -501,7 +506,11 @@ function retraceFrame(
 function parseStackTraceLine(line: string): ParsedLine {
     const match = line.match(/^(\s*)at\s+(.+)\((.*)\)$/);
     if (!match) {
-        return { type: ParsedLineType.Text, originalLine: line };
+        return {
+            type: ParsedLineType.Text,
+            originalLine: line,
+            className: extractThrowableClassName(line),
+        };
     }
 
     const methodCall = match[2];
@@ -616,26 +625,12 @@ function resolveOriginalCall(
     };
 }
 
-function collectExceptionClasses(lines: string[]): string[] {
-    const result: string[] = [];
-    for (const line of lines) {
-        if (parseStackTraceLine(line).type === ParsedLineType.Frame) {
+function findExceptionType(parsedLines: ParsedLine[], documents: Map<string, ClassDocument>): string | undefined {
+    for (const line of parsedLines) {
+        if (line.type === 'frame') {
             continue;
         }
-        const className = extractThrowableClassName(line);
-        if (className) {
-            result.push(className);
-        }
-    }
-    return result;
-}
-
-function findExceptionType(lines: string[], documents: Map<string, ClassDocument>): string | undefined {
-    for (const line of lines) {
-        if (parseStackTraceLine(line).type === ParsedLineType.Frame) {
-            continue;
-        }
-        const className = extractThrowableClassName(line);
+        const className = line.className;
         if (!className) {
             continue;
         }
