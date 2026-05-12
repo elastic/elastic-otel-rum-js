@@ -6,18 +6,19 @@
 import type {RawSourceMap} from 'source-map';
 import {SourceMapConsumer} from 'source-map';
 import * as stackTraceParser from 'stacktrace-parser';
-import { Retracer } from './retracer.js';
-
+import {Retracer} from './retracer.js';
 
 export class RetracerWeb extends Retracer<RawSourceMap> {
     async retrace(): Promise<string | undefined> {
         const stackLines = this._stackTrace.split('\n');
         const errorLine = stackLines.shift();
-        const stackFrames = stackLines.map(l => ({
+        const stackFrames = stackLines.map((l) => ({
             content: l,
             parsed: stackTraceParser.parse(l)[0],
         }));
-        const files = stackFrames.map(f => f.parsed?.file).filter(f => f) as string[];
+        const files = stackFrames
+            .map((f) => f.parsed?.file)
+            .filter((f) => f) as string[];
 
         let sourceMaps: RawSourceMap[];
         try {
@@ -60,9 +61,14 @@ export class RetracerWeb extends Retracer<RawSourceMap> {
                 continue;
             }
 
-            const originalPosition = consumer.originalPositionFor({line: lineNumber, column});
+            const originalPosition = consumer.originalPositionFor({
+                line: lineNumber,
+                column,
+            });
             if (originalPosition.source) {
-                decodedFrames.push(`  at ${originalPosition.name || methodName} (${originalPosition.source}:${originalPosition.line}:${originalPosition.column})`);
+                decodedFrames.push(
+                    `  at ${originalPosition.name || methodName} (${originalPosition.source}:${originalPosition.line}:${originalPosition.column})`
+                );
             } else {
                 decodedFrames.push(frame.content);
             }
@@ -74,9 +80,7 @@ export class RetracerWeb extends Retracer<RawSourceMap> {
 
         return [errorLine, ...decodedFrames].join('\n');
     }
-    
 }
-
 
 // export async function retraceWeb(
 //     stackTrace: string,
@@ -86,7 +90,7 @@ export class RetracerWeb extends Retracer<RawSourceMap> {
 //     if (sourceMaps.length === 0) {
 //         return stackTrace;
 //     }
-    
+
 //     const stackLines = stackTrace.split('\n');
 //     const errorLine = stackLines.shift();
 //     const stackFrames = stackLines.map(l => ({
@@ -105,7 +109,7 @@ export class RetracerWeb extends Retracer<RawSourceMap> {
 //         const sourceMap = sourceMaps.find((sm) => sm.file === file);
 //         // Skip if no sourcemap available
 //         if (!sourceMap) {
-//             decodedFrames.push(frame.content); 
+//             decodedFrames.push(frame.content);
 //             continue;
 //         }
 //         // Skip if no line/column found
