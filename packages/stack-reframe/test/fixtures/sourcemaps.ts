@@ -7,19 +7,19 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 interface SourceMapFixture {
-  afterDeleteIndex: string;
-  expected: string;
-  stacktrace: string;
-  sourcemaps: Array<{
-    content: string;
-    fileName: string;
-  }>;
+    afterDeleteIndex: string;
+    expected: string;
+    stacktrace: string;
+    sourcemaps: Array<{
+        content: string;
+        fileName: string;
+    }>;
 }
 
 // https://github.com/rmuratov/sourcemap.tools/blob/main/src/__tests__/fixtures/regular/index.ts
 export const sourcemapFixtures: SourceMapFixture[] = [
-  {
-    afterDeleteIndex: `Uncaught Error: Error!
+    {
+        afterDeleteIndex: `Uncaught Error: Error!
   at u (index-d803759c.js:1:785)
   at i (index-d803759c.js:1:831)
   at Object.Dc (../../node_modules/react-dom/cjs/react-dom.production.min.js:54:316)
@@ -30,7 +30,7 @@ export const sourcemapFixtures: SourceMapFixture[] = [
   at se (../../node_modules/react-dom/cjs/react-dom.production.min.js:117:103)
   at a (../../node_modules/react-dom/cjs/react-dom.production.min.js:274:41)
   at Gb (../../node_modules/react-dom/cjs/react-dom.production.min.js:52:374)`,
-    expected: `Uncaught Error: Error!
+        expected: `Uncaught Error: Error!
   at u (../../src/utils.ts:2:8)
   at throwError (../../src/App.tsx:5:15)
   at Object.Dc (../../node_modules/react-dom/cjs/react-dom.production.min.js:54:316)
@@ -41,11 +41,21 @@ export const sourcemapFixtures: SourceMapFixture[] = [
   at se (../../node_modules/react-dom/cjs/react-dom.production.min.js:117:103)
   at a (../../node_modules/react-dom/cjs/react-dom.production.min.js:274:41)
   at Gb (../../node_modules/react-dom/cjs/react-dom.production.min.js:52:374)`,
-    sourcemaps: fs.readdirSync(path.resolve(import.meta.dirname, 'sourcemaps')).map(fileName => ({
-      content: fs.readFileSync(path.resolve(import.meta.dirname, 'sourcemaps', fileName)).toString(),
-      fileName,
-    })),
-    stacktrace: `Uncaught Error: Error!
+        sourcemaps: fs
+            .readdirSync(path.resolve(import.meta.dirname, 'sourcemaps'))
+            .map((fileName) => ({
+                content: fs
+                    .readFileSync(
+                        path.resolve(
+                            import.meta.dirname,
+                            'sourcemaps',
+                            fileName
+                        )
+                    )
+                    .toString(),
+                fileName,
+            })),
+        stacktrace: `Uncaught Error: Error!
   at u (index-d803759c.js:1:785)
   at i (index-d803759c.js:1:831)
   at Object.Dc (vendor-221d27ba.js:37:9852)
@@ -56,6 +66,5 @@ export const sourcemapFixtures: SourceMapFixture[] = [
   at vendor-221d27ba.js:37:36771
   at Co (vendor-221d27ba.js:40:36724)
   at gs (vendor-221d27ba.js:37:8988)`,
-  }
+    },
 ];
-
