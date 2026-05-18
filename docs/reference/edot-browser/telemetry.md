@@ -73,12 +73,14 @@ Full feature parity with classic Elastic {{product.apm}} RUM agents for tracing 
 
 ### What EDOT Browser currently emits [logs-what-is-emitted]
 
-EDOT Browser supports the OpenTelemetry Logs API. When the LoggerProvider is configured and logs are exported using OTLP:
+EDOT Browser configures the LoggerProvider automatically, so you can use the OpenTelemetry Logs API directly from your application code without any additional setup. However, no logs are emitted automatically — your application must explicitly create and emit log records for any log data to be sent.
+
+When your application emits log records and they are exported over OTLP:
 
 - **Application logs**: Your application code can obtain a logger from the OpenTelemetry API and emit log records (severity, body, attributes). EDOT Browser exports these records to your configured endpoint on the `/v1/logs` path.
 - **Resource and context**: Log records are associated with the same resource (for example service name) and can optionally be linked to the active trace context, so you can correlate logs with traces in {{product.observability}}.
 
-There is no requirement to use logs. If you do not create log records or do not configure log export, no log data is sent.
+There is no requirement to use logs. If your application does not create log records, no log data is sent.
 
 ### Known limitations of browser-side logs [logs-limitations]
 

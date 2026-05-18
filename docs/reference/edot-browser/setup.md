@@ -55,7 +55,18 @@ The browser sends OTLP data to the reverse proxy endpoint that you configure. Th
 
 ## What to expect in {{kib}} [what-to-expect-in-kibana]
 
-After EDOT Browser is sending telemetry to {{product.observability}}, you can inspect traces and spans in the Observability app. The following describes what you see and how to interpret it.
+After EDOT Browser is sending telemetry to {{product.observability}}, your browser app surfaces in the following {{kib}} experiences:
+
+- **{{product.apm}} Service Inventory**: Your browser app appears as a service.
+- **{{product.apm}} trace view**: Distributed traces including browser spans are visible.
+- **Service Maps**: Frontend-to-backend service dependencies are shown when your backend services are also instrumented and reporting telemetry to {{product.observability}}.
+- **Discover**: Traces, metrics, and logs (if emitted by your application) are indexed and queryable.
+
+  :::{note}
+  Logs are only present in **Discover** if your application uses the OpenTelemetry Logs API to emit them. Refer to [Logs](telemetry.md#logs) for more information on what EDOT Browser emits and how to configure log export.
+  :::
+
+The **User Experience** app currently shows only data from classic Elastic {{product.apm}} Browser agents and does not display EDOT Browser data. For RUM-style dashboards compatible with EDOT Browser, install the [RUM OpenTelemetry Assets](https://github.com/elastic/integrations/tree/main/packages/otel_rum_dashboards) integration from the {{kib}} Integrations catalog. The integration is currently in preview, requires {{kib}} 9.2.1 or later, and on the Integrations page you must turn on **Display beta integrations** to find it.
 
 ### Document load spans [document-load-spans]
 
@@ -71,14 +82,15 @@ Outgoing HTTP requests made with the browser `fetch` API or `XMLHttpRequest` are
 
 EDOT Browser creates user interaction spans for events such as "click" and "submit". These spans represent the user action that triggered subsequent work (for example, a button click that leads to a `fetch` call). In {{kib}}, user interaction spans are used to group related spans: the interaction span is the logical parent or anchor for the cascade of operations that follow (for example, `external.http` requests and any child spans). When you analyze a trace, look for the user interaction span (for example, `userinteraction` or similar) to understand which click or submit caused the associated network and backend activity. This grouping makes it easier to attribute frontend and backend work to specific user actions.
 
-### Frontend-to-backend traces in Discover and Service Maps [frontend-backend-in-discover-and-service-maps]
+### End-to-end trace propagation [end-to-end-trace-propagation]
 
-Traces that start in the browser (from a user interaction) and continue to your backend appear as end-to-end traces in {{product.observability}}:
+Frontend-to-backend trace continuity depends on W3C Trace Context (`traceparent` and `tracestate`) headers being propagated from the browser request to the backend service. When propagation is configured correctly:
 
-- **Discover**: When you search or filter by your frontend service name or by trace ID, you see trace documents that include both browser-originated spans (for example, user interaction, `external.http`) and backend service spans, as long as trace context is propagated from the browser to the server. You can inspect the full path of a request from the user action through the frontend to backend services.
-- **Service Maps**: Your frontend application appears as a service node. Connections from that node to backend services are derived from the same trace data: when a browser `external.http` span targets a backend that is also instrumented and reported to {{product.observability}}, a dependency link is shown between the frontend and that backend service. This gives you a map of how browser traffic flows to your backend services.
+- In the **{{product.apm}} trace view**, the browser's `external.http` span and the backend service spans appear in the same waterfall, so you can follow a request from the user action through the frontend to backend services.
+- In **Discover**, you can filter by `trace.id` (or by the frontend `service.name`) to retrieve every document that belongs to the same trace, including both browser-originated and backend spans.
+- In **Service Maps**, the browser `external.http` span's destination is matched to a backend service that is also instrumented and reported to {{product.observability}}, producing the dependency edge between the frontend and that service.
 
-For more on how RUM and distributed traces appear in the Observability app, refer to [User experience (RUM)](docs-content://solutions/observability/applications/user-experience.md).
+If trace context is not propagated, browser and backend spans appear as separate traces, and no dependency edge is drawn between them in Service Maps.
 
 ## Next steps [next-steps]
 
