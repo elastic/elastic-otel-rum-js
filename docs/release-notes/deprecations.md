@@ -1,6 +1,6 @@
 ---
 navigation_title: Deprecations 
-description: Deprecations for Elastic Distribution of OpenTelemetry Browser.
+description: Deprecations for Elastic OTel Browser.
 applies_to:
   stack:
   serverless:

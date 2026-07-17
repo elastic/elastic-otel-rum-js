@@ -1,6 +1,6 @@
 ---
 navigation_title: Metrics, traces, and logs
-description: What EDOT Browser emits for each telemetry signal and known limitations.
+description: What Elastic OTel Browser emits for each telemetry signal and known limitations.
 applies_to:
   stack: ga
   serverless:
@@ -15,13 +15,13 @@ products:
 
 # Metrics, traces, and logs
 
-EDOT Browser can export all three OpenTelemetry signals (metrics, traces, and logs) to {{product.observability}} using OTLP.
+Elastic OTel Browser can export all three OpenTelemetry signals (metrics, traces, and logs) to {{product.observability}} using OTLP.
 
 ## Metrics [metrics]
 
-### What EDOT Browser currently emits [metrics-what-is-emitted]
+### What Elastic OTel Browser currently emits [metrics-what-is-emitted]
 
-EDOT Browser configures the OpenTelemetry MeterProvider and exports metrics over OTLP to the `/v1/metrics` path. Your application can create meters and instruments (counters, histograms, and so on) using the OpenTelemetry Metrics API. EDOT Browser exports those metrics along with any SDK-provided ones.
+Elastic OTel Browser configures the OpenTelemetry MeterProvider and exports metrics over OTLP to the `/v1/metrics` path. Your application can create meters and instruments (counters, histograms, and so on) using the OpenTelemetry Metrics API. Elastic OTel Browser exports those metrics along with any SDK-provided ones.
 
 Ensure your reverse proxy and OTLP endpoint accept the `/v1/metrics` path.
 
@@ -36,7 +36,7 @@ Ensure your reverse proxy and OTLP endpoint accept the `/v1/metrics` path.
 
 ### Context Manager [traces-context-manager]
 
-In certain scenarios, a trace might occur asynchronously. For instance, a user interaction that initiates an HTTP request to a downstream service and subsequently updates the User Interface with the service response. To maintain context across these asynchronous functions, EDOT incorporates a ContextManager that patches several asynchronous browser APIs, including:
+In certain scenarios, a trace might occur asynchronously. For instance, a user interaction that initiates an HTTP request to a downstream service and subsequently updates the User Interface with the service response. To maintain context across these asynchronous functions, Elastic OTel Browser incorporates a ContextManager that patches several asynchronous browser APIs, including:
 
 - setTimeout and setImmediate
 - Promise methods: then, catch, and finally
@@ -44,9 +44,9 @@ In certain scenarios, a trace might occur asynchronously. For instance, a user i
 
 This mechanism ensures that when these asynchronous operations execute, they do so within the same context that was active at the time of their scheduling. Consequently, distributed tracing and context values (such as trace IDs and spans) are accurately preserved across asynchronous boundaries in web applications.
 
-### What EDOT Browser currently emits [traces-what-is-emitted]
+### What Elastic OTel Browser currently emits [traces-what-is-emitted]
 
-EDOT Browser initializes tracing and registers instrumentations that produce spans:
+Elastic OTel Browser initializes tracing and registers instrumentations that produce spans:
 
 - Spans for the initial document load and related navigation timing (document load instrumentation is turned on by default).
 - Each outgoing request using `fetch` or `XMLHttpRequest` is captured as an `external.http` span with attributes such as URL, HTTP method, and status code. These spans represent the client-side portion of the request.
@@ -71,13 +71,13 @@ Full feature parity with classic Elastic {{product.apm}} RUM agents for tracing 
 
 ## Logs [logs]
 
-### What EDOT Browser currently emits [logs-what-is-emitted]
+### What Elastic OTel Browser currently emits [logs-what-is-emitted]
 
-EDOT Browser configures the LoggerProvider automatically, so you can use the OpenTelemetry Logs API directly from your application code without any additional setup. However, no logs are emitted automatically — your application must explicitly create and emit log records for any log data to be sent.
+Elastic OTel Browser configures the LoggerProvider automatically, so you can use the OpenTelemetry Logs API directly from your application code without any additional setup. However, no logs are emitted automatically — your application must explicitly create and emit log records for any log data to be sent.
 
 When your application emits log records and they are exported over OTLP:
 
-- **Application logs**: Your application code can obtain a logger from the OpenTelemetry API and emit log records (severity, body, attributes). EDOT Browser exports these records to your configured endpoint on the `/v1/logs` path.
+- **Application logs**: Your application code can obtain a logger from the OpenTelemetry API and emit log records (severity, body, attributes). Elastic OTel Browser exports these records to your configured endpoint on the `/v1/logs` path.
 - **Resource and context**: Log records are associated with the same resource (for example service name) and can optionally be linked to the active trace context, so you can correlate logs with traces in {{product.observability}}.
 
 There is no requirement to use logs. If your application does not create log records, no log data is sent.
@@ -89,11 +89,11 @@ There is no requirement to use logs. If your application does not create log rec
 - Logs that are not exported before the user navigates away or closes the tab might be lost unless the SDK supports a reliable flush (for example on `beforeunload`). Be aware that some log data might not reach the backend in edge cases.
 
 :::{note}
-Automatic capture of `console` methods (for example `console.log`, `console.error`) is not provided by EDOT Browser. To send logs to {{product.observability}}, you must use the OpenTelemetry Logs API from your application code. Automatic console instrumentation might be considered in the future.
+Automatic capture of `console` methods (for example `console.log`, `console.error`) is not provided by Elastic OTel Browser. To send logs to {{product.observability}}, you must use the OpenTelemetry Logs API from your application code. Automatic console instrumentation might be considered in the future.
 :::
 
 ## Next steps [next-steps]
 
-- Refer to [Set up EDOT Browser](setup.md), [Install the agent](install-agent.md), and [Proxy and CORS](proxy-cors.md) for installation and export configuration.
+- Refer to [Set up Elastic OTel Browser](setup.md), [Install the agent](install-agent.md), and [Proxy and CORS](proxy-cors.md) for installation and export configuration.
 - Refer to [What to expect in {{kib}}](setup.md#what-to-expect-in-kibana) for how traces appear in the Observability app.
-- Refer to [Supported technologies](supported-technologies.md) for included instrumentations and [Configure EDOT Browser](configuration.md) for turning signals and instrumentations on or off.
+- Refer to [Supported technologies](supported-technologies.md) for included instrumentations and [Configure Elastic OTel Browser](configuration.md) for turning signals and instrumentations on or off.

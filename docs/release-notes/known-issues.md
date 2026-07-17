@@ -1,6 +1,6 @@
 ---
 navigation_title: Known issues 
-description: Known issues for Elastic Distribution of OpenTelemetry Browser.
+description: Known issues for Elastic OTel Browser.
 applies_to:
   stack:
   serverless:
@@ -11,6 +11,6 @@ products:
   - id: edot-sdk
 ---
 
-# {{edot}} Browser known issues
+# {{edot}} Browser known issues [elastic-distribution-of-opentelemetry-browser-known-issues]
 
 No known issues.

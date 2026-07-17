@@ -1,6 +1,6 @@
 ---
 navigation_title: Troubleshooting
-description: Troubleshoot EDOT Browser telemetry export and common issues.
+description: Troubleshoot Elastic OTel Browser telemetry export and common issues.
 applies_to:
   stack: ga
   serverless:
@@ -13,13 +13,13 @@ products:
   - id: edot-sdk
 ---
 
-# Troubleshooting EDOT Browser
+# Troubleshooting Elastic OTel Browser [troubleshooting-edot-browser]
 
 If telemetry doesn't appear in {{product.observability}}, try the following:
 
 - Confirm the `otlpEndpoint` option points to your reverse proxy (not directly to {{product.observability}}) and doesn't include signal paths like `/v1/traces`.
 - Check the browser console for network errors or OpenTelemetry-related messages. Cross-Origin Resource Sharing (CORS) errors often mean the reverse proxy is not sending the right `Access-Control-Allow-Origin` or preflight response.
-- Ensure the reverse proxy can reach your EDOT Collector or {{ecloud}} Managed OTLP endpoint. To do so, check proxy logs for connection or authorization failures.
+- Ensure the reverse proxy can reach your {{product.elastic-agent}} or {{ecloud}} Managed OTLP endpoint. To do so, check proxy logs for connection or authorization failures.
 - Ensure service name is set and doesn't contain special characters.
 - Set `logLevel` to `debug` or `verbose` in the `startBrowserSdk` options to see detailed export and instrumentation output in the console.
 
@@ -29,11 +29,11 @@ If you use a Content Security Policy, ensure the proxy or OTLP endpoint domain i
 
 If the troubleshooting steps above don't resolve your issue, you can reach the team through the [Elastic discuss forum](https://discuss.elastic.co/tags/c/observability/apm/58/rum) or by opening a GitHub issue. Use the following guidance to choose the right repo:
 
-* **Open an issue in the [EDOT Browser repo](https://github.com/elastic/elastic-otel-rum-js/issues/new)** if the issue relates to:
+* **Open an issue in the [Elastic OTel Browser repo](https://github.com/elastic/elastic-otel-rum-js/issues/new)** if the issue relates to:
 
-  - EDOT Browser-specific behavior or configuration options (for example, `startBrowserSdk`, `otlpEndpoint`)
+  - Elastic OTel Browser-specific behavior or configuration options (for example, `startBrowserSdk`, `otlpEndpoint`)
   - Elastic-specific defaults or signal configuration
-  - EDOT Browser packaging or installation
+  - Elastic OTel Browser packaging or installation
   - Sending data to {{product.observability}}
 
 * **Open an issue in the [OpenTelemetry JS repo](https://github.com/open-telemetry/opentelemetry-js/issues/new) or [JS contrib repo](https://github.com/open-telemetry/opentelemetry-js-contrib/issues/new)** if the issue relates to:
@@ -45,5 +45,5 @@ If the troubleshooting steps above don't resolve your issue, you can reach the t
 ## Next steps [next-steps]
 
 - Refer to [Known limitations](supported-technologies.md#known-limitations) for what is not yet supported.
-- Refer to [Set up EDOT Browser](setup.md), [Install the agent](install-agent.md), and [Proxy and CORS](proxy-cors.md) for installation and proxy configuration.
+- Refer to [Set up Elastic OTel Browser](setup.md), [Install the agent](install-agent.md), and [Proxy and CORS](proxy-cors.md) for installation and proxy configuration.
 - For general OTLP ingest issues, refer to [OpenTelemetry ingest troubleshooting](docs-content://troubleshoot/ingest/opentelemetry/index.md).

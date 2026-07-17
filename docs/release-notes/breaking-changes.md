@@ -1,6 +1,6 @@
 ---
 navigation_title: Breaking changes
-description: Breaking changes for Elastic Distribution of OpenTelemetry Browser.
+description: Breaking changes for Elastic OTel Browser.
 applies_to:
   stack:
   serverless:

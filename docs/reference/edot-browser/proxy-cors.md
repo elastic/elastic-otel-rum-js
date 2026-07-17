@@ -1,6 +1,6 @@
 ---
 navigation_title: Proxy and CORS
-description: Configure a reverse proxy and CORS for EDOT Browser telemetry export.
+description: Configure a reverse proxy and CORS for Elastic OTel Browser telemetry export.
 applies_to:
   stack: ga
   serverless:
@@ -15,7 +15,7 @@ products:
 
 # Proxy and CORS configuration
 
-EDOT Browser exports telemetry from the user's browser to an OTLP endpoint. You can send data directly to an OTLP endpoint if you set the appropriate headers (for example `Authorization`). For security, Elastic recommends placing a reverse proxy in front of your OTLP endpoint and configuring it for authentication and [Cross-Origin Resource Sharing (CORS)](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/CORS) so that credentials are not exposed in the browser.
+Elastic OTel Browser exports telemetry from the user's browser to an OTLP endpoint. You can send data directly to an OTLP endpoint if you set the appropriate headers (for example `Authorization`). For security, Elastic recommends placing a reverse proxy in front of your OTLP endpoint and configuring it for authentication and [Cross-Origin Resource Sharing (CORS)](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/CORS) so that credentials are not exposed in the browser.
 
 :::{warning}
 Do not send telemetry directly from the browser to {{product.observability}} with an API key in client-side code. Any credentials in browser code are visible to end users and can be misused.
@@ -25,7 +25,7 @@ Do not send telemetry directly from the browser to {{product.observability}} wit
 
 A reverse proxy in front of the OTLP endpoint is recommended for these reasons:
 
-- Authentication: The EDOT Collector or {{ecloud}} Managed OTLP endpoint expects an `Authorization` header with an API key. The reverse proxy injects the header so the key stays on the server and is not exposed to the browser.
+- Authentication: The {{product.elastic-agent}} or {{ecloud}} Managed OTLP endpoint expects an `Authorization` header with an API key. The reverse proxy injects the header so the key stays on the server and is not exposed to the browser.
 - Cross-origin requests: Your web application and the OTLP endpoint often have different origins. Browsers enforce CORS, so without the right headers, export requests are blocked. A reverse proxy on the same origin as your app (or configured to allow it) can add the required CORS headers and handle preflight `OPTIONS` requests.
 - Traffic control: You can apply rate limiting or other controls at the proxy before traffic reaches the Collector or {{product.observability}}.
 
@@ -45,7 +45,7 @@ When your web application and the export endpoint have different origins, the br
 
 ## Example: NGINX reverse proxy [example-nginx]
 
-The following example forwards telemetry from `webapp.example.com` to an EDOT Collector at `collector.example.com`, injects the required `Authorization` header, and handles CORS preflight:
+The following example forwards telemetry from `webapp.example.com` to an {{product.elastic-agent}} at `collector.example.com`, injects the required `Authorization` header, and handles CORS preflight:
 
 ```nginx
 server {
@@ -80,5 +80,5 @@ server {
 
 ## Next steps [next-steps]
 
-- [Install the agent](install-agent.md) and initialize EDOT Browser in your application.
-- Refer to [Configure EDOT Browser](configuration.md) for initialization options.
+- [Install the agent](install-agent.md) and initialize Elastic OTel Browser in your application.
+- Refer to [Configure Elastic OTel Browser](configuration.md) for initialization options.

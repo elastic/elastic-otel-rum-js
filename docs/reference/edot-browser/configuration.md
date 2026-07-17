@@ -1,6 +1,6 @@
 ---
 navigation_title: Configuration
-description: Configure the Elastic Distribution of OpenTelemetry Browser (EDOT Browser).
+description: Configure the Elastic OTel Browser.
 applies_to:
   stack: ga
   serverless:
@@ -13,19 +13,19 @@ products:
   - id: edot-sdk
 ---
 
-# Configure EDOT Browser
+# Configure Elastic OTel Browser [configure-edot-browser]
 
-This page explains how to configure EDOT Browser, which settings are supported, and what's required to start exporting browser telemetry.
+This page explains how to configure Elastic OTel Browser, which settings are supported, and what's required to start exporting browser telemetry.
 
-EDOT Browser follows OpenTelemetry configuration conventions where possible. Like the upstream OpenTelemetry Browser SDK, it uses explicit configuration at initialization rather than environment variables, which are not available in the browser.
+Elastic OTel Browser follows OpenTelemetry configuration conventions where possible. Like the upstream OpenTelemetry Browser SDK, it uses explicit configuration at initialization rather than environment variables, which are not available in the browser.
 
 ## Configuration model in the browser [configuration-model-in-the-browser]
 
-EDOT Browser runs in your users' browsers. Configuration passed to EDOT Browser is accessible to end users, since browser source code and runtime values are visible. This is why you shouldn't embed secrets such as API keys in browser configuration.
+Elastic OTel Browser runs in your users' browsers. Configuration passed to Elastic OTel Browser is accessible to end users, since browser source code and runtime values are visible. This is why you shouldn't embed secrets such as API keys in browser configuration.
 
 Environment variables exist at build time only: a bundler replaces `process.env.*` with values when bundling, but these values are not available at runtime in the browser. You can provide configuration at build time (bundler-defined constants) or at runtime (options passed to the initialization function).
 
-EDOT Browser does not read `OTEL_*` variables directly. Instead, it accepts configuration values passed explicitly during initialization.
+Elastic OTel Browser does not read `OTEL_*` variables directly. Instead, it accepts configuration values passed explicitly during initialization.
 
 ### Common configuration patterns
 
@@ -38,7 +38,7 @@ The best approach depends on your application architecture and build tooling.
 
 ## Minimal required configuration [minimal-required-configuration]
 
-At a minimum, EDOT Browser requires:
+At a minimum, Elastic OTel Browser requires:
 
 - A service name to identify the frontend application.
 - An export endpoint that points to a reverse proxy.
@@ -87,7 +87,7 @@ For details on reverse proxy and authorization, refer to [OpenTelemetry for Real
 
 ## Logging and diagnostics [logging-and-diagnostics]
 
-EDOT Browser uses the OpenTelemetry diagnostic logger.
+Elastic OTel Browser uses the OpenTelemetry diagnostic logger.
 
 To troubleshoot setup issues, increase the log level when calling `startBrowserSdk`:
 
@@ -101,15 +101,15 @@ startBrowserSdk({
 });
 ```
 
-Diagnostic logs are written to the browser console. For more information on using debug logging to troubleshoot issues, refer to [Enable debug logging for EDOT SDKs](docs-content://troubleshoot/ingest/opentelemetry/edot-sdks/enable-debug-logging.md) and [Enable debug logging](docs-content://troubleshoot/ingest/opentelemetry/edot-collector/enable-debug-logging.md) (Collector).
+Diagnostic logs are written to the browser console. For more information on using debug logging to troubleshoot issues, refer to [Enable debug logging for Elastic OTel SDKs](docs-content://troubleshoot/ingest/opentelemetry/edot-sdks/enable-debug-logging.md) and [Enable debug logging](docs-content://troubleshoot/ingest/opentelemetry/edot-collector/enable-debug-logging.md) (Collector).
 
-## EDOT configuration details
+## Elastic OTel configuration details [edot-configuration-details]
 
-This section provides additional details about configuration settings that require further explanation or behave differently in EDOT Browser compared to OpenTelemetry JS.
+This section provides additional details about configuration settings that require further explanation or behave differently in Elastic OTel Browser compared to OpenTelemetry JS.
 
 ### `instrumentations` details [otel_browser_instrumentations-details]
 
-An object whose keys are the scope names of the available instrumentations in EDOT and whose values are the corresponding configuration objects.
+An object whose keys are the scope names of the available instrumentations in Elastic OTel Browser and whose values are the corresponding configuration objects.
 
 The following keys are supported:
 
@@ -128,4 +128,4 @@ The following keys are supported:
 - Refer to [Install the agent](install-agent.md) and [Proxy and CORS](proxy-cors.md) for installation and proxy configuration.
 - Refer to [Metrics, traces, and logs](telemetry.md) for what each signal emits and limitations.
 - Review [Supported technologies](supported-technologies.md) for browser and instrumentation support.
-- Refer to [Troubleshooting](troubleshooting.md) for EDOT Browser–specific issues, or [OpenTelemetry ingest troubleshooting](docs-content://troubleshoot/ingest/opentelemetry/index.md) for general OTLP ingest issues.
+- Refer to [Troubleshooting](troubleshooting.md) for Elastic OTel Browser–specific issues, or [OpenTelemetry ingest troubleshooting](docs-content://troubleshoot/ingest/opentelemetry/index.md) for general OTLP ingest issues.

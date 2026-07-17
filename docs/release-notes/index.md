@@ -1,6 +1,6 @@
 ---
-navigation_title: EDOT Browser
-description: Release notes for Elastic Distribution of OpenTelemetry Browser.
+navigation_title: Elastic OTel Browser
+description: Release notes for Elastic OTel Browser.
 applies_to:
   stack:
   serverless:
@@ -13,9 +13,9 @@ products:
 
 # {{edot}} Browser release notes [edot-browser-release-notes]
 
-Review the changes, fixes, and more in each version of {{edot}} Browser (EDOT Browser).
+Review the changes, fixes, and more in each version of {{edot}} Browser.
 
-To check for breaking changes, see [EDOT Browser Breaking Changes](./breaking-changes.md).
+To check for breaking changes, see [Elastic OTel Browser Breaking Changes](./breaking-changes.md).
 
 To check for security updates, go to [Security announcements for the Elastic stack](https://discuss.elastic.co/c/announcements/security-announcements/31).
 

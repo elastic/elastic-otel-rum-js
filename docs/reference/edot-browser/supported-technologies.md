@@ -1,6 +1,6 @@
 ---
 navigation_title: Supported technologies
-description: Supported browsers and instrumentations in EDOT Browser.
+description: Supported browsers and instrumentations in Elastic OTel Browser.
 applies_to:
   stack: ga
   serverless:
@@ -28,7 +28,7 @@ At a minimum, the runtime environment must support:
 
 ### Supported browsers [supported-browsers]
 
-EDOT Browser is designed to run in modern evergreen browsers that meet these requirements. 
+Elastic OTel Browser is designed to run in modern evergreen browsers that meet these requirements. 
 
 | Browser | Supported versions |
 |----------|--------------------|
@@ -41,11 +41,11 @@ EDOT Browser is designed to run in modern evergreen browsers that meet these req
 Internet Explorer is not supported.
 :::
 
-If your application targets older browsers, you might need to downlevel the code with a bundler and provide polyfills. EDOT Browser doesn't include built-in polyfills.
+If your application targets older browsers, you might need to downlevel the code with a bundler and provide polyfills. Elastic OTel Browser doesn't include built-in polyfills.
 
 ## Bundlers [bundlers]
 
-When you install EDOT Browser as a package (refer to [Install the agent](install-agent.md)), you build your application with a JavaScript bundler. The following bundlers are supported:
+When you install Elastic OTel Browser as a package (refer to [Install the agent](install-agent.md)), you build your application with a JavaScript bundler. The following bundlers are supported:
 
 | Bundler   | Notes |
 |-----------|-------|
@@ -66,7 +66,7 @@ Usage of `@elastic/opentelemetry-browser` in TypeScript code requires:
 
 ## Included instrumentations [included-instrumentations]
 
-EDOT Browser bundles a curated set of OpenTelemetry JS instrumentations suitable for browser environments. This list is being reviewed and might change in future releases.
+Elastic OTel Browser bundles a curated set of OpenTelemetry JS instrumentations suitable for browser environments. This list is being reviewed and might change in future releases.
 
 The following instrumentations are included and turned on by default. You can turn off any of them using `instrumentations` by setting `{ enabled: false }` for the corresponding key when calling `startBrowserSdk`:
 
@@ -82,7 +82,7 @@ The following instrumentations are included and turned on by default. You can tu
 
 ### Default behavior
 
-By default, EDOT Browser:
+By default, Elastic OTel Browser:
 
 - Initializes tracing
 - Registers included instrumentations
@@ -108,7 +108,7 @@ For capabilities that are not yet available and per-signal limitations (metrics,
 
 ## Next steps [next-steps]
 
-- Refer to [Set up EDOT Browser](setup.md) and [Install the agent](install-agent.md) to get started.
+- Refer to [Set up Elastic OTel Browser](setup.md) and [Install the agent](install-agent.md) to get started.
 - Refer to [Metrics, traces, and logs](telemetry.md) for what is emitted per signal and what is not yet supported.
 - Review [Configuration](configuration.md) to customize behavior.
-- Refer to [Known limitations](#known-limitations) above, [Troubleshooting](troubleshooting.md) for EDOT Browser–specific guidance, or [OpenTelemetry ingest troubleshooting](docs-content://troubleshoot/ingest/opentelemetry/index.md) for general OTLP ingest issues.
+- Refer to [Known limitations](#known-limitations) above, [Troubleshooting](troubleshooting.md) for Elastic OTel Browser–specific guidance, or [OpenTelemetry ingest troubleshooting](docs-content://troubleshoot/ingest/opentelemetry/index.md) for general OTLP ingest issues.
