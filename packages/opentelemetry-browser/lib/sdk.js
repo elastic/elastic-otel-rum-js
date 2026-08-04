@@ -3,8 +3,20 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import {diag, DiagLogLevel, metrics} from '@opentelemetry/api';
+import {
+    context,
+    diag,
+    DiagLogLevel,
+    metrics,
+    propagation,
+    trace,
+} from '@opentelemetry/api';
 import {logs} from '@opentelemetry/api-logs';
+import {
+    CompositePropagator,
+    W3CBaggagePropagator,
+    W3CTraceContextPropagator,
+} from '@opentelemetry/core';
 import {OTLPLogExporter} from '@opentelemetry/exporter-logs-otlp-http';
 import {OTLPMetricExporter} from '@opentelemetry/exporter-metrics-otlp-http';
 import {OTLPTraceExporter} from '@opentelemetry/exporter-trace-otlp-http';
@@ -16,8 +28,8 @@ import {
 import {
     BatchSpanProcessor,
     TraceIdRatioBasedSampler,
-} from '@opentelemetry/sdk-trace-base';
-import {WebTracerProvider} from '@opentelemetry/sdk-trace-web';
+    TracerProvider,
+} from '@opentelemetry/sdk-trace';
 
 import {registerInstrumentations} from '@opentelemetry/instrumentation';
 import {BrowserNavigationInstrumentation} from '@opentelemetry/instrumentation-browser-navigation';
@@ -114,29 +126,32 @@ export function startBrowserSdk(cfg = {}) {
     // NOTE: export payloads can be seen in DevTools network tab in JSON format
     // so IMHO it would be redundant to use console exporters
 
-    // traces signal configuration
-    const tracesEndpoint = appendPath(endpointUrl, 'v1/traces').href;
-    const spanProcessor = new BatchSpanProcessor(
-        new OTLPTraceExporter({
-            url: tracesEndpoint,
-            headers: config.exportHeaders,
+    // Traces depend on context manager & propagation
+    AsyncApisContextManager.enable();
+    context.setGlobalContextManager(AsyncApisContextManager);
+    propagation.setGlobalPropagator(
+        new CompositePropagator({
+            propagators: [
+                new W3CTraceContextPropagator(),
+                new W3CBaggagePropagator(),
+            ],
         })
     );
-    const tracerProvider = new WebTracerProvider({
+
+    // traces signal configuration
+    const tracesEndpoint = appendPath(endpointUrl, 'v1/traces').href;
+    const spanProcessor = new BatchSpanProcessor({
+        exporter: new OTLPTraceExporter({
+            url: tracesEndpoint,
+            headers: config.exportHeaders,
+        }),
+    });
+    const tracerProvider = new TracerProvider({
         resource,
         sampler: new TraceIdRatioBasedSampler(config.sampleRate),
         spanProcessors: [spanProcessor],
     });
-    // TODO: WebTracerProvider comes with
-    // - a composite propagator [W3C, Baggage]
-    // - a context manager (Stack, which has issues with exporters)
-    // Should we allow users to pass their own propagator, contextmanager?
-    tracerProvider.register({
-        contextManager: AsyncApisContextManager,
-    });
-    // ideally it shoud be
-    // trace.setGlobalTracerProvider(tracerProvider);
-    // but there is no way to set propagators and context manager
+    trace.setGlobalTracerProvider(tracerProvider);
 
     // metrics signal configuration
     const metricsEndpoint = appendPath(endpointUrl, 'v1/metrics').href;
@@ -154,12 +169,12 @@ export function startBrowserSdk(cfg = {}) {
 
     // logs signal configuration
     const logsEndpoint = appendPath(endpointUrl, 'v1/logs').href;
-    const logsProcessor = new BatchLogRecordProcessor(
-        new OTLPLogExporter({
+    const logsProcessor = new BatchLogRecordProcessor({
+        exporter: new OTLPLogExporter({
             url: logsEndpoint,
             headers: config.exportHeaders,
-        })
-    );
+        }),
+    });
     const loggerProvider = new LoggerProvider({
         resource,
         processors: [logsProcessor],
