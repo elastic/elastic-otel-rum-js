@@ -127,6 +127,7 @@ export function startBrowserSdk(cfg = {}) {
     // so IMHO it would be redundant to use console exporters
 
     // Traces depend on context manager & propagation
+    AsyncApisContextManager.enable();
     context.setGlobalContextManager(AsyncApisContextManager);
     propagation.setGlobalPropagator(
         new CompositePropagator({
