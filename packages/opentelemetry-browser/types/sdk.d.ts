@@ -14,7 +14,7 @@ export function startBrowserSdk(cfg?: BrowserSdkConfiguration): {
     pauseReplay: () => void;
     resumeReplay: () => void;
     sessionId: string | null;
-} | undefined;
+};
 export type InstrumentationsConfigMap = {
     "@opentelemetry/instrumentation-browser-navigation": import('@opentelemetry/instrumentation-browser-navigation').BrowserNavigationInstrumentationConfig;
     "@opentelemetry/instrumentation-document-load": import('@opentelemetry/instrumentation-document-load').DocumentLoadInstrumentationConfig;
@@ -33,11 +33,14 @@ export type BrowserSdkConfiguration = {
     sampleRate?: number;
     resourceAttributes?: Record<string, import('./detector.js').AttributeValue>;
     otlpEndpoint?: string;
-    exportHeaders?: Record<string, string>;
-    instrumentations?: Partial<InstrumentationsConfigMap>;
     /**
-     * Experimental session replay (POC). Off unless `enabled: true`.
+     * // other options
      */
+    exportHeaders?: Record<string, string>;
+    /**
+     * // experimental session replay (POC)
+     */
+    instrumentations?: Partial<InstrumentationsConfigMap>;
     replay?: ReplayConfiguration;
 };
 export type ReplayPrivacyConfiguration = {
@@ -62,14 +65,10 @@ export type ReplayQualityConfiguration = {
  */
 export type ReplayConfiguration = {
     enabled?: boolean;
-    /**
-     * 0-100, default 100
-     */
     samplingRate?: number;
-    /**
-     * 0-100, default 100; >0 enables error backfill
-     */
     errorSamplingRate?: number;
     privacy?: ReplayPrivacyConfiguration;
     quality?: ReplayQualityConfiguration;
 };
+import { pauseReplay } from './replay.js';
+import { resumeReplay } from './replay.js';

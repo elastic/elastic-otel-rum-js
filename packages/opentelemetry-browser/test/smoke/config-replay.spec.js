@@ -52,7 +52,9 @@ test('replay.enabled:false does not load replay path', async ({page}) => {
     const spans = await collector.getSpans({flush: true});
     expect(spans.length).toBeGreaterThan(0);
 
-    const logs = collector.getRequests().filter((r) => r.url.includes('/v1/logs'));
+    const logs = collector
+        .getRequests()
+        .filter((r) => r.url.includes('/v1/logs'));
     // May have web-vitals/exception logs; assert no elastic-rrweb scope
     let replayCount = 0;
     for (const req of logs) {

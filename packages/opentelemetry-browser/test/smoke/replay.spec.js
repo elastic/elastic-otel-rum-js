@@ -21,9 +21,7 @@ test('replay.enabled emits elastic-rrweb logs with required attributes', async (
             },
         })
     );
-    await page.goto(
-        `/fixtures/use-replay.html?config=${config}&sync=true`
-    );
+    await page.goto(`/fixtures/use-replay.html?config=${config}&sync=true`);
     await page.click('#action');
     // Allow async startReplay (dynamic import / record init) to finish
     await page.waitForTimeout(1000);

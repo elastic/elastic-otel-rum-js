@@ -34,7 +34,7 @@ let _eventCounter = 0;
 let _visibilityHandler = null;
 /** @type {(() => void) | null} */
 let _onError = null;
-/** @type {{record: Function, takeFullSnapshot?: Function} | null} */
+/** @type {{record: Function & {takeFullSnapshot?: Function}, takeFullSnapshot?: Function} | null} */
 let _rrweb = null;
 /** @type {Promise<void> | null} */
 let _startPromise = null;

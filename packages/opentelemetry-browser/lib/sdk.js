@@ -51,12 +51,7 @@ import {
     getSessionId,
     initSession,
 } from './session.js';
-import {
-    pauseReplay,
-    resumeReplay,
-    startReplay,
-    stopReplay,
-} from './replay.js';
+import {pauseReplay, resumeReplay, startReplay, stopReplay} from './replay.js';
 
 /**
  * @typedef {{
@@ -297,7 +292,8 @@ export function startBrowserSdk(cfg = {}) {
             const logsEndpoint = appendPath(endpointUrl, 'v1/logs').href;
             replayLoggerProvider = new LoggerProvider({
                 resource: resourceFromAttributes({
-                    'service.name': config.serviceName ?? defaultConfig.serviceName,
+                    'service.name':
+                        config.serviceName ?? defaultConfig.serviceName,
                     'session.id': sessionId,
                     'rum.sessionId': sessionId,
                     'telemetry.distro.name': 'elastic',
@@ -311,7 +307,8 @@ export function startBrowserSdk(cfg = {}) {
                     }),
                 ],
             });
-            const replayLogger = replayLoggerProvider.getLogger('elastic-rrweb');
+            const replayLogger =
+                replayLoggerProvider.getLogger('elastic-rrweb');
             replayReady = startReplay({
                 samplingRate: replayCfg.samplingRate,
                 errorSamplingRate: replayCfg.errorSamplingRate,

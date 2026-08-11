@@ -43,7 +43,10 @@ export function initSession(cfg = {}) {
         }
     };
     for (const ev of ['click', 'keydown', 'scroll', 'touchstart']) {
-        window.addEventListener(ev, _onActivity, {passive: true, capture: true});
+        window.addEventListener(ev, _onActivity, {
+            passive: true,
+            capture: true,
+        });
     }
 
     try {
