@@ -93,20 +93,24 @@ console.log(`server listening to http://localhost:${server.address().port}`);
 
 function injectSdk(html, config, jsSync) {
     const placeholder = '<!-- EDOT_PLACEHOLDER (DO NOT REMOVE)-->';
+    const replayEnabled = config?.replay?.enabled === true;
+    const bundle = replayEnabled
+        ? '/assets/elastic-otel-browser-replay.min.js'
+        : '/assets/elastic-otel-browser.min.js';
     const codeAsync = `
         <script>
         // Same pattern as https://www.elastic.co/docs/reference/apm/agents/rum-js/install-agent#_asynchronous_non_blocking_pattern
         ;(function(d, s, c) {
             var j = d.createElement(s),
                 t = d.getElementsByTagName(s)[0];
-            j.src = '/assets/elastic-otel-browser.min.js';
+            j.src = '${bundle}';
             j.onload = function() { globalThis.edotBrowser = startBrowserSdk(c); };
             t.parentNode.insertBefore(j, t);
         })(document, 'script', ${JSON.stringify(config)})
         </script>
     `;
     const codeSync = `
-        <script src="/assets/elastic-otel-browser.min.js"></script>
+        <script src="${bundle}"></script>
         <script>
             globalThis.edotBrowser = startBrowserSdk(${JSON.stringify(config)});
         </script>

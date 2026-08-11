@@ -30,6 +30,7 @@ import {
     TraceIdRatioBasedSampler,
     TracerProvider,
 } from '@opentelemetry/sdk-trace';
+import {resourceFromAttributes} from '@opentelemetry/resources';
 
 import {registerInstrumentations} from '@opentelemetry/instrumentation';
 import {BrowserNavigationInstrumentation} from '@opentelemetry/instrumentation-browser-navigation';
@@ -44,6 +45,18 @@ import {WebVitalsInstrumentation} from '@opentelemetry/browser-instrumentation/e
 import {AsyncApisContextManager} from './context.js';
 import {createLogger} from './logging.js';
 import {detectResource} from './detector.js';
+import {
+    checkRotation,
+    closeSession,
+    getSessionId,
+    initSession,
+} from './session.js';
+import {
+    pauseReplay,
+    resumeReplay,
+    startReplay,
+    stopReplay,
+} from './replay.js';
 
 /**
  * @typedef {{
@@ -71,6 +84,40 @@ import {detectResource} from './detector.js';
  *
  * // other options
  * @property {Partial<InstrumentationsConfigMap>} [instrumentations]
+ *
+ * // experimental session replay (POC)
+ * @property {ReplayConfiguration} [replay]
+ */
+
+/**
+ * @typedef {Object} ReplayPrivacyConfiguration
+ * @property {boolean} [maskAllInputs]
+ * @property {boolean} [maskAllText]
+ * @property {string} [maskTextSelector]
+ * @property {string} [blockSelector]
+ * @property {string} [blockClass]
+ * @property {string} [ignoreClass]
+ * @property {Record<string, boolean>} [maskInputOptions]
+ * @property {(text: string, element: HTMLElement) => string} [maskInputFn]
+ */
+
+/**
+ * @typedef {Object} ReplayQualityConfiguration
+ * @property {boolean} [inlineStylesheet]
+ * @property {boolean} [collectFonts]
+ * @property {boolean} [slimDOM]
+ * @property {boolean} [recordCanvas]
+ * @property {boolean} [packEvents]
+ */
+
+/**
+ * Experimental session replay options (POC). Off by default.
+ * @typedef {Object} ReplayConfiguration
+ * @property {boolean} [enabled]
+ * @property {number} [samplingRate] // 0-100, default 100
+ * @property {number} [errorSamplingRate] // 0-100, default 100; >0 enables error backfill
+ * @property {ReplayPrivacyConfiguration} [privacy]
+ * @property {ReplayQualityConfiguration} [quality]
  */
 
 // To control multiple calls to `startBrowserSdk`
@@ -89,8 +136,12 @@ const defaultConfig = {
 /**
  * @param {BrowserSdkConfiguration} cfg
  * @returns {{
- *      forceFlush: () => Promise<void>
- * }}
+ *      forceFlush: () => Promise<void>,
+ *      shutdown: () => Promise<void>,
+ *      pauseReplay: () => void,
+ *      resumeReplay: () => void,
+ *      sessionId: string | null,
+ * } | undefined}
  */
 export function startBrowserSdk(cfg = {}) {
     if (sdkStarted || cfg.disabled) {
@@ -223,16 +274,130 @@ export function startBrowserSdk(cfg = {}) {
     }
     registerInstrumentations({instrumentations: enabledInstrumentations});
 
+    const replayCfg = resolveReplayConfig(config.replay);
+    /** @type {import('@opentelemetry/sdk-logs').LoggerProvider | null} */
+    let replayLoggerProvider = null;
+    /** @type {Promise<void>} */
+    let replayReady = Promise.resolve();
+    /** @type {string | null} */
+    let sessionId = null;
+
+    if (replayCfg.enabled) {
+        // Elastic Synthetics injects syntheticsRunId. Do not use
+        // navigator.webdriver — Playwright (and other automation) sets it
+        // and would skip replay in smoke tests.
+        // @ts-ignore synthetics injects this global when present
+        const isSynthetic = globalThis.syntheticsRunId != null;
+
+        sessionId = initSession();
+
+        if (!isSynthetic) {
+            // Dedicated provider avoids array-valued resource attrs (e.g. browser.brands)
+            // that have historically broken large FullSnapshot log exports.
+            const logsEndpoint = appendPath(endpointUrl, 'v1/logs').href;
+            replayLoggerProvider = new LoggerProvider({
+                resource: resourceFromAttributes({
+                    'service.name': config.serviceName ?? defaultConfig.serviceName,
+                    'session.id': sessionId,
+                    'rum.sessionId': sessionId,
+                    'telemetry.distro.name': 'elastic',
+                }),
+                processors: [
+                    new BatchLogRecordProcessor({
+                        exporter: new OTLPLogExporter({
+                            url: logsEndpoint,
+                            headers: config.exportHeaders,
+                        }),
+                    }),
+                ],
+            });
+            const replayLogger = replayLoggerProvider.getLogger('elastic-rrweb');
+            replayReady = startReplay({
+                samplingRate: replayCfg.samplingRate,
+                errorSamplingRate: replayCfg.errorSamplingRate,
+                replayLogger,
+                getSessionId,
+                checkRotation,
+                privacy: replayCfg.privacy,
+                quality: replayCfg.quality,
+            }).catch((err) => {
+                diag.warn('startReplay failed; replay disabled', err);
+            });
+        } else {
+            diag.debug('Replay skipped for synthetic monitor');
+        }
+    }
+
     // Flag as started
     sdkStarted = true;
 
     return {
+        get sessionId() {
+            return sessionId ?? getSessionId();
+        },
+        pauseReplay,
+        resumeReplay,
         forceFlush() {
-            return Promise.all([
+            return replayReady.then(() =>
+                Promise.all([
+                    tracerProvider.forceFlush(),
+                    meterProvider.forceFlush(),
+                    loggerProvider.forceFlush(),
+                    replayLoggerProvider?.forceFlush() ?? Promise.resolve(),
+                ]).then(() => {})
+            );
+        },
+        async shutdown() {
+            await replayReady;
+            stopReplay();
+            closeSession();
+            await Promise.all([
                 tracerProvider.forceFlush(),
                 meterProvider.forceFlush(),
                 loggerProvider.forceFlush(),
-            ]).then(() => {});
+                replayLoggerProvider?.forceFlush() ?? Promise.resolve(),
+            ]);
+            try {
+                await replayLoggerProvider?.shutdown();
+            } catch (err) {
+                diag.warn('replay LoggerProvider shutdown failed', err);
+            }
+            sdkStarted = false;
+        },
+    };
+}
+
+/**
+ * @param {ReplayConfiguration | undefined} replay
+ * @returns {{
+ *   enabled: boolean,
+ *   samplingRate: number,
+ *   errorSamplingRate: number,
+ *   privacy: Required<Pick<ReplayPrivacyConfiguration, 'maskAllInputs' | 'maskAllText' | 'blockClass' | 'ignoreClass'>> & ReplayPrivacyConfiguration,
+ *   quality: Required<Pick<ReplayQualityConfiguration, 'inlineStylesheet' | 'collectFonts' | 'slimDOM' | 'recordCanvas' | 'packEvents'>>,
+ * }}
+ */
+function resolveReplayConfig(replay) {
+    return {
+        enabled: replay?.enabled === true,
+        samplingRate: replay?.samplingRate ?? 100,
+        errorSamplingRate: replay?.errorSamplingRate ?? 100,
+        privacy: {
+            maskAllInputs: replay?.privacy?.maskAllInputs ?? true,
+            maskAllText: replay?.privacy?.maskAllText ?? false,
+            maskTextSelector: replay?.privacy?.maskTextSelector,
+            blockSelector: replay?.privacy?.blockSelector,
+            blockClass: replay?.privacy?.blockClass ?? 'rum-block',
+            ignoreClass: replay?.privacy?.ignoreClass ?? 'rum-ignore',
+            maskInputOptions: replay?.privacy?.maskInputOptions,
+            maskInputFn: replay?.privacy?.maskInputFn,
+        },
+        quality: {
+            inlineStylesheet: replay?.quality?.inlineStylesheet ?? true,
+            collectFonts: replay?.quality?.collectFonts ?? false,
+            slimDOM: replay?.quality?.slimDOM ?? true,
+            recordCanvas: replay?.quality?.recordCanvas ?? false,
+            packEvents: replay?.quality?.packEvents ?? false,
         },
     };
 }

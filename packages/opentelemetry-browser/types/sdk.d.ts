@@ -1,12 +1,20 @@
 /**
  * @param {BrowserSdkConfiguration} cfg
  * @returns {{
- *      forceFlush: () => Promise<void>
- * }}
+ *      forceFlush: () => Promise<void>,
+ *      shutdown: () => Promise<void>,
+ *      pauseReplay: () => void,
+ *      resumeReplay: () => void,
+ *      sessionId: string | null,
+ * } | undefined}
  */
 export function startBrowserSdk(cfg?: BrowserSdkConfiguration): {
     forceFlush: () => Promise<void>;
-};
+    shutdown: () => Promise<void>;
+    pauseReplay: () => void;
+    resumeReplay: () => void;
+    sessionId: string | null;
+} | undefined;
 export type InstrumentationsConfigMap = {
     "@opentelemetry/instrumentation-browser-navigation": import('@opentelemetry/instrumentation-browser-navigation').BrowserNavigationInstrumentationConfig;
     "@opentelemetry/instrumentation-document-load": import('@opentelemetry/instrumentation-document-load').DocumentLoadInstrumentationConfig;
@@ -25,9 +33,43 @@ export type BrowserSdkConfiguration = {
     sampleRate?: number;
     resourceAttributes?: Record<string, import('./detector.js').AttributeValue>;
     otlpEndpoint?: string;
-    /**
-     * // other options
-     */
     exportHeaders?: Record<string, string>;
     instrumentations?: Partial<InstrumentationsConfigMap>;
+    /**
+     * Experimental session replay (POC). Off unless `enabled: true`.
+     */
+    replay?: ReplayConfiguration;
+};
+export type ReplayPrivacyConfiguration = {
+    maskAllInputs?: boolean;
+    maskAllText?: boolean;
+    maskTextSelector?: string;
+    blockSelector?: string;
+    blockClass?: string;
+    ignoreClass?: string;
+    maskInputOptions?: Record<string, boolean>;
+    maskInputFn?: (text: string, element: HTMLElement) => string;
+};
+export type ReplayQualityConfiguration = {
+    inlineStylesheet?: boolean;
+    collectFonts?: boolean;
+    slimDOM?: boolean;
+    recordCanvas?: boolean;
+    packEvents?: boolean;
+};
+/**
+ * Experimental session replay options (POC). Off by default.
+ */
+export type ReplayConfiguration = {
+    enabled?: boolean;
+    /**
+     * 0-100, default 100
+     */
+    samplingRate?: number;
+    /**
+     * 0-100, default 100; >0 enables error backfill
+     */
+    errorSamplingRate?: number;
+    privacy?: ReplayPrivacyConfiguration;
+    quality?: ReplayQualityConfiguration;
 };
