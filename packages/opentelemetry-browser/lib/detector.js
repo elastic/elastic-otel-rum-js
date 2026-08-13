@@ -74,12 +74,10 @@ export function detectResource(attribs, serviceName, serviceVersion) {
     attribs['telemetry.distro.name'] = 'elastic';
     attribs['telemetry.distro.version'] = EDOT_VERSION;
 
-    // This might be usefull info
-    // ['browser.touch_screen_enabled']: navigator.maxTouchPoints > 0,
-    // ['network.effective_type']: navigator['networkInformation']?.effectiveType || 'unknown',
-    // ['screen.width']: window.screen.width,
-    // ['screen.height']: window.screen.height,
-    // ['screen.size']: computeScreenSize(window.screen.width),
+    const nav = /** @type {Navigator & {deviceMemory?: number}} */ (navigator);
+    if (typeof nav.deviceMemory === 'number') {
+        attribs['device.memory'] = nav.deviceMemory;
+    }
 
     return resourceFromAttributes({...attribs, ...SDK_INFO});
 }

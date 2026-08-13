@@ -9,12 +9,19 @@ const SESSION_KEY = 'elastic.rum.sid';
 const CHANNEL_NAME = 'elastic-rum-session';
 const DEFAULT_MAX_MS = 14 * 60 * 1000; // 14 min
 const DEFAULT_IDLE_MS = 30 * 60 * 1000; // 30 min
+const ROTATE_CHECK_THROTTLE_MS = 1000;
 
 let _id = null;
 let _startedAt = 0;
 let _lastActivity = Date.now();
 let _channel = null;
 let _persistSession = false;
+let _maxMs = DEFAULT_MAX_MS;
+let _idleMs = DEFAULT_IDLE_MS;
+let _sequence = 1;
+let _lastRotateCheck = 0;
+/** @type {((newId: string) => void) | null} */
+let _onRotate = null;
 /** @type {(() => void) | null} */
 let _onActivity = null;
 
@@ -28,6 +35,9 @@ export function initSession(cfg = {}) {
     }
 
     _persistSession = cfg.persistSession === true;
+    _maxMs = cfg.maxMs ?? DEFAULT_MAX_MS;
+    _idleMs = cfg.idleMs ?? DEFAULT_IDLE_MS;
+    _sequence = 1;
 
     const stored = _persistSession ? _readCookie() : _readStorage();
     _id = stored || _generateUUID();
@@ -37,6 +47,11 @@ export function initSession(cfg = {}) {
     _writeSession(_id);
 
     _onActivity = () => {
+        const now = Date.now();
+        if (now - _lastRotateCheck >= ROTATE_CHECK_THROTTLE_MS) {
+            _lastRotateCheck = now;
+            checkRotation();
+        }
         _lastActivity = Date.now();
         if (_persistSession) {
             _writeCookie(_id);
@@ -56,7 +71,11 @@ export function initSession(cfg = {}) {
                 _id = e.data.id;
                 _startedAt = Date.now();
                 _lastActivity = Date.now();
+                _sequence += 1;
                 _writeSession(_id);
+                if (typeof _onRotate === 'function') {
+                    _onRotate(_id);
+                }
             }
         };
     } catch (err) {
@@ -71,14 +90,35 @@ export function getSessionId() {
     return _id;
 }
 
+/** Monotonic session generation (1 after init, increments on each rotate). */
+export function getSessionSequence() {
+    return _sequence;
+}
+
+/**
+ * Optional callback after this tab rotates (or adopts a rotate from another tab).
+ *
+ * @param {((newId: string) => void) | null} fn
+ */
+export function setSessionOnRotate(fn) {
+    _onRotate = fn;
+}
+
+/**
+ * @returns {{maxMs: number, idleMs: number, persistSession: boolean}}
+ */
+export function getSessionConfig() {
+    return {maxMs: _maxMs, idleMs: _idleMs, persistSession: _persistSession};
+}
+
 /**
  * @param {{maxMs?: number, idleMs?: number}} [cfg]
  * @param {(newId: string) => void} [onRotateFn]
  * @returns {boolean} whether rotation occurred
  */
 export function checkRotation(cfg = {}, onRotateFn) {
-    const maxMs = cfg.maxMs ?? DEFAULT_MAX_MS;
-    const idleMs = cfg.idleMs ?? DEFAULT_IDLE_MS;
+    const maxMs = cfg.maxMs ?? _maxMs;
+    const idleMs = cfg.idleMs ?? _idleMs;
     const now = Date.now();
     const elapsed = now - _startedAt;
     const idle = now - _lastActivity;
@@ -91,12 +131,16 @@ export function checkRotation(cfg = {}, onRotateFn) {
     _id = newId;
     _startedAt = now;
     _lastActivity = now;
+    _sequence += 1;
     _writeSession(newId);
 
     try {
         _channel && _channel.postMessage({type: 'rotate', id: newId});
     } catch (_) {}
 
+    if (typeof _onRotate === 'function') {
+        _onRotate(newId);
+    }
     if (typeof onRotateFn === 'function') {
         onRotateFn(newId);
     }
@@ -129,6 +173,11 @@ export function closeSession() {
     _startedAt = 0;
     _lastActivity = 0;
     _persistSession = false;
+    _maxMs = DEFAULT_MAX_MS;
+    _idleMs = DEFAULT_IDLE_MS;
+    _sequence = 1;
+    _lastRotateCheck = 0;
+    _onRotate = null;
 }
 
 // -- helper functions
@@ -168,7 +217,7 @@ function _readCookie() {
 
 function _writeCookie(id) {
     try {
-        const maxAge = Math.floor(DEFAULT_IDLE_MS / 1000);
+        const maxAge = Math.floor(_idleMs / 1000);
         const secure = location.protocol === 'https:' ? '; Secure' : '';
         document.cookie = `${SESSION_KEY}=${encodeURIComponent(id)}; max-age=${maxAge}; SameSite=Strict; path=/${secure}`;
     } catch (_) {}

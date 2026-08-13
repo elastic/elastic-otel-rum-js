@@ -5,6 +5,7 @@
 
 import {diag} from '@opentelemetry/api';
 import {SeverityNumber} from '@opentelemetry/api-logs';
+import {DEFAULT_MAX_CHUNK_BYTES, splitUtf8} from './chunk.js';
 
 const BUCKET_CAPACITY = 100;
 const BUCKET_REFILL_RATE = 10; // tokens/sec
@@ -73,6 +74,8 @@ let _settleSawChange = false;
 let _rrweb = null;
 /** @type {Promise<void> | null} */
 let _startPromise = null;
+/** @type {((event: any) => any) | undefined} */
+let _packFn = undefined;
 
 /**
  * Starts rrweb recording (loads `@rrweb/record` dynamically).
@@ -85,6 +88,8 @@ let _startPromise = null;
  *   checkRotation: (cfg?: any, fn?: Function) => boolean,
  *   privacy?: object,
  *   quality?: object,
+ *   sampling?: {mousemove?: number, scroll?: number, input?: string, canvas?: number},
+ *   maxChunkBytes?: number,
  * }} cfg
  * @returns {Promise<void>}
  */
@@ -135,6 +140,11 @@ async function _startReplayAsync(cfg) {
 
     const privacyCfg = cfg.privacy ?? {};
     const qualityCfg = cfg.quality ?? {};
+    const samplingCfg = cfg.sampling ?? qualityCfg.sampling ?? {};
+
+    if (qualityCfg.packEvents) {
+        _packFn = await _loadPackFn();
+    }
 
     try {
         _stopFn = recordFn({
@@ -153,10 +163,10 @@ async function _startReplayAsync(cfg) {
             slimDOMOptions: qualityCfg.slimDOM ?? true,
             recordCanvas: qualityCfg.recordCanvas ?? false,
             sampling: {
-                mousemove: 50,
-                scroll: 150,
-                input: 'last',
-                canvas: 2,
+                mousemove: samplingCfg.mousemove ?? 50,
+                scroll: samplingCfg.scroll ?? 150,
+                input: samplingCfg.input ?? 'last',
+                canvas: samplingCfg.canvas ?? 2,
             },
             checkoutEveryNms: 5 * 60 * 1000,
             errorHandler: (err) => {
@@ -257,6 +267,7 @@ export function stopReplay() {
     _replayLogger = null;
     _getSessionId = null;
     _checkRotation = null;
+    _packFn = undefined;
 }
 
 function _cleanupPartialStart() {
@@ -467,7 +478,7 @@ function _onEvent(event) {
         return;
     }
 
-    _checkRotation?.({maxMs: 840_000, idleMs: 1_800_000}, (newId) => {
+    _checkRotation?.({}, (newId) => {
         diag.debug('Session rotated during replay', newId);
     });
 
@@ -519,39 +530,74 @@ function _emitRecord(event) {
         return;
     }
     const sessionId = _getSessionId?.() ?? '';
-    const packEvents = _cfg?.quality?.packEvents ?? false;
+    const packEvents =
+        (_cfg?.quality?.packEvents ?? false) && typeof _packFn === 'function';
+
+    let payload = event;
+    if (packEvents) {
+        try {
+            payload = _packFn(event);
+        } catch (err) {
+            diag.warn('replay: pack error', err);
+            payload = event;
+        }
+    }
 
     let body;
     try {
-        body = JSON.stringify(event);
+        body = JSON.stringify(payload);
     } catch (err) {
         diag.warn('replay: serialise error', err);
         return;
     }
 
     const eventIdx = _nextSeq();
+    const maxChunkBytes =
+        _cfg?.maxChunkBytes ??
+        _cfg?.quality?.maxChunkBytes ??
+        DEFAULT_MAX_CHUNK_BYTES;
+    const parts = splitUtf8(body, maxChunkBytes);
+    const total = parts.length;
+    const packed = packEvents && payload !== event ? 1 : 0;
 
-    try {
-        _replayLogger.emit({
-            body,
-            severityNumber: SeverityNumber.UNSPECIFIED,
-            attributes: {
-                'session.id': sessionId,
-                'rum.sessionId': sessionId,
-                'rr-web.event': eventIdx,
-                'rr-web.offset': eventIdx,
-                'rr-web.chunk': 1,
-                'rr-web.total-chunks': 1,
-                'rrweb.type': event.type ?? 0,
-                'rrweb.packed': packEvents ? 1 : 0,
-                'page.url': window.location.href,
-                'page.url.path': window.location.pathname,
-                'elastic.rum.log.type': 'replay',
-            },
-        });
-    } catch (err) {
-        diag.warn('replay: emit error', err);
+    for (let i = 0; i < parts.length; i++) {
+        try {
+            _replayLogger.emit({
+                body: parts[i],
+                severityNumber: SeverityNumber.UNSPECIFIED,
+                attributes: {
+                    'session.id': sessionId,
+                    'rum.sessionId': sessionId,
+                    'rr-web.event': eventIdx,
+                    'rr-web.offset': eventIdx,
+                    'rr-web.chunk': i + 1,
+                    'rr-web.total-chunks': total,
+                    'rrweb.type': event.type ?? 0,
+                    'rrweb.packed': packed,
+                    'page.url': window.location.href,
+                    'page.url.path': window.location.pathname,
+                    'elastic.rum.log.type': 'replay',
+                },
+            });
+        } catch (err) {
+            diag.warn('replay: emit error', err);
+        }
     }
+}
+
+/**
+ * @returns {Promise<((event: any) => any) | undefined>}
+ */
+async function _loadPackFn() {
+    try {
+        const mod = await import('@rrweb/packer');
+        if (typeof mod.pack === 'function') {
+            return mod.pack;
+        }
+    } catch (err) {
+        diag.debug('Replay: @rrweb/packer unavailable', err);
+    }
+    return undefined;
 }
 
 function _consumeToken(nodeId) {

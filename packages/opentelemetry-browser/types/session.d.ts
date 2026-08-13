@@ -9,6 +9,22 @@ export function initSession(cfg?: {
 }): string;
 /** @returns {string | null} */
 export function getSessionId(): string | null;
+/** Monotonic session generation (1 after init, increments on each rotate). */
+export function getSessionSequence(): number;
+/**
+ * Optional callback after this tab rotates (or adopts a rotate from another tab).
+ *
+ * @param {((newId: string) => void) | null} fn
+ */
+export function setSessionOnRotate(fn: (newId: string) => void): void;
+/**
+ * @returns {{maxMs: number, idleMs: number, persistSession: boolean}}
+ */
+export function getSessionConfig(): {
+    maxMs: number;
+    idleMs: number;
+    persistSession: boolean;
+};
 /**
  * @param {{maxMs?: number, idleMs?: number}} [cfg]
  * @param {(newId: string) => void} [onRotateFn]
