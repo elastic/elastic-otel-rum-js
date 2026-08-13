@@ -162,9 +162,15 @@ export function startBrowserSdk(cfg = {}) {
         return;
     }
 
-    // Detect resource
+    // Session id is independent of Session Replay — stamp it on all signals.
+    /** @type {string} */
+    const sessionId = initSession();
     const resource = detectResource(
-        config.resourceAttributes,
+        {
+            ...config.resourceAttributes,
+            'session.id': sessionId,
+            'rum.sessionId': sessionId,
+        },
         serviceName,
         serviceVersion
     );
@@ -274,8 +280,6 @@ export function startBrowserSdk(cfg = {}) {
     let replayLoggerProvider = null;
     /** @type {Promise<void>} */
     let replayReady = Promise.resolve();
-    /** @type {string | null} */
-    let sessionId = null;
 
     if (replayCfg.enabled) {
         // Elastic Synthetics injects syntheticsRunId. Do not use
@@ -283,8 +287,6 @@ export function startBrowserSdk(cfg = {}) {
         // and would skip replay in smoke tests.
         // @ts-ignore synthetics injects this global when present
         const isSynthetic = globalThis.syntheticsRunId != null;
-
-        sessionId = initSession();
 
         if (!isSynthetic) {
             // Dedicated provider avoids array-valued resource attrs (e.g. browser.brands)
@@ -330,7 +332,7 @@ export function startBrowserSdk(cfg = {}) {
 
     return {
         get sessionId() {
-            return sessionId ?? getSessionId();
+            return sessionId;
         },
         pauseReplay,
         resumeReplay,
