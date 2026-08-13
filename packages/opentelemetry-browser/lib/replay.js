@@ -11,6 +11,22 @@ const BUCKET_REFILL_RATE = 10; // tokens/sec
 const MAX_BUFFER_EVENTS = 200;
 const MAX_BUFFER_BYTES = 5 * 1024 * 1024;
 
+// rrweb IncrementalSource values that are safe to rate-limit: high-frequency
+// interaction noise that carries no DOM/CSS state, so dropping a few frames only
+// costs cursor/scroll smoothness. Everything else (mutation, input, stylesheet
+// rule, style declaration, canvas, font, adopted stylesheet, media) mutates the
+// replayed document and must NEVER be dropped — a single dropped structural or
+// style event permanently corrupts every later frame.
+const THROTTLEABLE_SOURCES = new Set([
+    1, // MouseMove
+    2, // MouseInteraction
+    3, // Scroll
+    4, // ViewportResize
+    6, // TouchMove
+    12, // Drag
+    14, // Selection
+]);
+
 // Persist the replay event sequence next to the session id. Each full page
 // navigation reloads this module with a fresh JS context, so an in-memory
 // counter would restart at 0 on every page and `rr-web.event` would no longer
@@ -42,6 +58,17 @@ let _eventCounter = 0;
 let _visibilityHandler = null;
 /** @type {(() => void) | null} */
 let _onError = null;
+/** @type {Array<ReturnType<typeof setTimeout>>} */
+let _settleTimers = [];
+/** @type {(() => void) | null} */
+let _settleLoadHandler = null;
+/** @type {ReturnType<typeof setTimeout> | null} */
+let _settleQuietTimer = null;
+/** @type {ReturnType<typeof setTimeout> | null} */
+let _settleMaxTimer = null;
+let _settleQuietMs = 0;
+let _settleDone = false;
+let _settleSawChange = false;
 /** @type {{record: Function & {takeFullSnapshot?: Function}, takeFullSnapshot?: Function} | null} */
 let _rrweb = null;
 /** @type {Promise<void> | null} */
@@ -157,6 +184,24 @@ async function _startReplayAsync(cfg) {
     };
     document.addEventListener('visibilitychange', _visibilityHandler);
 
+    if (qualityCfg.settleSnapshot ?? true) {
+        const fixedDelays =
+            qualityCfg.settleSnapshotDelaysMs ??
+            qualityCfg.settleSnapshotDelayMs;
+        if (fixedDelays != null) {
+            // Escape hatch: explicit, app-tuned snapshot offsets.
+            _scheduleSettleSnapshot(
+                Array.isArray(fixedDelays) ? fixedDelays : [fixedDelays]
+            );
+        } else {
+            // Default: adaptive. Snapshot once the DOM stops changing.
+            _armSettleWatcher(
+                qualityCfg.settleQuietMs ?? 500,
+                qualityCfg.settleMaxWaitMs ?? 5000
+            );
+        }
+    }
+
     diag.debug('Replay started, live=', _live);
 
     if (_live) {
@@ -228,6 +273,25 @@ function _cleanupPartialStart() {
         window.removeEventListener('unhandledrejection', _onError);
         _onError = null;
     }
+    for (const timer of _settleTimers) {
+        clearTimeout(timer);
+    }
+    _settleTimers = [];
+    if (_settleQuietTimer) {
+        clearTimeout(_settleQuietTimer);
+        _settleQuietTimer = null;
+    }
+    if (_settleMaxTimer) {
+        clearTimeout(_settleMaxTimer);
+        _settleMaxTimer = null;
+    }
+    _settleQuietMs = 0;
+    _settleDone = false;
+    _settleSawChange = false;
+    if (_settleLoadHandler) {
+        window.removeEventListener('load', _settleLoadHandler);
+        _settleLoadHandler = null;
+    }
 }
 
 function _takeFullSnapshot() {
@@ -240,6 +304,109 @@ function _takeFullSnapshot() {
     } catch (err) {
         diag.debug('Replay: takeFullSnapshot failed', err);
     }
+}
+
+/**
+ * Re-snapshot once the DOM stops changing after load (framework-agnostic).
+ *
+ * rrweb only inlines the CSS present at snapshot time. Many sites inject styles
+ * via CSSOM (`insertRule`, CSS-in-JS) as components render — after the initial
+ * snapshot — and rrweb's incremental style observers can miss rules whose owner
+ * `<style>` isn't yet in the mirror, leaving replayed content unstyled. Taking a
+ * fresh full snapshot once the page goes quiet re-serialises the DOM and
+ * re-reads every stylesheet's `cssRules`, capturing the fully-rendered page.
+ *
+ * Adaptive by design: the snapshot fires a short "quiet" window after the last
+ * DOM mutation (so async/staged pages are captured once their content lands) and
+ * is capped by a max wait; it is skipped entirely if nothing changed after load.
+ *
+ * @param {number} quietMs quiet window after the last mutation
+ * @param {number} maxWaitMs upper bound measured from page load
+ */
+function _armSettleWatcher(quietMs, maxWaitMs) {
+    _settleQuietMs = quietMs;
+    const start = () => {
+        _bumpSettleQuiet();
+        _settleMaxTimer = setTimeout(() => _fireSettle(), maxWaitMs);
+    };
+    if (document.readyState === 'complete') {
+        start();
+        return;
+    }
+    _settleLoadHandler = () => start();
+    window.addEventListener('load', _settleLoadHandler, {once: true});
+}
+
+/** (Re)arm the quiet-window timer; called on each visually-relevant change. */
+function _bumpSettleQuiet() {
+    if (_settleDone || !_settleQuietMs) {
+        return;
+    }
+    if (_settleQuietTimer) {
+        clearTimeout(_settleQuietTimer);
+    }
+    _settleQuietTimer = setTimeout(() => _fireSettle(), _settleQuietMs);
+}
+
+function _fireSettle() {
+    if (_settleDone) {
+        return;
+    }
+    _settleDone = true;
+    if (_settleQuietTimer) {
+        clearTimeout(_settleQuietTimer);
+        _settleQuietTimer = null;
+    }
+    if (_settleMaxTimer) {
+        clearTimeout(_settleMaxTimer);
+        _settleMaxTimer = null;
+    }
+    // Nothing rendered after the initial snapshot — it already covers the page.
+    if (!_settleSawChange) {
+        return;
+    }
+    const idle =
+        typeof requestIdleCallback === 'function'
+            ? requestIdleCallback
+            : (fn) => setTimeout(fn, 0);
+    idle(() => {
+        if (_active) {
+            _takeFullSnapshot();
+        }
+    });
+}
+
+/**
+ * Escape hatch: take full snapshots at explicit offsets from page load.
+ *
+ * @param {number[]} delaysMs snapshot offsets (ms) measured from page load
+ */
+function _scheduleSettleSnapshot(delaysMs) {
+    const runAfterIdle = () => {
+        // Debounce past the burst of mutations that follow first paint, then
+        // wait for idle so we don't contend with the app's own rendering.
+        const idle =
+            typeof requestIdleCallback === 'function'
+                ? requestIdleCallback
+                : (fn) => setTimeout(fn, 0);
+        for (const delayMs of delaysMs) {
+            const timer = setTimeout(() => {
+                idle(() => {
+                    if (_active) {
+                        _takeFullSnapshot();
+                    }
+                });
+            }, delayMs);
+            _settleTimers.push(timer);
+        }
+    };
+
+    if (document.readyState === 'complete') {
+        runAfterIdle();
+        return;
+    }
+    _settleLoadHandler = () => runAfterIdle();
+    window.addEventListener('load', _settleLoadHandler, {once: true});
 }
 
 function _activateFromError() {
@@ -260,7 +427,20 @@ function _activateFromError() {
 }
 
 function _onEvent(event) {
-    if (event.type === 3) {
+    // Track DOM/CSS activity so the adaptive settle snapshot can fire once the
+    // page goes quiet (source 0 = mutation, 8 = stylesheet rule insert/delete).
+    if (
+        !_settleDone &&
+        _settleQuietMs &&
+        event.type === 3 &&
+        (event.data?.source === 0 || event.data?.source === 8)
+    ) {
+        _settleSawChange = true;
+        _bumpSettleQuiet();
+    }
+
+    // Only throttle interaction noise; never drop structural/style events.
+    if (event.type === 3 && THROTTLEABLE_SOURCES.has(event.data?.source)) {
         const nodeId = event.data?.id ?? 0;
         if (!_consumeToken(nodeId)) {
             return;
