@@ -11,6 +11,14 @@ const BUCKET_REFILL_RATE = 10; // tokens/sec
 const MAX_BUFFER_EVENTS = 200;
 const MAX_BUFFER_BYTES = 5 * 1024 * 1024;
 
+// Persist the replay event sequence next to the session id. Each full page
+// navigation reloads this module with a fresh JS context, so an in-memory
+// counter would restart at 0 on every page and `rr-web.event` would no longer
+// be unique/monotonic within a session — collapsing the reassembled stream onto
+// the first page's snapshot. sessionStorage shares the session's lifetime
+// (per-tab, survives reloads), so the sequence continues across navigations.
+const SEQ_KEY = 'elastic.rum.replay.seq';
+
 /** @type {Map<number, {tokens: number, lastRefill: number}>} */
 let _buckets = new Map();
 let _refillTimer = null;
@@ -73,6 +81,9 @@ async function _startReplayAsync(cfg) {
     _replayLogger = cfg.replayLogger;
     _getSessionId = cfg.getSessionId;
     _checkRotation = cfg.checkRotation;
+
+    // Resume the session-wide sequence (0 for a fresh/rotated session).
+    _eventCounter = _loadSeq(_getSessionId?.() ?? '');
 
     _live = Math.random() * 100 < (cfg.samplingRate ?? 100);
 
@@ -151,6 +162,7 @@ async function _startReplayAsync(cfg) {
     if (_live) {
         try {
             const packEvents = _cfg?.quality?.packEvents ?? false;
+            const eventIdx = _nextSeq();
             _replayLogger.emit({
                 body: JSON.stringify({
                     type: 99,
@@ -161,7 +173,8 @@ async function _startReplayAsync(cfg) {
                     'elastic.rum.log.type': 'replay',
                     'rrweb.type': 99,
                     'rrweb.packed': packEvents ? 1 : 0,
-                    'rr-web.event': 0,
+                    'rr-web.event': eventIdx,
+                    'rr-web.offset': eventIdx,
                     'rr-web.chunk': 1,
                     'rr-web.total-chunks': 1,
                     'session.id': _getSessionId?.() ?? '',
@@ -281,6 +294,46 @@ function _onEvent(event) {
     _emitRecord(event);
 }
 
+/**
+ * Next monotonic, session-unique event index. Persisted so it survives full
+ * page navigations within the session (see SEQ_KEY).
+ *
+ * @returns {number}
+ */
+function _nextSeq() {
+    _eventCounter++;
+    _saveSeq(_getSessionId?.() ?? '', _eventCounter);
+    return _eventCounter;
+}
+
+/**
+ * @param {string} sessionId
+ * @returns {number} stored sequence for this session, or 0 if none/rotated
+ */
+function _loadSeq(sessionId) {
+    try {
+        const raw = sessionStorage.getItem(SEQ_KEY);
+        if (!raw) {
+            return 0;
+        }
+        const parsed = JSON.parse(raw);
+        if (parsed && parsed.sid === sessionId && Number.isFinite(parsed.n)) {
+            return parsed.n;
+        }
+    } catch (_) {}
+    return 0;
+}
+
+/**
+ * @param {string} sessionId
+ * @param {number} n
+ */
+function _saveSeq(sessionId, n) {
+    try {
+        sessionStorage.setItem(SEQ_KEY, JSON.stringify({sid: sessionId, n}));
+    } catch (_) {}
+}
+
 function _emitRecord(event) {
     if (!_replayLogger) {
         return;
@@ -296,7 +349,7 @@ function _emitRecord(event) {
         return;
     }
 
-    const eventIdx = ++_eventCounter;
+    const eventIdx = _nextSeq();
 
     try {
         _replayLogger.emit({
