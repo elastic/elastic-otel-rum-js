@@ -288,6 +288,19 @@
       ];
 
       const state = { cart: [], tab: 'catalog' };
+      const DEMO_API = 'http://localhost:3001';
+
+      async function callShopApi(path, body) {
+        try {
+          await fetch(`${DEMO_API}${path}`, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify(body),
+          });
+        } catch (err) {
+          console.warn('demo backend', err);
+        }
+      }
 
       const toastEl = document.getElementById('toast');
       function toast(message) {
@@ -370,6 +383,7 @@
         state.cart.push(product);
         renderCart();
         toast(`Added ${product.name}`);
+        void callShopApi('/api/cart', { id: product.id });
       });
       document.getElementById('cart-list').addEventListener('click', (e) => {
         const index = e.target.getAttribute('data-remove');
@@ -388,10 +402,12 @@
           toast('Add something first');
           return;
         }
+        const items = state.cart.map((item) => item.id);
         toast(`Checked out ${state.cart.length} item(s)`);
         state.cart = [];
         renderCart();
         setTab('support');
+        void callShopApi('/api/checkout', { items });
       });
       document.getElementById('save-account').addEventListener('click', () => {
         toast('Profile saved');
