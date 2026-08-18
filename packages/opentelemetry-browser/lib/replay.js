@@ -6,6 +6,7 @@
 import {diag} from '@opentelemetry/api';
 import {SeverityNumber} from '@opentelemetry/api-logs';
 import {DEFAULT_MAX_CHUNK_BYTES, splitUtf8} from './chunk.js';
+import {clearReplayRecording, markReplayRecording} from './replay-state.js';
 
 const BUCKET_CAPACITY = 100;
 const BUCKET_REFILL_RATE = 10; // tokens/sec
@@ -215,6 +216,7 @@ async function _startReplayAsync(cfg) {
     diag.debug('Replay started, live=', _live);
 
     if (_live) {
+        markReplayRecording();
         try {
             const packEvents = _cfg?.quality?.packEvents ?? false;
             const eventIdx = _nextSeq();
@@ -246,6 +248,7 @@ export function pauseReplay() {
 
 export function resumeReplay() {
     _live = true;
+    markReplayRecording();
     _takeFullSnapshot();
 }
 
@@ -268,6 +271,7 @@ export function stopReplay() {
     _getSessionId = null;
     _checkRotation = null;
     _packFn = undefined;
+    clearReplayRecording();
 }
 
 function _cleanupPartialStart() {
@@ -434,6 +438,7 @@ function _activateFromError() {
     }
     _buffer = [];
     _live = true;
+    markReplayRecording();
     diag.debug('Replay: activated from error sampling');
 }
 

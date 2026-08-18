@@ -2,9 +2,9 @@
  * Current session + user attributes. Resource attrs are immutable after
  * provider start, so these are stamped on every span/log instead.
  *
- * @returns {Record<string, string | number>}
+ * @returns {Record<string, string | number | boolean>}
  */
-export function currentSessionAttributes(): Record<string, string | number>;
+export function currentSessionAttributes(): Record<string, string | number | boolean>;
 /**
  * Span processor that refreshes session/user attributes on start (survives
  * session rotate without replacing the TracerProvider resource).

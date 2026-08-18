@@ -19,16 +19,18 @@ import {
     resourceTimingAttributes,
     urlFromAttributes,
 } from './timing.js';
+import {hasReplayRecording} from './replay-state.js';
 
 /**
  * Current session + user + device + page attributes. Resource attrs are
  * immutable after provider start, so these are stamped on every span/log.
  *
- * @returns {Record<string, string | number>}
+ * @returns {Record<string, string | number | boolean>}
  */
 export function currentSessionAttributes() {
     const sessionId = getSessionId() ?? '';
-    return {
+    /** @type {Record<string, string | number | boolean>} */
+    const attrs = {
         'session.id': sessionId,
         'rum.sessionId': sessionId,
         'session.sequence': getSessionSequence(),
@@ -37,6 +39,10 @@ export function currentSessionAttributes() {
         ...currentPageAttributes(),
         ...lastActionAttributes(),
     };
+    if (hasReplayRecording()) {
+        attrs['rum.has_replay'] = true;
+    }
+    return attrs;
 }
 
 /**
