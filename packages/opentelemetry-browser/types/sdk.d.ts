@@ -1,11 +1,13 @@
 /**
  * @param {BrowserSdkConfiguration} cfg
  * @returns {{
- *      forceFlush: () => Promise<void>
+ *      forceFlush: () => Promise<void>;
+ *      shutdown: () => Promise<void>;
  * }}
  */
 export function startBrowserSdk(cfg?: BrowserSdkConfiguration): {
     forceFlush: () => Promise<void>;
+    shutdown: () => Promise<void>;
 };
 export type InstrumentationsConfigMap = {
     "@opentelemetry/instrumentation-browser-navigation": import('@opentelemetry/instrumentation-browser-navigation').BrowserNavigationInstrumentationConfig;

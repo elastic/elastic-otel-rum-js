@@ -3,33 +3,17 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import {
-    context,
-    diag,
-    DiagLogLevel,
-    metrics,
-    propagation,
-    trace,
-} from '@opentelemetry/api';
+import {diag, DiagLogLevel, metrics, trace} from '@opentelemetry/api';
 import {logs} from '@opentelemetry/api-logs';
-import {
-    CompositePropagator,
-    W3CBaggagePropagator,
-    W3CTraceContextPropagator,
-} from '@opentelemetry/core';
-import {OTLPLogExporter} from '@opentelemetry/exporter-logs-otlp-http';
+import {startLogsSdk} from '@opentelemetry/browser-sdk/logs';
+import {startTracesSdk} from '@opentelemetry/browser-sdk/traces';
 import {OTLPMetricExporter} from '@opentelemetry/exporter-metrics-otlp-http';
-import {OTLPTraceExporter} from '@opentelemetry/exporter-trace-otlp-http';
-import {BatchLogRecordProcessor, LoggerProvider} from '@opentelemetry/sdk-logs';
+import {resourceFromAttributes} from '@opentelemetry/resources';
 import {
     MeterProvider,
     PeriodicExportingMetricReader,
 } from '@opentelemetry/sdk-metrics';
-import {
-    BatchSpanProcessor,
-    TraceIdRatioBasedSampler,
-    TracerProvider,
-} from '@opentelemetry/sdk-trace';
+import {TraceIdRatioBasedSampler} from '@opentelemetry/sdk-trace';
 
 import {registerInstrumentations} from '@opentelemetry/instrumentation';
 import {BrowserNavigationInstrumentation} from '@opentelemetry/instrumentation-browser-navigation';
@@ -89,7 +73,8 @@ const defaultConfig = {
 /**
  * @param {BrowserSdkConfiguration} cfg
  * @returns {{
- *      forceFlush: () => Promise<void>
+ *      forceFlush: () => Promise<void>;
+ *      shutdown: () => Promise<void>;
  * }}
  */
 export function startBrowserSdk(cfg = {}) {
@@ -97,7 +82,12 @@ export function startBrowserSdk(cfg = {}) {
         return;
     }
 
-    const logLevel = cfg.logLevel ?? defaultConfig.logLevel;
+    // The upstream SDKs already set a logger but we want to print
+    // some messages before using them. We need to setup our own
+    // logger and disable it before starting logs/traces to avoid
+    // the override message from old and new logger
+    /** @type {any} */
+    const logLevel = (cfg.logLevel ?? defaultConfig.logLevel).toUpperCase();
     diag.setLogger(createLogger({logLevel}), {logLevel: DiagLogLevel.ALL});
     diag.debug(`Browser SDK intialization`, cfg);
 
@@ -108,7 +98,7 @@ export function startBrowserSdk(cfg = {}) {
     /** @type {URL} */
     let endpointUrl;
     try {
-        endpointUrl = new URL(config.otlpEndpoint);
+        endpointUrl = new URL(config?.otlpEndpoint);
     } catch (urlErr) {
         diag.error(
             `The value "${config.otlpEndpoint}" for "otlpEndpoint" configuration is not an URL. SDK won't start.`
@@ -117,69 +107,54 @@ export function startBrowserSdk(cfg = {}) {
     }
 
     // Detect resource
-    const resource = detectResource(
+    const resourceAttributes = detectResource(
         config.resourceAttributes,
         serviceName,
         serviceVersion
     );
 
+    // Disable our logger to let the upstream take its place
+    // TODO: if upstream exports its methid to register a logger
+    // we could get rid of this
+    diag.disable();
+
     // NOTE: export payloads can be seen in DevTools network tab in JSON format
-    // so IMHO it would be redundant to use console exporters
-
-    // Traces depend on context manager & propagation
-    AsyncApisContextManager.enable();
-    context.setGlobalContextManager(AsyncApisContextManager);
-    propagation.setGlobalPropagator(
-        new CompositePropagator({
-            propagators: [
-                new W3CTraceContextPropagator(),
-                new W3CBaggagePropagator(),
-            ],
-        })
-    );
-
-    // traces signal configuration
-    const tracesEndpoint = appendPath(endpointUrl, 'v1/traces').href;
-    const spanProcessor = new BatchSpanProcessor({
-        exporter: new OTLPTraceExporter({
-            url: tracesEndpoint,
-            headers: config.exportHeaders,
-        }),
-    });
-    const tracerProvider = new TracerProvider({
-        resource,
+    // so IMHO it would be redundant to use console exporters in traces signal
+    const tracesSdk = startTracesSdk({
+        logLevel,
+        resourceAttributes,
+        contextManager: AsyncApisContextManager.enable(),
         sampler: new TraceIdRatioBasedSampler(config.sampleRate),
-        spanProcessors: [spanProcessor],
+        exportConfig: {
+            url: appendPath(endpointUrl, 'v1/traces').href,
+            headers: config.exportHeaders,
+        },
     });
-    trace.setGlobalTracerProvider(tracerProvider);
+    const tracerProvider = trace.getTracerProvider();
+
+    const logsSdk = startLogsSdk({
+        logLevel,
+        resourceAttributes,
+        exportConfig: {
+            url: appendPath(endpointUrl, 'v1/logs').href,
+            headers: config.exportHeaders,
+        },
+    });
+    const loggerProvider = logs.getLoggerProvider();
 
     // metrics signal configuration
-    const metricsEndpoint = appendPath(endpointUrl, 'v1/metrics').href;
+    // possible `startMetricsSdk` function
     const metricsReader = new PeriodicExportingMetricReader({
         exporter: new OTLPMetricExporter({
-            url: metricsEndpoint,
+            url: appendPath(endpointUrl, 'v1/metrics').href,
             headers: config.exportHeaders,
         }),
     });
     const meterProvider = new MeterProvider({
-        resource,
+        resource: resourceFromAttributes(resourceAttributes),
         readers: [metricsReader],
     });
     metrics.setGlobalMeterProvider(meterProvider);
-
-    // logs signal configuration
-    const logsEndpoint = appendPath(endpointUrl, 'v1/logs').href;
-    const logsProcessor = new BatchLogRecordProcessor({
-        exporter: new OTLPLogExporter({
-            url: logsEndpoint,
-            headers: config.exportHeaders,
-        }),
-    });
-    const loggerProvider = new LoggerProvider({
-        resource,
-        processors: [logsProcessor],
-    });
-    logs.setGlobalLoggerProvider(loggerProvider);
 
     // Resgister instrumentations. The `registerInstrumentations` enabled all of them
     // regardless of the configuration so EDOT only add the ones that are not disabled
@@ -204,18 +179,10 @@ export function startBrowserSdk(cfg = {}) {
             new WebVitalsInstrumentation(cfg),
     };
 
-    const httpSemconvConfig = {semconvStabilityOptIn: 'http'};
     const instrumentations = config.instrumentations || {};
     const enabledInstrumentations = [];
     for (const key of Object.keys(instrFactories)) {
-        let instrConfig = instrumentations[key];
-        if (
-            key === '@opentelemetry/instrumentation-fetch' ||
-            key === '@opentelemetry/instrumentation-xml-http-request'
-        ) {
-            instrConfig = {...httpSemconvConfig, ...instrConfig};
-        }
-
+        const instrConfig = instrumentations[key];
         const isDisabled = instrConfig?.enabled === false;
         if (!isDisabled) {
             enabledInstrumentations.push(instrFactories[key](instrConfig));
@@ -228,11 +195,34 @@ export function startBrowserSdk(cfg = {}) {
 
     return {
         forceFlush() {
-            return Promise.all([
-                tracerProvider.forceFlush(),
-                meterProvider.forceFlush(),
+            return Promise.allSettled([
+                // @ts-expect-error -- accesing private delegate
+                tracerProvider._delegate.forceFlush(),
+                // @ts-expect-error -- accesing private method
                 loggerProvider.forceFlush(),
-            ]).then(() => {});
+                meterProvider.forceFlush(),
+            ]).then((results) => {
+                for (const res of results) {
+                    if (res.status === 'rejected') {
+                        diag.warn(`Error flushing data. Reason: ${res.reason}`);
+                    }
+                }
+            });
+        },
+        shutdown() {
+            return Promise.allSettled([
+                tracesSdk.shutdown(),
+                logsSdk.shutdown(),
+                meterProvider.shutdown(),
+            ]).then((results) => {
+                for (const res of results) {
+                    if (res.status === 'rejected') {
+                        diag.warn(
+                            `Error shutting down SDK. Reason: ${res.reason}`
+                        );
+                    }
+                }
+            });
         },
     };
 }

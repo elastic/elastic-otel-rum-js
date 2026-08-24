@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import {resourceFromAttributes} from '@opentelemetry/resources';
 import {SDK_INFO} from '@opentelemetry/core';
 
 import {
@@ -33,7 +32,7 @@ import {EDOT_VERSION} from './version.js';
  * @param {Record<string, AttributeValue>} attribs
  * @param {string | undefined} serviceName
  * @param {string | undefined} serviceVersion
- * @returns {import('@opentelemetry/resources').Resource}
+ * @returns {Record<string, AttributeValue>}
  */
 export function detectResource(attribs, serviceName, serviceVersion) {
     /** @type {MaybeArray<number>} */
@@ -81,7 +80,7 @@ export function detectResource(attribs, serviceName, serviceVersion) {
     // ['screen.height']: window.screen.height,
     // ['screen.size']: computeScreenSize(window.screen.width),
 
-    return resourceFromAttributes({...attribs, ...SDK_INFO});
+    return {...attribs, ...SDK_INFO};
 }
 
 // -- helper functions

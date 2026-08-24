@@ -14,9 +14,9 @@
  * @param {Record<string, AttributeValue>} attribs
  * @param {string | undefined} serviceName
  * @param {string | undefined} serviceVersion
- * @returns {import('@opentelemetry/resources').Resource}
+ * @returns {Record<string, AttributeValue>}
  */
-export function detectResource(attribs: Record<string, AttributeValue>, serviceName: string | undefined, serviceVersion: string | undefined): import('@opentelemetry/resources').Resource;
+export function detectResource(attribs: Record<string, AttributeValue>, serviceName: string | undefined, serviceVersion: string | undefined): Record<string, AttributeValue>;
 /**
  * @param {string} userAgent
  * @returns {{name: string; version: string} | undefined}
