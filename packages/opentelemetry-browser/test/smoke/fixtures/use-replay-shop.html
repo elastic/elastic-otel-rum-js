@@ -1,0 +1,430 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Elastic Shop — Session Replay Demo</title>
+    <!-- EDOT_PLACEHOLDER (DO NOT REMOVE)-->
+    <style>
+      :root {
+        --bg: #0b1220;
+        --panel: #121a2b;
+        --line: #243049;
+        --text: #e8eefc;
+        --muted: #93a0b8;
+        --accent: #3b82f6;
+        --accent-2: #22c55e;
+        --danger: #ef4444;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+        background: radial-gradient(1200px 600px at 10% -10%, #1a2744, var(--bg));
+        color: var(--text);
+        min-height: 100vh;
+      }
+      header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px 24px;
+        border-bottom: 1px solid var(--line);
+        background: rgba(11, 18, 32, 0.85);
+        position: sticky;
+        top: 0;
+        backdrop-filter: blur(8px);
+        z-index: 10;
+      }
+      .brand { font-weight: 700; letter-spacing: 0.2px; }
+      .brand span { color: var(--accent); }
+      nav { display: flex; gap: 8px; }
+      nav button, .btn {
+        border: 1px solid var(--line);
+        background: var(--panel);
+        color: var(--text);
+        border-radius: 8px;
+        padding: 8px 12px;
+        cursor: pointer;
+      }
+      nav button.active, .btn.primary {
+        background: var(--accent);
+        border-color: transparent;
+      }
+      .btn.success { background: var(--accent-2); border-color: transparent; color: #052e16; }
+      main { max-width: 980px; margin: 0 auto; padding: 24px; }
+      .hero {
+        padding: 28px;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background: linear-gradient(135deg, #152038, #101827);
+        margin-bottom: 24px;
+      }
+      .hero h1 { margin: 0 0 8px; font-size: 28px; }
+      .hero p { margin: 0; color: var(--muted); }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: 16px;
+      }
+      .card {
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: var(--panel);
+        padding: 16px;
+        min-height: 180px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .card h3 { margin: 0; font-size: 16px; }
+      .price { color: var(--muted); font-size: 14px; }
+      .swatch {
+        height: 72px;
+        border-radius: 10px;
+        border: 1px solid var(--line);
+      }
+      .panel {
+        display: none;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: var(--panel);
+        padding: 20px;
+        margin-top: 16px;
+      }
+      .panel.visible { display: block; }
+      label { display: block; font-size: 13px; color: var(--muted); margin: 12px 0 6px; }
+      input, select, textarea {
+        width: 100%;
+        border-radius: 8px;
+        border: 1px solid var(--line);
+        background: #0d1526;
+        color: var(--text);
+        padding: 10px 12px;
+      }
+      textarea { min-height: 90px; resize: vertical; }
+      .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+      .cart-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 10px 0;
+        border-bottom: 1px solid var(--line);
+      }
+      .toast {
+        position: fixed;
+        right: 20px;
+        bottom: 20px;
+        background: #052e16;
+        color: #bbf7d0;
+        border: 1px solid #166534;
+        padding: 12px 14px;
+        border-radius: 10px;
+        opacity: 0;
+        transform: translateY(8px);
+        transition: all 0.25s ease;
+        pointer-events: none;
+      }
+      .toast.show { opacity: 1; transform: translateY(0); }
+      .modal-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.55);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 20;
+      }
+      .modal-backdrop.open { display: flex; }
+      .modal {
+        width: min(420px, 92vw);
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 20px;
+      }
+      .long-copy {
+        color: var(--muted);
+        line-height: 1.6;
+        margin-top: 28px;
+        padding-bottom: 120px;
+      }
+      .badge {
+        display: inline-block;
+        font-size: 12px;
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: #1e293b;
+        color: #93c5fd;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="brand">Elastic <span>Shop</span> <span class="badge">replay demo</span></div>
+      <nav>
+        <button type="button" class="tab active" data-tab="catalog">Catalog</button>
+        <button type="button" class="tab" data-tab="cart">Cart (<span id="cart-count">0</span>)</button>
+        <button type="button" class="tab" data-tab="account">Account</button>
+        <button type="button" class="tab" data-tab="support">Support</button>
+      </nav>
+    </header>
+
+    <main>
+      <section class="hero">
+        <h1>Find something worth observing</h1>
+        <p>Browse, filter, add to cart, checkout — this page is instrumented for Session Replay.</p>
+      </section>
+
+      <section id="panel-catalog" class="panel visible">
+        <div style="display:flex; gap:12px; margin-bottom:16px; align-items:end;">
+          <div style="flex:1;">
+            <label for="search">Search</label>
+            <input id="search" placeholder="Search products…" />
+          </div>
+          <div style="width:180px;">
+            <label for="category">Category</label>
+            <select id="category">
+              <option value="all">All</option>
+              <option value="observability">Observability</option>
+              <option value="security">Security</option>
+              <option value="search">Search</option>
+            </select>
+          </div>
+        </div>
+        <div id="product-grid" class="grid"></div>
+        <div class="long-copy">
+          <h2>Why teams use Session Replay</h2>
+          <p>
+            Session replay reconstructs what users did in the browser: navigation, clicks, typing,
+            scroll, and DOM mutations. Pair it with RUM vitals and traces to jump from a slow page
+            or JS error into the exact user journey that produced it.
+          </p>
+          <p>
+            This demo intentionally includes enough UI surface area — filters, forms, a modal, and
+            a tall page — so a capture run produces a richer rrweb event stream than a one-button
+            smoke test.
+          </p>
+          <p>
+            Scroll a little further… keep going… a few more lines help create scroll events and
+            incremental snapshots. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer
+            at orci non nisl laoreet tincidunt. Vestibulum ante ipsum primis in faucibus orci luctus
+            et ultrices posuere cubilia curae; Donec fermentum, ipsum nec dictum aliquet, nisl mi
+            faucibus nisl, vitae tincidunt elit nisl eget mi.
+          </p>
+        </div>
+      </section>
+
+      <section id="panel-cart" class="panel">
+        <h2>Your cart</h2>
+        <div id="cart-list"></div>
+        <div style="margin-top:16px; display:flex; gap:8px;">
+          <button type="button" class="btn" id="clear-cart">Clear cart</button>
+          <button type="button" class="btn primary" id="checkout">Checkout</button>
+        </div>
+      </section>
+
+      <section id="panel-account" class="panel">
+        <h2>Account</h2>
+        <div class="row">
+          <div>
+            <label for="email">Email</label>
+            <input id="email" type="email" placeholder="you@company.com" />
+          </div>
+          <div>
+            <label for="name">Name</label>
+            <input id="name" placeholder="Ada Lovelace" />
+          </div>
+        </div>
+        <label for="plan">Plan</label>
+        <select id="plan">
+          <option>Starter</option>
+          <option>Pro</option>
+          <option>Enterprise</option>
+        </select>
+        <div style="margin-top:16px;">
+          <button type="button" class="btn primary" id="save-account">Save profile</button>
+        </div>
+      </section>
+
+      <section id="panel-support" class="panel">
+        <h2>Support</h2>
+        <label for="topic">Topic</label>
+        <select id="topic">
+          <option>Billing</option>
+          <option>Bug report</option>
+          <option>Feature request</option>
+        </select>
+        <label for="message">Message</label>
+        <textarea id="message" placeholder="Describe what happened…"></textarea>
+        <div style="margin-top:16px; display:flex; gap:8px;">
+          <button type="button" class="btn" id="open-help">Open help tips</button>
+          <button type="button" class="btn success" id="send-support">Send</button>
+        </div>
+      </section>
+    </main>
+
+    <div class="toast" id="toast"></div>
+    <div class="modal-backdrop" id="help-modal">
+      <div class="modal">
+        <h3>Help tips</h3>
+        <p style="color:var(--muted);">
+          Try searching, switching tabs, scrolling the catalog, and submitting the support form.
+          Those interactions show up as rrweb events in Session Replay.
+        </p>
+        <button type="button" class="btn primary" id="close-help">Got it</button>
+      </div>
+    </div>
+
+    <script>
+      const PRODUCTS = [
+        { id: 'apm', name: 'APM Insights', category: 'observability', price: 49, color: '#2563eb' },
+        { id: 'rum', name: 'RUM Pack', category: 'observability', price: 39, color: '#06b6d4' },
+        { id: 'logs', name: 'Logs Explorer', category: 'observability', price: 59, color: '#8b5cf6' },
+        { id: 'siem', name: 'SIEM Starter', category: 'security', price: 79, color: '#ef4444' },
+        { id: 'edr', name: 'Endpoint Guard', category: 'security', price: 69, color: '#f97316' },
+        { id: 'search', name: 'Search Studio', category: 'search', price: 45, color: '#22c55e' },
+        { id: 'vector', name: 'Vector Kit', category: 'search', price: 55, color: '#84cc16' },
+        { id: 'replay', name: 'Session Replay', category: 'observability', price: 99, color: '#eab308' },
+      ];
+
+      const state = { cart: [], tab: 'catalog' };
+      const DEMO_API = 'http://localhost:3001';
+
+      async function callShopApi(path, body) {
+        try {
+          await fetch(`${DEMO_API}${path}`, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify(body),
+          });
+        } catch (err) {
+          console.warn('demo backend', err);
+        }
+      }
+
+      const toastEl = document.getElementById('toast');
+      function toast(message) {
+        toastEl.textContent = message;
+        toastEl.classList.add('show');
+        setTimeout(() => toastEl.classList.remove('show'), 1600);
+      }
+
+      function setTab(tab) {
+        state.tab = tab;
+        // Hash routes so session journey can show Catalog → Cart → Account…
+        if (location.hash.replace(/^#/, '') !== tab) {
+          location.hash = tab;
+        }
+        document.querySelectorAll('.tab').forEach((btn) => {
+          btn.classList.toggle('active', btn.dataset.tab === tab);
+        });
+        document.querySelectorAll('.panel').forEach((panel) => {
+          panel.classList.toggle('visible', panel.id === `panel-${tab}`);
+        });
+      }
+
+      window.addEventListener('hashchange', () => {
+        const tab = location.hash.replace(/^#/, '') || 'catalog';
+        if (['catalog', 'cart', 'account', 'support'].includes(tab) && tab !== state.tab) {
+          setTab(tab);
+        }
+      });
+
+      function renderProducts() {
+        const q = document.getElementById('search').value.trim().toLowerCase();
+        const category = document.getElementById('category').value;
+        const grid = document.getElementById('product-grid');
+        grid.innerHTML = '';
+        PRODUCTS.filter((p) => {
+          const matchesCategory = category === 'all' || p.category === category;
+          const matchesQuery = !q || p.name.toLowerCase().includes(q);
+          return matchesCategory && matchesQuery;
+        }).forEach((p) => {
+          const card = document.createElement('article');
+          card.className = 'card';
+          card.innerHTML = `
+            <div class="swatch" style="background:${p.color}"></div>
+            <h3>${p.name}</h3>
+            <div class="price">$${p.price}/mo · ${p.category}</div>
+            <button type="button" class="btn primary" data-add="${p.id}">Add to cart</button>
+          `;
+          grid.appendChild(card);
+        });
+      }
+
+      function renderCart() {
+        document.getElementById('cart-count').textContent = String(state.cart.length);
+        const list = document.getElementById('cart-list');
+        if (!state.cart.length) {
+          list.innerHTML = '<p style="color:var(--muted)">Cart is empty.</p>';
+          return;
+        }
+        list.innerHTML = state.cart
+          .map(
+            (item, index) => `
+            <div class="cart-item">
+              <div>${item.name} <span class="price">$${item.price}</span></div>
+              <button type="button" class="btn" data-remove="${index}">Remove</button>
+            </div>`
+          )
+          .join('');
+      }
+
+      document.querySelectorAll('.tab').forEach((btn) => {
+        btn.addEventListener('click', () => setTab(btn.dataset.tab));
+      });
+      document.getElementById('search').addEventListener('input', renderProducts);
+      document.getElementById('category').addEventListener('change', renderProducts);
+      document.getElementById('product-grid').addEventListener('click', (e) => {
+        const id = e.target.getAttribute('data-add');
+        if (!id) return;
+        const product = PRODUCTS.find((p) => p.id === id);
+        if (!product) return;
+        state.cart.push(product);
+        renderCart();
+        toast(`Added ${product.name}`);
+        void callShopApi('/api/cart', { id: product.id });
+      });
+      document.getElementById('cart-list').addEventListener('click', (e) => {
+        const index = e.target.getAttribute('data-remove');
+        if (index == null) return;
+        state.cart.splice(Number(index), 1);
+        renderCart();
+        toast('Removed item');
+      });
+      document.getElementById('clear-cart').addEventListener('click', () => {
+        state.cart = [];
+        renderCart();
+        toast('Cart cleared');
+      });
+      document.getElementById('checkout').addEventListener('click', () => {
+        if (!state.cart.length) {
+          toast('Add something first');
+          return;
+        }
+        const items = state.cart.map((item) => item.id);
+        toast(`Checked out ${state.cart.length} item(s)`);
+        state.cart = [];
+        renderCart();
+        setTab('support');
+        void callShopApi('/api/checkout', { items });
+      });
+      document.getElementById('save-account').addEventListener('click', () => {
+        toast('Profile saved');
+      });
+      document.getElementById('send-support').addEventListener('click', () => {
+        toast('Support request sent');
+        document.getElementById('message').value = '';
+      });
+      document.getElementById('open-help').addEventListener('click', () => {
+        document.getElementById('help-modal').classList.add('open');
+      });
+      document.getElementById('close-help').addEventListener('click', () => {
+        document.getElementById('help-modal').classList.remove('open');
+      });
+
+      renderProducts();
+      renderCart();
+    </script>
+  </body>
+</html>

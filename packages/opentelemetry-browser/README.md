@@ -17,3 +17,31 @@ EDOT Browser is very similar to the `@opentelemetry/auto-instrumentations-web` p
 - EDOT Browser, being a [distribution](https://opentelemetry.io/docs/concepts/distributions/) of the OpenTelemetry JS SDK, always adds the [`telemetry.distro.*`](https://opentelemetry.io/docs/specs/semconv/attributes-registry/telemetry/) resource attributes to identify itself.
 
 - EDOT Browser defaults to [`OTEL_SEMCONV_STABILITY_OPT_IN=http`](https://opentelemetry.io/docs/specs/semconv/non-normative/http-migration/) such that telemetry from the `@opentelemetry/instrumentation-fetch` and `@opentelemetry/instrumentation-xml-http-request` package will use stable HTTP semantic conventions by default. Upstream OpenTelemetry JS has [a tracking issue for the migration to newer HTTP semantic conventions](https://github.com/open-telemetry/opentelemetry-js/issues/5646) in its instrumentations.
+
+## Experimental: session replay (POC)
+
+> **Experimental / not GA.** Session replay POC — not for production use.
+
+Opt in via `startBrowserSdk({ replay: { enabled: true } })`. When enabled, the SDK dynamically loads [`@rrweb/record`](https://www.npmjs.com/package/@rrweb/record) and exports DOM recording events as OTLP logs with instrumentation scope `elastic-rrweb`.
+
+```js
+import { startBrowserSdk } from '@elastic/opentelemetry-browser';
+
+const sdk = startBrowserSdk({
+  serviceName: 'my-app',
+  otlpEndpoint: 'https://otlp-proxy.example',
+  replay: {
+    enabled: true,
+    samplingRate: 10,
+    errorSamplingRate: 100,
+    privacy: { maskAllInputs: true },
+  },
+});
+
+sdk.pauseReplay();
+sdk.resumeReplay();
+await sdk.forceFlush();
+```
+
+Route collector logs where `instrumentation_scope.name == "elastic-rrweb"` to a dedicated data stream (e.g. `logs-rum.replay-*` with LogsDB). Default script-tag builds keep `@rrweb/record` external; use `elastic-otel-browser-replay.min.js` (or a bundler that resolves the dynamic import) when enabling replay from a `<script>` tag.
+
