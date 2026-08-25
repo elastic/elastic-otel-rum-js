@@ -89,6 +89,7 @@ export type ReplayQualityConfiguration = {
     inlineStylesheet?: boolean;
     collectFonts?: boolean;
     slimDOM?: boolean;
+    /** Capture `<canvas>` pixels (Elastic Charts). Default true. */
     recordCanvas?: boolean;
     packEvents?: boolean;
     maxChunkBytes?: number;

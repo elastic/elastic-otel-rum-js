@@ -6,6 +6,7 @@
 import {diag} from '@opentelemetry/api';
 import {SeverityNumber} from '@opentelemetry/api-logs';
 import {DEFAULT_MAX_CHUNK_BYTES, splitUtf8} from './chunk.js';
+import {isPaused} from './capture.js';
 import {clearReplayRecording, markReplayRecording} from './replay-state.js';
 
 const BUCKET_CAPACITY = 100;
@@ -42,6 +43,8 @@ let _buckets = new Map();
 let _refillTimer = null;
 
 let _live = false;
+/** Idle / explicit pause. Distinct from `_live` (replay sampling). */
+let _paused = false;
 /** @type {any[]} */
 let _buffer = [];
 /** @type {(() => void) | null} */
@@ -117,6 +120,7 @@ async function _startReplayAsync(cfg) {
 
     // Resume the session-wide sequence (0 for a fresh/rotated session).
     _eventCounter = _loadSeq(_getSessionId?.() ?? '');
+    _paused = false;
 
     _live = Math.random() * 100 < (cfg.samplingRate ?? 100);
 
@@ -162,7 +166,7 @@ async function _startReplayAsync(cfg) {
             inlineStylesheet: qualityCfg.inlineStylesheet ?? true,
             collectFonts: qualityCfg.collectFonts ?? false,
             slimDOMOptions: qualityCfg.slimDOM ?? true,
-            recordCanvas: qualityCfg.recordCanvas ?? false,
+            recordCanvas: qualityCfg.recordCanvas ?? true,
             sampling: {
                 mousemove: samplingCfg.mousemove ?? 50,
                 scroll: samplingCfg.scroll ?? 150,
@@ -243,11 +247,14 @@ async function _startReplayAsync(cfg) {
 }
 
 export function pauseReplay() {
-    _live = false;
+    _paused = true;
 }
 
 export function resumeReplay() {
-    _live = true;
+    _paused = false;
+    if (!_live) {
+        return;
+    }
     markReplayRecording();
     _takeFullSnapshot();
 }
@@ -266,6 +273,7 @@ export function stopReplay() {
     _rrweb = null;
     _eventCounter = 0;
     _live = false;
+    _paused = false;
     _cfg = null;
     _replayLogger = null;
     _getSessionId = null;
@@ -443,6 +451,10 @@ function _activateFromError() {
 }
 
 function _onEvent(event) {
+    if (isPaused() || _paused) {
+        return;
+    }
+
     // Track DOM/CSS activity so the adaptive settle snapshot can fire once the
     // page goes quiet (source 0 = mutation, 8 = stylesheet rule insert/delete).
     if (

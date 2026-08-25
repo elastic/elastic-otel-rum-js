@@ -13,11 +13,18 @@ import {
     getSessionId,
     getSessionSequence,
     initSession,
+    isSessionPaused,
+    setSessionOnIdle,
+    setSessionOnResume,
     setSessionOnRotate,
 } from '../../lib/session.js';
 
+/** @type {((ev?: unknown) => void) | null} */
+let activityHandler = null;
+
 function installBrowserMocks() {
     const store = new Map();
+    activityHandler = null;
     globalThis.sessionStorage = {
         getItem: (k) => (store.has(k) ? store.get(k) : null),
         setItem: (k, v) => store.set(k, String(v)),
@@ -25,7 +32,11 @@ function installBrowserMocks() {
         clear: () => store.clear(),
     };
     globalThis.window = {
-        addEventListener() {},
+        addEventListener(type, fn) {
+            if (type === 'click') {
+                activityHandler = fn;
+            }
+        },
         removeEventListener() {},
     };
     globalThis.document = {cookie: ''};
@@ -63,10 +74,31 @@ test('initSession is idempotent', () => {
     assert.equal(a, b);
 });
 
-test('initSession reuses sessionStorage value', () => {
-    sessionStorage.setItem('elastic.rum.sid', 'stored-session-id');
+test('initSession reuses sessionStorage state within idle and max windows', () => {
+    const startedAt = Date.now() - 60_000;
+    sessionStorage.setItem(
+        'elastic.rum.sid',
+        JSON.stringify({
+            id: 'stored-session-id',
+            startedAt,
+            lastActivity: Date.now(),
+        })
+    );
     const id = initSession();
     assert.equal(id, 'stored-session-id');
+});
+
+test('initSession does not reuse a stale stored session after idle', () => {
+    sessionStorage.setItem(
+        'elastic.rum.sid',
+        JSON.stringify({
+            id: 'old-session',
+            startedAt: Date.now() - 2 * 60 * 60 * 1000,
+            lastActivity: Date.now() - 40 * 60 * 1000,
+        })
+    );
+    const id = initSession({idleMs: 30 * 60 * 1000});
+    assert.notEqual(id, 'old-session');
 });
 
 test('checkRotation returns false when within max and idle windows', () => {
@@ -74,14 +106,50 @@ test('checkRotation returns false when within max and idle windows', () => {
     const rotated = checkRotation({maxMs: 60_000, idleMs: 60_000});
     assert.equal(rotated, false);
     assert.ok(getSessionId());
+    assert.equal(isSessionPaused(), false);
 });
 
 test('checkRotation rotates when maxMs exceeded', () => {
     const id = initSession();
-    // Force elapsed by calling with maxMs: 0
     const rotated = checkRotation({maxMs: 0, idleMs: 60_000});
     assert.equal(rotated, true);
     assert.notEqual(getSessionId(), id);
+    assert.equal(isSessionPaused(), false);
+});
+
+test('checkRotation pauses on idle without minting a new session', () => {
+    const id = initSession();
+    let idle = false;
+    setSessionOnIdle(() => {
+        idle = true;
+    });
+    const rotated = checkRotation({maxMs: 60_000, idleMs: 0});
+    assert.equal(rotated, false);
+    assert.equal(getSessionId(), id);
+    assert.equal(isSessionPaused(), true);
+    assert.equal(idle, true);
+});
+
+test('user activity after idle rotates and resumes', () => {
+    const id = initSession();
+    let resumed = false;
+    let rotatedTo = null;
+    setSessionOnIdle(() => {});
+    setSessionOnResume(() => {
+        resumed = true;
+    });
+    setSessionOnRotate((newId) => {
+        rotatedTo = newId;
+    });
+    checkRotation({maxMs: 60_000, idleMs: 0});
+    assert.equal(isSessionPaused(), true);
+    assert.ok(activityHandler);
+    activityHandler();
+    assert.equal(isSessionPaused(), false);
+    assert.equal(resumed, true);
+    assert.ok(rotatedTo);
+    assert.notEqual(rotatedTo, id);
+    assert.equal(getSessionId(), rotatedTo);
 });
 
 test('checkRotation increments session.sequence', () => {

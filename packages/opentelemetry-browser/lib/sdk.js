@@ -52,6 +52,8 @@ import {
     closeSession,
     getSessionId,
     initSession,
+    setSessionOnIdle,
+    setSessionOnResume,
     setSessionOnRotate,
 } from './session.js';
 import {pauseReplay, resumeReplay, startReplay, stopReplay} from './replay.js';
@@ -112,8 +114,8 @@ import {wrapExporter} from './exporter.js';
 
 /**
  * @typedef {Object} SessionConfiguration
- * @property {number} [maxMs] // default 14 minutes
- * @property {number} [idleMs] // default 30 minutes
+ * @property {number} [maxMs] // default 4 hours while the user keeps interacting
+ * @property {number} [idleMs] // default 30 minutes without click/key/scroll/touch — pauses capture
  * @property {boolean} [persistSession] // cookie vs sessionStorage; default false
  */
 
@@ -134,7 +136,7 @@ import {wrapExporter} from './exporter.js';
  * @property {boolean} [inlineStylesheet]
  * @property {boolean} [collectFonts]
  * @property {boolean} [slimDOM]
- * @property {boolean} [recordCanvas]
+ * @property {boolean} [recordCanvas] // default true — Elastic Charts / canvas UIs in replay
  * @property {boolean} [packEvents]
  * @property {number} [maxChunkBytes]
  * @property {{mousemove?: number, scroll?: number, input?: string, canvas?: number}} [sampling]
@@ -211,6 +213,17 @@ export function startBrowserSdk(cfg = {}) {
     setSessionOnRotate((newId) => {
         diag.debug('Session id rotated', newId);
     });
+    setSessionOnIdle(() => {
+        pauseCapture();
+        pauseReplay();
+    });
+    setSessionOnResume(() => {
+        resumeCapture();
+        resumeReplay();
+    });
+    // Resource session.id is a startup snapshot (OTel resources are immutable).
+    // SessionSpanProcessor / SessionLogProcessor re-stamp the live id on every
+    // signal so Kibana can group on attributes.session.id after rotate.
     const resource = detectResource(
         {
             ...config.resourceAttributes,
@@ -588,7 +601,7 @@ function resolveReplayConfig(replay) {
             inlineStylesheet: replay?.quality?.inlineStylesheet ?? true,
             collectFonts: replay?.quality?.collectFonts ?? false,
             slimDOM: replay?.quality?.slimDOM ?? true,
-            recordCanvas: replay?.quality?.recordCanvas ?? false,
+            recordCanvas: replay?.quality?.recordCanvas ?? true,
             packEvents: replay?.quality?.packEvents ?? false,
             maxChunkBytes: replay?.quality?.maxChunkBytes,
             sampling: replay?.quality?.sampling,

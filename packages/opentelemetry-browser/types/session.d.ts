@@ -11,12 +11,18 @@ export function initSession(cfg?: {
 export function getSessionId(): string | null;
 /** Monotonic session generation (1 after init, increments on each rotate). */
 export function getSessionSequence(): number;
+/** True after idle timeout until the next user action starts a new session. */
+export function isSessionPaused(): boolean;
 /**
  * Optional callback after this tab rotates (or adopts a rotate from another tab).
  *
  * @param {((newId: string) => void) | null} fn
  */
-export function setSessionOnRotate(fn: (newId: string) => void): void;
+export function setSessionOnRotate(fn: ((newId: string) => void) | null): void;
+/** Fired when idle timeout pauses capture (session id unchanged). */
+export function setSessionOnIdle(fn: (() => void) | null): void;
+/** Fired when user activity resumes capture after idle (id already rotated). */
+export function setSessionOnResume(fn: (() => void) | null): void;
 /**
  * @returns {{maxMs: number, idleMs: number, persistSession: boolean}}
  */
