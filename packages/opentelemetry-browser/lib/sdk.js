@@ -118,7 +118,7 @@ export function startBrowserSdk(cfg = {}) {
     );
 
     // Disable our logger to let the upstream take its place
-    // TODO: if upstream exports its methid to register a logger
+    // TODO: if upstream exports its method to register a logger
     // we could get rid of this
     diag.disable();
 
