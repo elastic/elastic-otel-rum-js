@@ -7,6 +7,10 @@ import {diag, DiagLogLevel, metrics, trace} from '@opentelemetry/api';
 import {logs} from '@opentelemetry/api-logs';
 import {startLogsSdk} from '@opentelemetry/browser-sdk/logs';
 import {startTracesSdk} from '@opentelemetry/browser-sdk/traces';
+import {
+    W3CBaggagePropagator,
+    W3CTraceContextPropagator,
+} from '@opentelemetry/core';
 import {OTLPMetricExporter} from '@opentelemetry/exporter-metrics-otlp-http';
 import {resourceFromAttributes} from '@opentelemetry/resources';
 import {
@@ -124,6 +128,12 @@ export function startBrowserSdk(cfg = {}) {
         logLevel,
         resourceAttributes,
         contextManager: AsyncApisContextManager.enable(),
+        // the upstream traces SDK has no defaults for propagation.
+        // Keep this until `@opentelemetry/browser-sdk@0.3.0` is published
+        propagators: [
+            new W3CBaggagePropagator(),
+            new W3CTraceContextPropagator(),
+        ],
         sampler: new TraceIdRatioBasedSampler(config.sampleRate),
         exportConfig: {
             url: appendPath(endpointUrl, 'v1/traces').href,
