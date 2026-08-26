@@ -32,6 +32,13 @@ To check for security updates, go to [Security announcements for the Elastic sta
 % ### Chores [edot-browser-X.X.X-chores]
 % *
 
+## X.X.X [edot-browser-X.X.X-release-notes]
+
+### Chores [edot-browser-X.X.X-chores]
+
+* Use the new upstream `@opentelemetry/browser-sdk` package to setup traces and logs signal.
+
+
 ## 0.3.0 [edot-browser-0.3.0-release-notes]
 
 ### Chores [edot-browser-0.3.0-chores]
