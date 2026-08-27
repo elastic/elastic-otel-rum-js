@@ -20,7 +20,7 @@ import {
 import {TraceIdRatioBasedSampler} from '@opentelemetry/sdk-trace';
 
 import {registerInstrumentations} from '@opentelemetry/instrumentation';
-import {BrowserNavigationInstrumentation} from '@opentelemetry/instrumentation-browser-navigation';
+import {NavigationInstrumentation} from '@opentelemetry/browser-instrumentation/experimental/navigation';
 import {DocumentLoadInstrumentation} from '@opentelemetry/instrumentation-document-load';
 import {FetchInstrumentation} from '@opentelemetry/instrumentation-fetch';
 import {LongTaskInstrumentation} from '@opentelemetry/instrumentation-long-task';
@@ -35,7 +35,7 @@ import {detectResource} from './detector.js';
 
 /**
  * @typedef {{
- *  "@opentelemetry/instrumentation-browser-navigation": import('@opentelemetry/instrumentation-browser-navigation').BrowserNavigationInstrumentationConfig;
+ *  "navigation": import('@opentelemetry/browser-instrumentation/experimental/navigation').NavigationInstrumentationConfig;
  *  "@opentelemetry/instrumentation-document-load": import('@opentelemetry/instrumentation-document-load').DocumentLoadInstrumentationConfig;
  *  "@opentelemetry/instrumentation-fetch": import('@opentelemetry/instrumentation-fetch').FetchInstrumentationConfig;
  *  "@opentelemetry/instrumentation-long-task": import('@opentelemetry/instrumentation-long-task').LongtaskInstrumentationConfig;
@@ -171,8 +171,7 @@ export function startBrowserSdk(cfg = {}) {
     // by configuration
     /** @type {Record<keyof InstrumentationsConfigMap, (cfg: any) => any>} */
     const instrFactories = {
-        '@opentelemetry/instrumentation-browser-navigation': (cfg) =>
-            new BrowserNavigationInstrumentation(cfg),
+        navigation: (cfg) => new NavigationInstrumentation(cfg),
         '@opentelemetry/instrumentation-document-load': (cfg) =>
             new DocumentLoadInstrumentation(cfg),
         '@opentelemetry/instrumentation-fetch': (cfg) =>
