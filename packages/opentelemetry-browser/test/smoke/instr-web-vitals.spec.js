@@ -10,19 +10,9 @@ test('should export web vitals', async ({page, browserName}) => {
     const collector = createCollector(page);
     await page.goto('/fixtures/use-web-vitals.html');
     await page.click('#make-shift');
-    // webvitals library won't send the cls unless a visibility change happens, so force one
-    await page.evaluate(() => {
-        Object.defineProperty(document, 'visibilityState', {
-            value: 'hidden',
-            writable: true,
-        });
-        Object.defineProperty(document, 'hidden', {
-            value: true,
-            writable: true,
-        });
-        window.dispatchEvent(new Event('visibilitychange'));
-    });
 
+    // webvitals library won't send the cls unless a visibility change happens
+    // the `getLogs` function already does that by default to flush the data
     const logs = await collector.getLogs();
     expect(logs.length).toBeGreaterThan(0);
 

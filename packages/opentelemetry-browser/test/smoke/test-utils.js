@@ -50,8 +50,21 @@ export function createCollector(page) {
     const waitForData = async (signal, flush) => {
         // Is there any situation we prefer to wait?
         // - yes, for fetch instrumentation tests
+        // Processors flush on `visibilitychange` events. Refs:
+        // - SpanProcessor: https://github.com/open-telemetry/opentelemetry-js/blob/59dac70d00d46fa56b2b921cf721fd922730f23d/packages/sdk-trace/src/platform/browser/export/BatchSpanProcessor.ts#L25
+        // - LogRecordProcessor: https://github.com/open-telemetry/opentelemetry-js/blob/59dac70d00d46fa56b2b921cf721fd922730f23d/experimental/packages/sdk-logs/src/platform/browser/export/BatchLogRecordProcessor.ts#L41
         if (flush) {
-            await page.evaluate(() => globalThis.edotBrowser.forceFlush());
+            await page.evaluate(() => {
+                Object.defineProperty(document, 'visibilityState', {
+                    value: 'hidden',
+                    configurable: true,
+                });
+                document.dispatchEvent(new Event('visibilitychange'));
+                Object.defineProperty(document, 'visibilityState', {
+                    value: 'visible',
+                    configurable: true,
+                });
+            });
         }
 
         return new Promise((resolve, reject) => {

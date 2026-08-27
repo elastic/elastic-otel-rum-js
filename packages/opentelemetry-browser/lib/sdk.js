@@ -77,7 +77,6 @@ const defaultConfig = {
 /**
  * @param {BrowserSdkConfiguration} cfg
  * @returns {{
- *      forceFlush: () => Promise<void>;
  *      shutdown: () => Promise<void>;
  * }}
  */
@@ -204,21 +203,6 @@ export function startBrowserSdk(cfg = {}) {
     sdkStarted = true;
 
     return {
-        forceFlush() {
-            return Promise.allSettled([
-                // @ts-expect-error -- accesing private delegate
-                tracerProvider._delegate.forceFlush(),
-                // @ts-expect-error -- accesing private method
-                loggerProvider.forceFlush(),
-                meterProvider.forceFlush(),
-            ]).then((results) => {
-                for (const res of results) {
-                    if (res.status === 'rejected') {
-                        diag.warn(`Error flushing data. Reason: ${res.reason}`);
-                    }
-                }
-            });
-        },
         shutdown() {
             return Promise.allSettled([
                 tracesSdk.shutdown(),
