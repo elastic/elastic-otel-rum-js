@@ -1,12 +1,10 @@
 /**
  * @param {BrowserSdkConfiguration} cfg
  * @returns {{
- *      forceFlush: () => Promise<void>;
  *      shutdown: () => Promise<void>;
  * }}
  */
 export function startBrowserSdk(cfg?: BrowserSdkConfiguration): {
-    forceFlush: () => Promise<void>;
     shutdown: () => Promise<void>;
 };
 export type InstrumentationsConfigMap = {
