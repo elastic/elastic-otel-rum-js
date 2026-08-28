@@ -37,6 +37,13 @@ To check for security updates, go to [Security announcements for the Elastic sta
 ### Chores [edot-browser-X.X.X-chores]
 
 * Use the new upstream `@opentelemetry/browser-sdk` package to setup traces and logs signal.
+* Switch to the new upstream `navigation` instrumentation from  `@opentelemetry/browser-sdk` package.
+  * It replaces the former `@opentelemetry/instrumentation-browser-navigation`. the new instrumentation is a port
+    from [opentelemetry-js-contrib](https://github.com/open-telemetry/opentelemetry-js-contrib) to
+    [opentelemetry-browser](https://github.com/open-telemetry/opentelemetry-browser). There are no changes in the data
+    model rather than the scope.
+  * This change breaks the configuration interface of instrumentation switching the configuration key form the full
+    scope to a shorter name `navigation`.
 
 
 ## 0.3.0 [edot-browser-0.3.0-release-notes]
