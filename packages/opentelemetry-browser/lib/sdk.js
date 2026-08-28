@@ -170,8 +170,7 @@ export function startBrowserSdk(cfg = {}) {
             new UserInteractionInstrumentation(cfg),
         xhr: (cfg) => new XhrInstrumentation(cfg),
         errors: (cfg) => new ErrorsInstrumentation(cfg),
-        'web-vitals': (cfg) =>
-            new WebVitalsInstrumentation(cfg),
+        'web-vitals': (cfg) => new WebVitalsInstrumentation(cfg),
     };
 
     const instrumentations = config.instrumentations || {};
