@@ -116,10 +116,10 @@ The following keys are supported:
 | Instrumentation   | Key (scope name)                                 | Configuration |
 |-------------------|--------------------------------------------------|---------------|
 | Document load     | `@opentelemetry/instrumentation-document-load`   | [Reference](https://github.com/open-telemetry/opentelemetry-js-contrib/blob/main/packages/instrumentation-document-load/README.md#document-load-instrumentation-options) |
-| Fetch             | `@opentelemetry/instrumentation-fetch`           | [Reference](https://github.com/open-telemetry/opentelemetry-js/tree/main/experimental/packages/opentelemetry-instrumentation-fetch#fetch-instrumentation-options) |
+| Fetch             | `@opentelemetry/browser-instrumentation/fetch`   | [Reference](https://github.com/open-telemetry/opentelemetry-browser/tree/main/packages/instrumentation#fetch) |
 | Long task         | `@opentelemetry/instrumentation-long-task`       | [Reference](https://github.com/open-telemetry/opentelemetry-js-contrib/tree/main/packages/instrumentation-long-task#longtask-instrumentation-options) |
 | User interaction  | `@opentelemetry/instrumentation-user-interaction`| [Reference](https://github.com/open-telemetry/opentelemetry-js-contrib/tree/main/packages/instrumentation-user-interaction#send-spans-for-different-events) |
-| XMLHttpRequest    | `@opentelemetry/instrumentation-xml-http-request`| [Reference](https://github.com/open-telemetry/opentelemetry-js/tree/main/experimental/packages/opentelemetry-instrumentation-xml-http-request#xhr-instrumentation-options) |
+| XMLHttpRequest    | `@opentelemetry/browser-instrumentation/xhr`     | [Reference](https://github.com/open-telemetry/opentelemetry-browser/tree/main/packages/instrumentation#xhr-xmlhttprequest) |
 | Web exception     | `@opentelemetry/instrumentation-web-exception`   | [Reference](https://github.com/open-telemetry/opentelemetry-js-contrib/tree/main/packages/instrumentation-web-exception#configuration) |
 | Web vitals        | `@opentelemetry/instrumentation-web-vitals`      | [Reference](https://github.com/open-telemetry/opentelemetry-browser/blob/main/packages/instrumentation/README.md#configuration-1) |
 

@@ -73,8 +73,8 @@ The following instrumentations are included and turned on by default. You can tu
 | Instrumentation | NPM package | Config key | On by default |
 |-----------------|-------------|------------|----------------|
 | Document load   | `@opentelemetry/instrumentation-document-load` | `@opentelemetry/instrumentation-document-load` | Yes |
-| Fetch           | `@opentelemetry/instrumentation-fetch` | `@opentelemetry/instrumentation-fetch` | Yes |
-| XMLHttpRequest  | `@opentelemetry/instrumentation-xml-http-request` | `@opentelemetry/instrumentation-xml-http-request` | Yes |
+| Fetch           | `@opentelemetry/browser-instrumentation` | `fetch` | Yes |
+| XMLHttpRequest  | `@opentelemetry/browser-instrumentation` | `xhr` | Yes |
 | User interaction| `@opentelemetry/instrumentation-user-interaction` | `@opentelemetry/instrumentation-user-interaction` | Yes |
 | Long tasks      | `@opentelemetry/instrumentation-long-task` | `@opentelemetry/instrumentation-long-task` | Yes |
 | Web exception   | `@opentelemetry/instrumentation-web-exception` | `@opentelemetry/instrumentation-web-exception` | Yes |
