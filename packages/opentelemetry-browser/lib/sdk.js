@@ -38,7 +38,7 @@ import {detectResource} from './detector.js';
  *  "@opentelemetry/instrumentation-user-interaction": import('@opentelemetry/instrumentation-user-interaction').UserInteractionInstrumentationConfig;
  *  "xhr": import('@opentelemetry/browser-instrumentation/experimental/xhr').XhrInstrumentationConfig;
  *  "errors": import('@opentelemetry/browser-instrumentation/experimental/errors').ErrorsInstrumentationConfig;
- *  "@opentelemetry/instrumentation-web-vitals": import('@opentelemetry/browser-instrumentation/experimental/web-vitals').WebVitalsInstrumentationConfig;
+ *  "web-vitals": import('@opentelemetry/browser-instrumentation/experimental/web-vitals').WebVitalsInstrumentationConfig;
  * }} InstrumentationsConfigMap
  */
 
@@ -170,7 +170,7 @@ export function startBrowserSdk(cfg = {}) {
             new UserInteractionInstrumentation(cfg),
         xhr: (cfg) => new XhrInstrumentation(cfg),
         errors: (cfg) => new ErrorsInstrumentation(cfg),
-        '@opentelemetry/instrumentation-web-vitals': (cfg) =>
+        'web-vitals': (cfg) =>
             new WebVitalsInstrumentation(cfg),
     };
 

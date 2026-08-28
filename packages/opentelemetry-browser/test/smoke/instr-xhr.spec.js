@@ -6,7 +6,7 @@
 import {test, expect} from '@playwright/test';
 import {createCollector} from './test-utils';
 
-test.only('should export XMLHttpRequest related spans', async ({page}) => {
+test('should export XMLHttpRequest related spans', async ({page}) => {
     const collector = createCollector(page);
     const sameOriginHeaders = {};
     const otherOriginHeaders = {};

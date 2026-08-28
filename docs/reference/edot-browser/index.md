@@ -39,7 +39,7 @@ In addition to the features provided by OpenTelemetry Browser, EDOT Browser incl
 * A single package that bundles multiple OpenTelemetry dependencies, so you can install and update one package for most use cases. This is similar to the `@opentelemetry/auto-instrumentations-web` package.
 * Improvements and bug fixes contributed by Elastic, available before they are released in contrib OpenTelemetry repositories.
 * Optional features that enhance the OpenTelemetry data sent to Elastic.
-* A preconfigured set of tracing and metric signals with opinionated defaults, including which sources are collected by default. This also includes additional metrics, such as `browser.web_vital.*` from the `instrumentation/web-vitals` package.
+* A preconfigured set of tracing and metric signals with opinionated defaults, including which sources are collected by default. This also includes additional metrics, such as `browser.web_vital.*` from the `@opentelemetry/browser-instrumentation` package.
 
 ## How it works [how-it-works]
 
