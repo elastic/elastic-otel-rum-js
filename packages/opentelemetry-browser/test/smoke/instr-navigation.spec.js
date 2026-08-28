@@ -13,7 +13,7 @@ test('should export browser navigation related events', async ({page}) => {
     // Make a soft navigation
     await page.evaluate(() => history.pushState({}, '', '/with-push.html'));
 
-    const scopeName = '@opentelemetry/instrumentation-browser-navigation';
+    const scopeName = '@opentelemetry/browser-instrumentation/navigation';
     const logs = (await collector.getLogs()).filter(
         (l) => l.scope.name === scopeName
     );

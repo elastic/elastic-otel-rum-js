@@ -30,7 +30,7 @@ Breaking changes can impact your applications, potentially disrupting normal ope
 
 ## Next version [edot-browser-X.X.X-breaking-changes]
 
-::::{dropdown} Configuration change in navigation instrumentation
+::::{dropdown} Configuration change in fetch instrumentation
 The configuration key for `fetch` instrumentation has changed from
 `@opentelemetry/instrumentation-fetch` to a shorter name `fetch`.
 **Impact**<br> This change produces a compilation error if you use the SDK with TypeScript.
@@ -39,7 +39,7 @@ At runtime the configuration will be ignored if using the old configuration key.
 Refer to [PR 97#](https://github.com/elastic/elastic-otel-rum-js/pull/97).
 ::::
 
-::::{dropdown} Configuration change in navigation instrumentation
+::::{dropdown} Configuration change in XmlHttpRequest instrumentation
 The configuration key for `xml-http-request` instrumentation has changed from
 `@opentelemetry/instrumentation-xml-http-request` to a shorter name `xhr`.
 **Impact**<br> This change produces a compilation error if you use the SDK with TypeScript.
@@ -47,3 +47,22 @@ At runtime the configuration will be ignored if using the old configuration key.
 **Action**<br> Change the configuration key to `xhr`.
 Refer to [PR 97#](https://github.com/elastic/elastic-otel-rum-js/pull/97).
 ::::
+
+::::{dropdown} Configuration change in navigation instrumentation
+The configuration key for `navigation` instrumentation has changed from `@opentelemetry/instrumentation-browser-navigation`
+to a shorter name `navigation`.
+**Impact**<br> This change eproduces a compilation error if you use the SDK with TypeScript. At runtime the configuration
+will be ignored if using the old configuration key.
+**Action**<br> Change the configuration key to `nanigation`.
+Refer to [PR 96#](https://github.com/elastic/elastic-otel-rum-js/pull/96).
+::::
+
+::::{dropdown} Configuration change in web exception instrumentation
+The configuration key for `web-exception` instrumentation has changed from `@opentelemetry/instrumentation-web-exception`
+to a shorter name `errors`.
+**Impact**<br> This change eproduces a compilation error if you use the SDK with TypeScript. At runtime the configuration
+will be ignored if using the old configuration key.
+**Action**<br> Change the configuration key to `errors`.
+Refer to [PR 96#](https://github.com/elastic/elastic-otel-rum-js/pull/95).
+::::
+

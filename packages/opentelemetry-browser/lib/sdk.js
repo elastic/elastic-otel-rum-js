@@ -16,13 +16,13 @@ import {
 import {TraceIdRatioBasedSampler} from '@opentelemetry/sdk-trace';
 
 import {registerInstrumentations} from '@opentelemetry/instrumentation';
-import {BrowserNavigationInstrumentation} from '@opentelemetry/instrumentation-browser-navigation';
+import {NavigationInstrumentation} from '@opentelemetry/browser-instrumentation/experimental/navigation';
 import {DocumentLoadInstrumentation} from '@opentelemetry/instrumentation-document-load';
 import {FetchInstrumentation} from '@opentelemetry/browser-instrumentation/experimental/fetch';
 import {LongTaskInstrumentation} from '@opentelemetry/instrumentation-long-task';
 import {UserInteractionInstrumentation} from '@opentelemetry/instrumentation-user-interaction';
 import {XhrInstrumentation} from '@opentelemetry/browser-instrumentation/experimental/xhr';
-import {ExceptionInstrumentation} from '@opentelemetry/instrumentation-web-exception';
+import {ErrorsInstrumentation} from '@opentelemetry/browser-instrumentation/experimental/errors';
 import {WebVitalsInstrumentation} from '@opentelemetry/browser-instrumentation/experimental/web-vitals';
 
 import {AsyncApisContextManager} from './context.js';
@@ -31,13 +31,13 @@ import {detectResource} from './detector.js';
 
 /**
  * @typedef {{
- *  "@opentelemetry/instrumentation-browser-navigation": import('@opentelemetry/instrumentation-browser-navigation').BrowserNavigationInstrumentationConfig;
+ *  "navigation": import('@opentelemetry/browser-instrumentation/experimental/navigation').NavigationInstrumentationConfig;
  *  "@opentelemetry/instrumentation-document-load": import('@opentelemetry/instrumentation-document-load').DocumentLoadInstrumentationConfig;
  *  "fetch": import('@opentelemetry/browser-instrumentation/experimental/fetch').FetchInstrumentationConfig;
  *  "@opentelemetry/instrumentation-long-task": import('@opentelemetry/instrumentation-long-task').LongtaskInstrumentationConfig;
  *  "@opentelemetry/instrumentation-user-interaction": import('@opentelemetry/instrumentation-user-interaction').UserInteractionInstrumentationConfig;
  *  "xhr": import('@opentelemetry/browser-instrumentation/experimental/xhr').XhrInstrumentationConfig;
- *  "@opentelemetry/instrumentation-web-exception": import('@opentelemetry/instrumentation-web-exception').GlobalErrorsInstrumentationConfig;
+ *  "errors": import('@opentelemetry/browser-instrumentation/experimental/errors').ErrorsInstrumentationConfig;
  *  "@opentelemetry/instrumentation-web-vitals": import('@opentelemetry/browser-instrumentation/experimental/web-vitals').WebVitalsInstrumentationConfig;
  * }} InstrumentationsConfigMap
  */
@@ -160,8 +160,7 @@ export function startBrowserSdk(cfg = {}) {
     // by configuration
     /** @type {Record<keyof InstrumentationsConfigMap, (cfg: any) => any>} */
     const instrFactories = {
-        '@opentelemetry/instrumentation-browser-navigation': (cfg) =>
-            new BrowserNavigationInstrumentation(cfg),
+        navigation: (cfg) => new NavigationInstrumentation(cfg),
         '@opentelemetry/instrumentation-document-load': (cfg) =>
             new DocumentLoadInstrumentation(cfg),
         fetch: (cfg) => new FetchInstrumentation(cfg),
@@ -170,8 +169,7 @@ export function startBrowserSdk(cfg = {}) {
         '@opentelemetry/instrumentation-user-interaction': (cfg) =>
             new UserInteractionInstrumentation(cfg),
         xhr: (cfg) => new XhrInstrumentation(cfg),
-        '@opentelemetry/instrumentation-web-exception': (cfg) =>
-            new ExceptionInstrumentation(cfg),
+        errors: (cfg) => new ErrorsInstrumentation(cfg),
         '@opentelemetry/instrumentation-web-vitals': (cfg) =>
             new WebVitalsInstrumentation(cfg),
     };
