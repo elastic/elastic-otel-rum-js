@@ -6,7 +6,7 @@
 import {test, expect} from '@playwright/test';
 import {createCollector} from './test-utils';
 
-test('should export XMLHttpRequest related spans', async ({page}) => {
+test.only('should export XMLHttpRequest related spans', async ({page}) => {
     const collector = createCollector(page);
     const sameOriginHeaders = {};
     const otherOriginHeaders = {};
@@ -39,8 +39,7 @@ test('should export XMLHttpRequest related spans', async ({page}) => {
 
     const spans = await collector.getSpans({flush: false});
     const fetchSpans = spans.filter(
-        (s) =>
-            s.scope.name === '@opentelemetry/instrumentation-xml-http-request'
+        (s) => s.scope.name === '@opentelemetry/browser-instrumentation/xhr'
     );
 
     // We got spans

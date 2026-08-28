@@ -22,10 +22,10 @@ import {TraceIdRatioBasedSampler} from '@opentelemetry/sdk-trace';
 import {registerInstrumentations} from '@opentelemetry/instrumentation';
 import {BrowserNavigationInstrumentation} from '@opentelemetry/instrumentation-browser-navigation';
 import {DocumentLoadInstrumentation} from '@opentelemetry/instrumentation-document-load';
-import {FetchInstrumentation} from '@opentelemetry/instrumentation-fetch';
+import {FetchInstrumentation} from '@opentelemetry/browser-instrumentation/experimental/fetch';
 import {LongTaskInstrumentation} from '@opentelemetry/instrumentation-long-task';
 import {UserInteractionInstrumentation} from '@opentelemetry/instrumentation-user-interaction';
-import {XMLHttpRequestInstrumentation} from '@opentelemetry/instrumentation-xml-http-request';
+import {XhrInstrumentation} from '@opentelemetry/browser-instrumentation/experimental/xhr';
 import {ExceptionInstrumentation} from '@opentelemetry/instrumentation-web-exception';
 import {WebVitalsInstrumentation} from '@opentelemetry/browser-instrumentation/experimental/web-vitals';
 
@@ -37,10 +37,10 @@ import {detectResource} from './detector.js';
  * @typedef {{
  *  "@opentelemetry/instrumentation-browser-navigation": import('@opentelemetry/instrumentation-browser-navigation').BrowserNavigationInstrumentationConfig;
  *  "@opentelemetry/instrumentation-document-load": import('@opentelemetry/instrumentation-document-load').DocumentLoadInstrumentationConfig;
- *  "@opentelemetry/instrumentation-fetch": import('@opentelemetry/instrumentation-fetch').FetchInstrumentationConfig;
+ *  "fetch": import('@opentelemetry/browser-instrumentation/experimental/fetch').FetchInstrumentationConfig;
  *  "@opentelemetry/instrumentation-long-task": import('@opentelemetry/instrumentation-long-task').LongtaskInstrumentationConfig;
  *  "@opentelemetry/instrumentation-user-interaction": import('@opentelemetry/instrumentation-user-interaction').UserInteractionInstrumentationConfig;
- *  "@opentelemetry/instrumentation-xml-http-request": import('@opentelemetry/instrumentation-xml-http-request').XMLHttpRequestInstrumentationConfig;
+ *  "xhr": import('@opentelemetry/browser-instrumentation/experimental/xhr').XhrInstrumentationConfig;
  *  "@opentelemetry/instrumentation-web-exception": import('@opentelemetry/instrumentation-web-exception').GlobalErrorsInstrumentationConfig;
  *  "@opentelemetry/instrumentation-web-vitals": import('@opentelemetry/browser-instrumentation/experimental/web-vitals').WebVitalsInstrumentationConfig;
  * }} InstrumentationsConfigMap
@@ -127,12 +127,6 @@ export function startBrowserSdk(cfg = {}) {
         logLevel,
         resourceAttributes,
         contextManager: AsyncApisContextManager.enable(),
-        // the upstream traces SDK has no defaults for propagation.
-        // Keep this until `@opentelemetry/browser-sdk@0.3.0` is published
-        propagators: [
-            new W3CBaggagePropagator(),
-            new W3CTraceContextPropagator(),
-        ],
         sampler: new TraceIdRatioBasedSampler(config.sampleRate),
         exportConfig: {
             url: appendPath(endpointUrl, 'v1/traces').href,
@@ -174,14 +168,12 @@ export function startBrowserSdk(cfg = {}) {
             new BrowserNavigationInstrumentation(cfg),
         '@opentelemetry/instrumentation-document-load': (cfg) =>
             new DocumentLoadInstrumentation(cfg),
-        '@opentelemetry/instrumentation-fetch': (cfg) =>
-            new FetchInstrumentation(cfg),
+        fetch: (cfg) => new FetchInstrumentation(cfg),
         '@opentelemetry/instrumentation-long-task': (cfg) =>
             new LongTaskInstrumentation(cfg),
         '@opentelemetry/instrumentation-user-interaction': (cfg) =>
             new UserInteractionInstrumentation(cfg),
-        '@opentelemetry/instrumentation-xml-http-request': (cfg) =>
-            new XMLHttpRequestInstrumentation(cfg),
+        xhr: (cfg) => new XhrInstrumentation(cfg),
         '@opentelemetry/instrumentation-web-exception': (cfg) =>
             new ExceptionInstrumentation(cfg),
         '@opentelemetry/instrumentation-web-vitals': (cfg) =>
