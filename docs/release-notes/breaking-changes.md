@@ -37,4 +37,13 @@ to a shorter name `navigation`.
 will be ignored if using the old configuration key.
 **Action**<br> Change the configuration key to `nanigation`.
 Refer to [PR 96#](https://github.com/elastic/elastic-otel-rum-js/pull/96).
+
 ::::
+The configuration key for `web-exception` instrumentation has changed from `@opentelemetry/instrumentation-web-exception`
+to a shorter name `errors`.
+**Impact**<br> This change eproduces a compilation error if you use the SDK with TypeScript. At runtime the configuration
+will be ignored if using the old configuration key.
+**Action**<br> Change the configuration key to `errors`.
+Refer to [PR 96#](https://github.com/elastic/elastic-otel-rum-js/pull/95).
+::::
+

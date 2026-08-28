@@ -26,7 +26,7 @@ import {FetchInstrumentation} from '@opentelemetry/instrumentation-fetch';
 import {LongTaskInstrumentation} from '@opentelemetry/instrumentation-long-task';
 import {UserInteractionInstrumentation} from '@opentelemetry/instrumentation-user-interaction';
 import {XMLHttpRequestInstrumentation} from '@opentelemetry/instrumentation-xml-http-request';
-import {ExceptionInstrumentation} from '@opentelemetry/instrumentation-web-exception';
+import {ErrorsInstrumentation} from '@opentelemetry/browser-instrumentation/experimental/errors';
 import {WebVitalsInstrumentation} from '@opentelemetry/browser-instrumentation/experimental/web-vitals';
 
 import {AsyncApisContextManager} from './context.js';
@@ -41,7 +41,7 @@ import {detectResource} from './detector.js';
  *  "@opentelemetry/instrumentation-long-task": import('@opentelemetry/instrumentation-long-task').LongtaskInstrumentationConfig;
  *  "@opentelemetry/instrumentation-user-interaction": import('@opentelemetry/instrumentation-user-interaction').UserInteractionInstrumentationConfig;
  *  "@opentelemetry/instrumentation-xml-http-request": import('@opentelemetry/instrumentation-xml-http-request').XMLHttpRequestInstrumentationConfig;
- *  "@opentelemetry/instrumentation-web-exception": import('@opentelemetry/instrumentation-web-exception').GlobalErrorsInstrumentationConfig;
+ *  "errors": import('@opentelemetry/browser-instrumentation/experimental/errors').ErrorsInstrumentationConfig;
  *  "@opentelemetry/instrumentation-web-vitals": import('@opentelemetry/browser-instrumentation/experimental/web-vitals').WebVitalsInstrumentationConfig;
  * }} InstrumentationsConfigMap
  */
@@ -77,7 +77,6 @@ const defaultConfig = {
 /**
  * @param {BrowserSdkConfiguration} cfg
  * @returns {{
- *      forceFlush: () => Promise<void>;
  *      shutdown: () => Promise<void>;
  * }}
  */
@@ -182,8 +181,7 @@ export function startBrowserSdk(cfg = {}) {
             new UserInteractionInstrumentation(cfg),
         '@opentelemetry/instrumentation-xml-http-request': (cfg) =>
             new XMLHttpRequestInstrumentation(cfg),
-        '@opentelemetry/instrumentation-web-exception': (cfg) =>
-            new ExceptionInstrumentation(cfg),
+        errors: (cfg) => new ErrorsInstrumentation(cfg),
         '@opentelemetry/instrumentation-web-vitals': (cfg) =>
             new WebVitalsInstrumentation(cfg),
     };
@@ -203,21 +201,6 @@ export function startBrowserSdk(cfg = {}) {
     sdkStarted = true;
 
     return {
-        forceFlush() {
-            return Promise.allSettled([
-                // @ts-expect-error -- accesing private delegate
-                tracerProvider._delegate.forceFlush(),
-                // @ts-expect-error -- accesing private method
-                loggerProvider.forceFlush(),
-                meterProvider.forceFlush(),
-            ]).then((results) => {
-                for (const res of results) {
-                    if (res.status === 'rejected') {
-                        diag.warn(`Error flushing data. Reason: ${res.reason}`);
-                    }
-                }
-            });
-        },
         shutdown() {
             return Promise.allSettled([
                 tracesSdk.shutdown(),

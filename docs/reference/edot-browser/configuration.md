@@ -113,15 +113,15 @@ An object whose keys are the scope names of the available instrumentations in ED
 
 The following keys are supported:
 
-| Instrumentation   | Key (scope name)                                    | Configuration |
-|-------------------|-----------------------------------------------------|---------------|
-| Document load     | `@opentelemetry/instrumentation-document-load`      | [Reference](https://github.com/open-telemetry/opentelemetry-js-contrib/blob/main/packages/instrumentation-document-load/README.md#document-load-instrumentation-options) |
-| Fetch             | `@opentelemetry/instrumentation-fetch`              | [Reference](https://github.com/open-telemetry/opentelemetry-js/tree/main/experimental/packages/opentelemetry-instrumentation-fetch#fetch-instrumentation-options) |
-| Long task         | `@opentelemetry/instrumentation-long-task`          | [Reference](https://github.com/open-telemetry/opentelemetry-js-contrib/tree/main/packages/instrumentation-long-task#longtask-instrumentation-options) |
-| User interaction  | `@opentelemetry/instrumentation-user-interaction`   | [Reference](https://github.com/open-telemetry/opentelemetry-js-contrib/tree/main/packages/instrumentation-user-interaction#send-spans-for-different-events) |
-| XMLHttpRequest    | `@opentelemetry/instrumentation-xml-http-request`   | [Reference](https://github.com/open-telemetry/opentelemetry-js/tree/main/experimental/packages/opentelemetry-instrumentation-xml-http-request#xhr-instrumentation-options) |
-| Web exception     | `@opentelemetry/instrumentation-web-exception`      | [Reference](https://github.com/open-telemetry/opentelemetry-js-contrib/tree/main/packages/instrumentation-web-exception#configuration) |
-| Web vitals        | `@opentelemetry/instrumentation-browser/web-vitals` | [Reference](https://github.com/open-telemetry/opentelemetry-browser/blob/main/packages/instrumentation/README.md#web-vitals) |
+| Instrumentation   | Key (scope name)                                 | Configuration |
+|-------------------|--------------------------------------------------|---------------|
+| Document load     | `@opentelemetry/instrumentation-document-load`   | [Reference](https://github.com/open-telemetry/opentelemetry-js-contrib/blob/main/packages/instrumentation-document-load/README.md#document-load-instrumentation-options) |
+| Fetch             | `@opentelemetry/instrumentation-fetch`           | [Reference](https://github.com/open-telemetry/opentelemetry-js/tree/main/experimental/packages/opentelemetry-instrumentation-fetch#fetch-instrumentation-options) |
+| Long task         | `@opentelemetry/instrumentation-long-task`       | [Reference](https://github.com/open-telemetry/opentelemetry-js-contrib/tree/main/packages/instrumentation-long-task#longtask-instrumentation-options) |
+| User interaction  | `@opentelemetry/instrumentation-user-interaction`| [Reference](https://github.com/open-telemetry/opentelemetry-js-contrib/tree/main/packages/instrumentation-user-interaction#send-spans-for-different-events) |
+| XMLHttpRequest    | `@opentelemetry/instrumentation-xml-http-request`| [Reference](https://github.com/open-telemetry/opentelemetry-js/tree/main/experimental/packages/opentelemetry-instrumentation-xml-http-request#xhr-instrumentation-options) |
+| Errors            | `@opentelemetry/browser-instrumentation/errors`   | [Reference](https://github.com/open-telemetry/opentelemetry-browser/tree/main/packages/instrumentation#errors) |
+| Web vitals        | `@opentelemetry/instrumentation-web-vitals`      | [Reference](https://github.com/open-telemetry/opentelemetry-browser/blob/main/packages/instrumentation/README.md#configuration-1) |
 | Navigation        | `@opentelemetry/instrumentation-browser/navigation` | [Reference](https://github.com/open-telemetry/opentelemetry-browser/blob/main/packages/instrumentation/README.md#navigation) |
 
 ## Next steps [next-steps]
