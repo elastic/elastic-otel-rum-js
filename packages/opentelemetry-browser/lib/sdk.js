@@ -7,10 +7,6 @@ import {diag, DiagLogLevel, metrics, trace} from '@opentelemetry/api';
 import {logs} from '@opentelemetry/api-logs';
 import {startLogsSdk} from '@opentelemetry/browser-sdk/logs';
 import {startTracesSdk} from '@opentelemetry/browser-sdk/traces';
-import {
-    W3CBaggagePropagator,
-    W3CTraceContextPropagator,
-} from '@opentelemetry/core';
 import {OTLPMetricExporter} from '@opentelemetry/exporter-metrics-otlp-http';
 import {resourceFromAttributes} from '@opentelemetry/resources';
 import {
