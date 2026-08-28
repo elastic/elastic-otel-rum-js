@@ -79,6 +79,7 @@ The following instrumentations are included and turned on by default. You can tu
 | Long tasks      | `@opentelemetry/instrumentation-long-task` | `@opentelemetry/instrumentation-long-task` | Yes |
 | Errors.         | `@opentelemetry/browser-instrumentation` | `errors` | Yes |
 | Web vitals      | `@opentelemetry/browser-instrumentation` | `@opentelemetry/instrumentation-web-vitals` | Yes |
+| Navigation      | `@opentelemetry/browser-instrumentation` | `navigation` | Yes |
 
 ### Default behavior
 
