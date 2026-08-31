@@ -7,10 +7,6 @@ import {diag, DiagLogLevel, metrics, trace} from '@opentelemetry/api';
 import {logs} from '@opentelemetry/api-logs';
 import {startLogsSdk} from '@opentelemetry/browser-sdk/logs';
 import {startTracesSdk} from '@opentelemetry/browser-sdk/traces';
-import {
-    W3CBaggagePropagator,
-    W3CTraceContextPropagator,
-} from '@opentelemetry/core';
 import {OTLPMetricExporter} from '@opentelemetry/exporter-metrics-otlp-http';
 import {resourceFromAttributes} from '@opentelemetry/resources';
 import {
@@ -22,10 +18,10 @@ import {TraceIdRatioBasedSampler} from '@opentelemetry/sdk-trace';
 import {registerInstrumentations} from '@opentelemetry/instrumentation';
 import {NavigationInstrumentation} from '@opentelemetry/browser-instrumentation/experimental/navigation';
 import {DocumentLoadInstrumentation} from '@opentelemetry/instrumentation-document-load';
-import {FetchInstrumentation} from '@opentelemetry/instrumentation-fetch';
+import {FetchInstrumentation} from '@opentelemetry/browser-instrumentation/experimental/fetch';
 import {LongTaskInstrumentation} from '@opentelemetry/instrumentation-long-task';
 import {UserInteractionInstrumentation} from '@opentelemetry/instrumentation-user-interaction';
-import {XMLHttpRequestInstrumentation} from '@opentelemetry/instrumentation-xml-http-request';
+import {XhrInstrumentation} from '@opentelemetry/browser-instrumentation/experimental/xhr';
 import {ErrorsInstrumentation} from '@opentelemetry/browser-instrumentation/experimental/errors';
 import {WebVitalsInstrumentation} from '@opentelemetry/browser-instrumentation/experimental/web-vitals';
 
@@ -37,12 +33,12 @@ import {detectResource} from './detector.js';
  * @typedef {{
  *  "navigation": import('@opentelemetry/browser-instrumentation/experimental/navigation').NavigationInstrumentationConfig;
  *  "@opentelemetry/instrumentation-document-load": import('@opentelemetry/instrumentation-document-load').DocumentLoadInstrumentationConfig;
- *  "@opentelemetry/instrumentation-fetch": import('@opentelemetry/instrumentation-fetch').FetchInstrumentationConfig;
+ *  "fetch": import('@opentelemetry/browser-instrumentation/experimental/fetch').FetchInstrumentationConfig;
  *  "@opentelemetry/instrumentation-long-task": import('@opentelemetry/instrumentation-long-task').LongtaskInstrumentationConfig;
  *  "@opentelemetry/instrumentation-user-interaction": import('@opentelemetry/instrumentation-user-interaction').UserInteractionInstrumentationConfig;
- *  "@opentelemetry/instrumentation-xml-http-request": import('@opentelemetry/instrumentation-xml-http-request').XMLHttpRequestInstrumentationConfig;
+ *  "xhr": import('@opentelemetry/browser-instrumentation/experimental/xhr').XhrInstrumentationConfig;
  *  "errors": import('@opentelemetry/browser-instrumentation/experimental/errors').ErrorsInstrumentationConfig;
- *  "@opentelemetry/instrumentation-web-vitals": import('@opentelemetry/browser-instrumentation/experimental/web-vitals').WebVitalsInstrumentationConfig;
+ *  "web-vitals": import('@opentelemetry/browser-instrumentation/experimental/web-vitals').WebVitalsInstrumentationConfig;
  * }} InstrumentationsConfigMap
  */
 
@@ -127,12 +123,6 @@ export function startBrowserSdk(cfg = {}) {
         logLevel,
         resourceAttributes,
         contextManager: AsyncApisContextManager.enable(),
-        // the upstream traces SDK has no defaults for propagation.
-        // Keep this until `@opentelemetry/browser-sdk@0.3.0` is published
-        propagators: [
-            new W3CBaggagePropagator(),
-            new W3CTraceContextPropagator(),
-        ],
         sampler: new TraceIdRatioBasedSampler(config.sampleRate),
         exportConfig: {
             url: appendPath(endpointUrl, 'v1/traces').href,
@@ -173,17 +163,14 @@ export function startBrowserSdk(cfg = {}) {
         navigation: (cfg) => new NavigationInstrumentation(cfg),
         '@opentelemetry/instrumentation-document-load': (cfg) =>
             new DocumentLoadInstrumentation(cfg),
-        '@opentelemetry/instrumentation-fetch': (cfg) =>
-            new FetchInstrumentation(cfg),
+        fetch: (cfg) => new FetchInstrumentation(cfg),
         '@opentelemetry/instrumentation-long-task': (cfg) =>
             new LongTaskInstrumentation(cfg),
         '@opentelemetry/instrumentation-user-interaction': (cfg) =>
             new UserInteractionInstrumentation(cfg),
-        '@opentelemetry/instrumentation-xml-http-request': (cfg) =>
-            new XMLHttpRequestInstrumentation(cfg),
+        xhr: (cfg) => new XhrInstrumentation(cfg),
         errors: (cfg) => new ErrorsInstrumentation(cfg),
-        '@opentelemetry/instrumentation-web-vitals': (cfg) =>
-            new WebVitalsInstrumentation(cfg),
+        'web-vitals': (cfg) => new WebVitalsInstrumentation(cfg),
     };
 
     const instrumentations = config.instrumentations || {};

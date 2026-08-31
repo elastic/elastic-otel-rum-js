@@ -27,8 +27,7 @@ test('should carry context on different async operations and functions', async (
         'xhr-event',
         'xhr-prop',
         'xhr-target-prop',
-        // TODO: enable when there is a fix for https://github.com/open-telemetry/opentelemetry-js/issues/6339
-        // 'fetch',
+        'fetch',
     ];
     for (const id of buttonIds) {
         // Clear previous exports

@@ -70,16 +70,16 @@ EDOT Browser bundles a curated set of OpenTelemetry JS instrumentations suitable
 
 The following instrumentations are included and turned on by default. You can turn off any of them using `instrumentations` by setting `{ enabled: false }` for the corresponding key when calling `startBrowserSdk`:
 
-| Instrumentation | NPM package | Config key | On by default |
-|-----------------|-------------|------------|----------------|
-| Document load   | `@opentelemetry/instrumentation-document-load` | `@opentelemetry/instrumentation-document-load` | Yes |
-| Fetch           | `@opentelemetry/instrumentation-fetch` | `@opentelemetry/instrumentation-fetch` | Yes |
-| XMLHttpRequest  | `@opentelemetry/instrumentation-xml-http-request` | `@opentelemetry/instrumentation-xml-http-request` | Yes |
+| Instrumentation | NPM package                                       | Config key                                        | On by default |
+|-----------------|---------------------------------------------------|---------------------------------------------------|---------------|
+| Document load   | `@opentelemetry/instrumentation-document-load`    | `@opentelemetry/instrumentation-document-load`    | Yes |
+| Fetch           | `@opentelemetry/browser-instrumentation`          | `fetch`                                           | Yes |
+| XMLHttpRequest  | `@opentelemetry/browser-instrumentation`          | `xhr`                                             | Yes |
 | User interaction| `@opentelemetry/instrumentation-user-interaction` | `@opentelemetry/instrumentation-user-interaction` | Yes |
-| Long tasks      | `@opentelemetry/instrumentation-long-task` | `@opentelemetry/instrumentation-long-task` | Yes |
-| Errors.         | `@opentelemetry/browser-instrumentation` | `errors` | Yes |
-| Web vitals      | `@opentelemetry/browser-instrumentation` | `@opentelemetry/instrumentation-web-vitals` | Yes |
-| Navigation      | `@opentelemetry/browser-instrumentation` | `navigation` | Yes |
+| Long tasks      | `@opentelemetry/instrumentation-long-task`        | `@opentelemetry/instrumentation-long-task`        | Yes |
+| Errors.         | `@opentelemetry/browser-instrumentation`          | `errors`                                          | Yes |
+| Web vitals      | `@opentelemetry/browser-instrumentation`          | `web-vitals`                                      | Yes |
+| Navigation      | `@opentelemetry/browser-instrumentation`          | `navigation`                                      | Yes |
 
 ### Default behavior
 

@@ -39,7 +39,7 @@ test('should export fetch related spans', async ({page}) => {
 
     const spans = await collector.getSpans({flush: false});
     const fetchSpans = spans.filter(
-        (s) => s.scope.name === '@opentelemetry/instrumentation-fetch'
+        (s) => s.scope.name === '@opentelemetry/browser-instrumentation/fetch'
     );
 
     // We got spans

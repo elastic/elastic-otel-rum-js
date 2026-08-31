@@ -36,9 +36,9 @@ If the troubleshooting steps above don't resolve your issue, you can reach the t
   - EDOT Browser packaging or installation
   - Sending data to {{product.observability}}
 
-* **Open an issue in the [OpenTelemetry JS repo](https://github.com/open-telemetry/opentelemetry-js/issues/new) or [JS contrib repo](https://github.com/open-telemetry/opentelemetry-js-contrib/issues/new)** if the issue relates to:
+* **Open an issue in the [OpenTelemetry Browser repo](https://github.com/open-telemetry/opentelemetry-browser/issues/new) or [JS core repo](https://github.com/open-telemetry/opentelemetry-js/issues/new)** if the issue relates to:
 
-  - A specific instrumentation (for example, `@opentelemetry/instrumentation-fetch`, `@opentelemetry/instrumentation-user-interaction`)
+  - A specific instrumentation (for example, `@opentelemetry/browser-instrumentation/fetch`)
   - OpenTelemetry SDK core behavior
   - OpenTelemetry specification compliance
 
