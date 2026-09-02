@@ -308,8 +308,7 @@ function wrap(nodule, name, wrapper) {
     }
 
     if (!wrapper) {
-        logger.warn('no wrapper function');
-        logger.warn(new Error().stack || '');
+        logger.warn('no wrapper function', new Error().stack);
         return;
     }
 
@@ -349,8 +348,7 @@ function wrap(nodule, name, wrapper) {
  */
 function unwrap(nodule, name) {
     if (!nodule || !nodule[name]) {
-        logger.warn('no function to unwrap.');
-        logger.warn(new Error().stack || '');
+        logger.warn('no function to unwrap.', new Error().stack);
         return;
     }
 
