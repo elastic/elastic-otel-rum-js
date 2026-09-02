@@ -34,7 +34,6 @@ export const AsyncApisContextManager = {
             _currentContext = prevContext;
         }
     },
-    // @ts-expect-error -- upstream types expects a generic type as return
     bind: function (context, target) {
         if (typeof target === 'function') {
             return bindFn(target, this, context);
@@ -47,6 +46,11 @@ export const AsyncApisContextManager = {
         }
         const manager = this;
         wrap(window, 'setTimeout', (origSetTimeout) => {
+            /**
+             * @this {any}
+             * @param {...any} args
+             * @returns {number}
+             */
             return function (...args) {
                 // Coerce the delay argument to number like the original function does.
                 // ref: https://developer.mozilla.org/en-US/docs/Web/API/Window/setTimeout#non-number_delay_values_are_silently_coerced_into_numbers
@@ -54,10 +58,8 @@ export const AsyncApisContextManager = {
                 // Only carry the context if the delay is low enough. `NaN` is the same as `undefined`
                 // and schedules the callback immediately. The max value (50) is arbitrary.
                 if (isNaN(delay) || delay <= 50) {
-                    // @ts-ignore
                     args[0] = bindFn(args[0], manager, manager.active());
                 }
-                // @ts-ignore
                 return origSetTimeout.apply(this, args);
             };
         });
@@ -89,22 +91,25 @@ export const AsyncApisContextManager = {
  */
 
 /**
- * @param {Function} fn
+ * @template F
+ * @param {F} fn
  * @param {import('@opentelemetry/api').ContextManager} manager
  * @param {import('@opentelemetry/api').Context} context
- * @returns {Function}
+ * @returns {F}
  */
 function bindFn(fn, manager, context) {
     if (typeof fn !== 'function') {
         return fn;
     }
+
     const ctx = context || manager.active();
     /**
+     * @this {any}
      * @param  {...any} args
      * @returns
      */
     function wrappedCtxFn(...args) {
-        // @ts-expect-error - this is of type any
+        // @ts-expect-error - TS does not narrow te type to function
         return manager.with(ctx, () => fn.apply(this, args));
     }
     Object.defineProperty(wrappedCtxFn, 'length', {
@@ -113,6 +118,7 @@ function bindFn(fn, manager, context) {
         writable: false,
         value: fn.length,
     });
+    // @ts-expect-error - cannot cast here to generic
     return wrappedCtxFn;
 }
 
@@ -122,35 +128,43 @@ function bindFn(fn, manager, context) {
  * @param {import('@opentelemetry/api').ContextManager} manager
  */
 function wrapPromise(manager) {
-    // @ts-ignore
     wrap(Promise.prototype, 'then', (origThen) => {
+        /**
+         * @this {Promise<any>}
+         * @param {((value: any) => any) | null | undefined} onResolved
+         * @param {((reason: any) => any) | null | undefined} onRejected
+         * @returns {Promise<any>}
+         */
         return function (onResolved, onRejected) {
             return origThen.call(
-                // @ts-ignore
                 this,
-                // @ts-ignore
                 bindFn(onResolved, manager, manager.active()),
-                // @ts-ignore
                 bindFn(onRejected, manager, manager.active())
             );
         };
     });
     wrap(Promise.prototype, 'catch', (origCatch) => {
+        /**
+         * @this {Promise<any>}
+         * @param {((reason: any) => any) | null | undefined} onRejected
+         * @returns {Promise<any>}
+         */
         return function (onRejected) {
             return origCatch.call(
-                // @ts-ignore
                 this,
-                // @ts-ignore
                 bindFn(onRejected, manager, manager.active())
             );
         };
     });
     wrap(Promise.prototype, 'finally', (origFinally) => {
+        /**
+         * @this {Promise<any>}
+         * @param {(() => any) | null | undefined} onCompleted
+         * @returns {Promise<any>}
+         */
         return function (onCompleted) {
             return origFinally.call(
-                // @ts-ignore
                 this,
-                // @ts-ignore
                 bindFn(onCompleted, manager, manager.active())
             );
         };
@@ -185,11 +199,12 @@ function wrapXMLHttpRequest(manager) {
     // Wrap events
     wrap(xhrProto, 'addEventListener', function (origAEL) {
         /**
+         * @this {XMLHttpRequest}
          * @param {...any} args
          */
         return function (...args) {
             /** @type {XMLHttpRequest & {__bound: undefined | Map<any, any>}} */
-            // @ts-expect-error - we are casting to XMLHttpRequest type with an extra prop
+            // @ts-expect-error - we use extra porperties to handle state
             const xhr = this;
             if (typeof args[1] === 'function') {
                 xhr.__bound = xhr.__bound || new Map();
@@ -203,11 +218,12 @@ function wrapXMLHttpRequest(manager) {
     });
     wrap(xhrProto, 'removeEventListener', function (origREL) {
         /**
+         * @this {XMLHttpRequest}
          * @param {...any} args
          */
         return function (...args) {
             /** @type {XMLHttpRequest & {__bound: undefined | Map<any, any>}} */
-            // @ts-expect-error - we are casting to XMLHttpRequest type with an extra prop
+            // @ts-expect-error - we use extra porperties to handle state
             const xhr = this;
             if (typeof args[1] === 'function') {
                 const handler = args[1];
@@ -283,7 +299,7 @@ function unwrapXMLHttpRequest() {
  * @param {T} nodule
  * @param {K} name
  * @param {(orig: T[K], name: K) => T[K]} wrapper
- * @returns
+ * @returns {T[K] | undefined}
  */
 function wrap(nodule, name, wrapper) {
     if (!nodule || !nodule[name]) {
@@ -304,10 +320,11 @@ function wrap(nodule, name, wrapper) {
         return;
     }
 
+    /** @type {T[K] & {toString: () => string}} */
+    // @ts-expect-error - toString is not in the type definition
     const wrapped = wrapper(original, name);
     // Some frameworks check the `toString` to check if the function is native
     if (typeof original.toString === 'function') {
-        // @ts-expect-error - toString is not in the type definition
         wrapped.toString = original.toString.bind(original);
     }
 
@@ -328,7 +345,7 @@ function wrap(nodule, name, wrapper) {
  * @template {FunctionKeys<T>} K
  * @param {T} nodule
  * @param {K} name
- * @returns
+ * @returns {undefined}
  */
 function unwrap(nodule, name) {
     if (!nodule || !nodule[name]) {
@@ -337,14 +354,14 @@ function unwrap(nodule, name) {
         return;
     }
 
-    const wrapped = nodule[name];
+    /** @type {T[K] & {__unwrap: () => void}} */
     // @ts-expect-error - accessing internal property
+    const wrapped = nodule[name];
     if (!wrapped.__unwrap) {
         logger.warn(
             `no original to unwrap to -- has ${String(name)} already been unwrapped?`
         );
     } else {
-        // @ts-expect-error - accessing internal property
         wrapped.__unwrap();
         return;
     }
