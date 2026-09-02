@@ -23,6 +23,8 @@ const logLevelMap = {
  * @returns {import('@opentelemetry/api').DiagLogger}
  */
 export function createLogger(config) {
+    /** @type {keyof typeof import('@opentelemetry/api').DiagLogLevel} */
+    // @ts-expect-error - we handle any other string that is not a log level
     _logLevel = logLevelMap[config.logLevel.toUpperCase()];
 
     if (_logLevel == null) {

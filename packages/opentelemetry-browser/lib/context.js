@@ -34,7 +34,7 @@ export const AsyncApisContextManager = {
             _currentContext = prevContext;
         }
     },
-    // @ts-ignore -- upstream types expects a generic type as return
+    // @ts-expect-error -- upstream types expects a generic type as return
     bind: function (context, target) {
         if (typeof target === 'function') {
             return bindFn(target, this, context);
@@ -54,15 +54,11 @@ export const AsyncApisContextManager = {
                 // Only carry the context if the delay is low enough. `NaN` is the same as `undefined`
                 // and schedules the callback immediately. The max value (50) is arbitrary.
                 if (isNaN(delay) || delay <= 50) {
+                    // @ts-ignore
                     args[0] = bindFn(args[0], manager, manager.active());
                 }
+                // @ts-ignore
                 return origSetTimeout.apply(this, args);
-            };
-        });
-        wrap(window, 'setImmediate', (origSetImmediate) => {
-            return function (...args) {
-                args[0] = bindFn(args[0], manager, manager.active());
-                return origSetImmediate.apply(this, args);
             };
         });
         wrapXMLHttpRequest(manager);
@@ -76,7 +72,6 @@ export const AsyncApisContextManager = {
     disable: function () {
         if (_managerEnabled) {
             unwrap(window, 'setTimeout');
-            unwrap(window, 'setImmediate');
             unwrapXMLHttpRequest();
             if (window.Promise) {
                 unwrapPromise();
@@ -89,6 +84,9 @@ export const AsyncApisContextManager = {
 };
 
 // -- helper functions
+/**
+ * @typedef {(...args: any[]) => any} AnyFunction
+ */
 
 /**
  * @param {Function} fn
@@ -101,7 +99,12 @@ function bindFn(fn, manager, context) {
         return fn;
     }
     const ctx = context || manager.active();
+    /**
+     * @param  {...any} args
+     * @returns
+     */
     function wrappedCtxFn(...args) {
+        // @ts-expect-error - this is of type any
         return manager.with(ctx, () => fn.apply(this, args));
     }
     Object.defineProperty(wrappedCtxFn, 'length', {
@@ -119,11 +122,15 @@ function bindFn(fn, manager, context) {
  * @param {import('@opentelemetry/api').ContextManager} manager
  */
 function wrapPromise(manager) {
+    // @ts-ignore
     wrap(Promise.prototype, 'then', (origThen) => {
         return function (onResolved, onRejected) {
             return origThen.call(
+                // @ts-ignore
                 this,
+                // @ts-ignore
                 bindFn(onResolved, manager, manager.active()),
+                // @ts-ignore
                 bindFn(onRejected, manager, manager.active())
             );
         };
@@ -131,7 +138,9 @@ function wrapPromise(manager) {
     wrap(Promise.prototype, 'catch', (origCatch) => {
         return function (onRejected) {
             return origCatch.call(
+                // @ts-ignore
                 this,
+                // @ts-ignore
                 bindFn(onRejected, manager, manager.active())
             );
         };
@@ -139,7 +148,9 @@ function wrapPromise(manager) {
     wrap(Promise.prototype, 'finally', (origFinally) => {
         return function (onCompleted) {
             return origFinally.call(
+                // @ts-ignore
                 this,
+                // @ts-ignore
                 bindFn(onCompleted, manager, manager.active())
             );
         };
@@ -173,7 +184,12 @@ const xhrTargetProto = globalThis.XMLHttpRequestEventTarget.prototype;
 function wrapXMLHttpRequest(manager) {
     // Wrap events
     wrap(xhrProto, 'addEventListener', function (origAEL) {
+        /**
+         * @param {...any} args
+         */
         return function (...args) {
+            /** @type {XMLHttpRequest & {__bound: undefined | Map<any, any>}} */
+            // @ts-expect-error - we are casting to XMLHttpRequest type with an extra prop
             const xhr = this;
             if (typeof args[1] === 'function') {
                 xhr.__bound = xhr.__bound || new Map();
@@ -186,7 +202,12 @@ function wrapXMLHttpRequest(manager) {
         };
     });
     wrap(xhrProto, 'removeEventListener', function (origREL) {
+        /**
+         * @param {...any} args
+         */
         return function (...args) {
+            /** @type {XMLHttpRequest & {__bound: undefined | Map<any, any>}} */
+            // @ts-expect-error - we are casting to XMLHttpRequest type with an extra prop
             const xhr = this;
             if (typeof args[1] === 'function') {
                 const handler = args[1];
@@ -250,6 +271,20 @@ function unwrapXMLHttpRequest() {
 }
 
 // shimmer functions
+/**
+ * @template T
+ * @typedef {{
+ *   [K in keyof T]: T[K] extends ((...args: any[]) => any) | undefined ? K : never
+ * }[keyof T]} FunctionKeys
+ */
+/**
+ * @template T
+ * @template {FunctionKeys<T>} K
+ * @param {T} nodule
+ * @param {K} name
+ * @param {(orig: T[K], name: K) => T[K]} wrapper
+ * @returns
+ */
 function wrap(nodule, name, wrapper) {
     if (!nodule || !nodule[name]) {
         logger.warn('no original function ' + String(name) + ' to wrap');
@@ -258,7 +293,7 @@ function wrap(nodule, name, wrapper) {
 
     if (!wrapper) {
         logger.warn('no wrapper function');
-        logger.warn(new Error().stack);
+        logger.warn(new Error().stack || '');
         return;
     }
 
@@ -272,6 +307,7 @@ function wrap(nodule, name, wrapper) {
     const wrapped = wrapper(original, name);
     // Some frameworks check the `toString` to check if the function is native
     if (typeof original.toString === 'function') {
+        // @ts-expect-error - toString is not in the type definition
         wrapped.toString = original.toString.bind(original);
     }
 
@@ -287,24 +323,38 @@ function wrap(nodule, name, wrapper) {
 }
 
 // shimmer unwrap function
+/**
+ * @template T
+ * @template {FunctionKeys<T>} K
+ * @param {T} nodule
+ * @param {K} name
+ * @returns
+ */
 function unwrap(nodule, name) {
     if (!nodule || !nodule[name]) {
         logger.warn('no function to unwrap.');
-        logger.warn(new Error().stack);
+        logger.warn(new Error().stack || '');
         return;
     }
 
     const wrapped = nodule[name];
+    // @ts-expect-error - accessing internal property
     if (!wrapped.__unwrap) {
         logger.warn(
             `no original to unwrap to -- has ${String(name)} already been unwrapped?`
         );
     } else {
+        // @ts-expect-error - accessing internal property
         wrapped.__unwrap();
         return;
     }
 }
 
+/**
+ *
+ * @param {PropertyDescriptor} descriptor
+ * @param {import('@opentelemetry/api').ContextManager} manager
+ */
 function wrapDescriptor(descriptor, manager) {
     wrap(descriptor, 'set', function (origSet) {
         return function (value) {
@@ -313,11 +363,13 @@ function wrapDescriptor(descriptor, manager) {
                 value = bindFn(origValue, manager, manager.active());
                 value.__original = origValue;
             }
+            // @ts-expect-error - this is of type any
             return origSet.call(this, value);
         };
     });
     wrap(descriptor, 'get', function (origGet) {
         return function () {
+            // @ts-expect-error - this is of type any
             const value = origGet.call(this);
             if (typeof value === 'function' && value.__original) {
                 return value.__original;

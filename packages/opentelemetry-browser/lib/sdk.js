@@ -57,10 +57,14 @@ import {detectResource} from './detector.js';
  * @property {Partial<InstrumentationsConfigMap>} [instrumentations]
  */
 
+// SDK returned when invalid config or some error happens at start
+const NOOP_SDK = {shutdown: () => Promise.resolve()};
+
 // To control multiple calls to `startBrowserSdk`
 let sdkStarted = false;
 
-/** @type {BrowserSdkConfiguration} */
+/** @typedef {'logLevel' | 'sampleRate' | 'serviceName' | 'resourceAttributes' | 'otlpEndpoint' | 'exportHeaders'} DefaultConfigProps*/
+/** @type {Required<Pick<BrowserSdkConfiguration, DefaultConfigProps>>} */
 const defaultConfig = {
     logLevel: 'info',
     sampleRate: 1,
@@ -78,14 +82,15 @@ const defaultConfig = {
  */
 export function startBrowserSdk(cfg = {}) {
     if (sdkStarted || cfg.disabled) {
-        return;
+        return NOOP_SDK;
     }
 
     // The upstream SDKs already set a logger but we want to print
     // some messages before using them. We need to setup our own
     // logger and disable it before starting logs/traces to avoid
     // the override message from old and new logger
-    /** @type {any} */
+    /** @type {keyof typeof import('@opentelemetry/api').DiagLogLevel} */
+    // @ts-expect-error - we handle any other string that is not a log level
     const logLevel = (cfg.logLevel ?? defaultConfig.logLevel).toUpperCase();
     diag.setLogger(createLogger({logLevel}), {logLevel: DiagLogLevel.ALL});
     diag.debug(`Browser SDK intialization`, cfg);
@@ -102,7 +107,7 @@ export function startBrowserSdk(cfg = {}) {
         diag.error(
             `The value "${config.otlpEndpoint}" for "otlpEndpoint" configuration is not an URL. SDK won't start.`
         );
-        return;
+        return NOOP_SDK;
     }
 
     // Detect resource
@@ -175,7 +180,12 @@ export function startBrowserSdk(cfg = {}) {
 
     const instrumentations = config.instrumentations || {};
     const enabledInstrumentations = [];
-    for (const key of Object.keys(instrFactories)) {
+
+    /** @type {Array<keyof InstrumentationsConfigMap>} */
+    // @ts-expect-error - the object defined above only has the allowed keys
+    const instrKeys = Object.keys(instrFactories);
+
+    for (const key of instrKeys) {
         const instrConfig = instrumentations[key];
         const isDisabled = instrConfig?.enabled === false;
         if (!isDisabled) {

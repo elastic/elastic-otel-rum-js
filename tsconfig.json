@@ -5,12 +5,12 @@
     "checkJs": true,
     "declaration": true,
     "emitDeclarationOnly": true,
-    "target": "ESNext",
     "resolveJsonModule": true,
-    "moduleResolution": "nodenext",
-    "module": "es2022",
     "allowSyntheticDefaultImports": true,
-    "lib": ["ES2022", "DOM"]
+    // Environment setup & latest features
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "target": "ES2022",
+    "module": "ESNext"
   },
   "exclude": ["node_modules"]
 }

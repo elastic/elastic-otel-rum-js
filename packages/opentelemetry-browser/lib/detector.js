@@ -88,7 +88,7 @@ export function detectResource(attribs, serviceName, serviceVersion) {
 
 /**
  * @param {string} userAgent
- * @returns {{name: string; version: string} | undefined}
+ * @returns {{name: string; version: string | undefined} | undefined}
  */
 export function getPlatformInfo(userAgent) {
     /** @type {Array<[string,RegExp[]]>} */
