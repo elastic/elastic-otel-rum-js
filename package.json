@@ -20,6 +20,6 @@
     "minimatch": "^10.1.1",
     "prettier": "^3.8.0",
     "semver": "^7.7.3",
-    "typescript": "5.0.4"
+    "typescript": "^6.0.3"
   }
 }

@@ -44,7 +44,11 @@ To check for security updates, go to [Security announcements for the Elastic sta
     model rather than the scope.
   * This change breaks the configuration interface of instrumentation switching the configuration key form the full
     scope to a shorter name `navigation`.
-
+* Update `typescript` package to match the version in [opentelemetry-browser](https://github.com/open-telemetry/opentelemetry-browser).
+  * SDK has ben updated to retun a no-op SDK to conform to the types in the previous version.
+  * Internal JSDoc comments have been updated for better type checking.
+* Remove patching of `window.setImmediate` function in the context manager. The function is deprecated and not available
+  in the majority of browsers. Ref: https://developer.mozilla.org/en-US/docs/Web/API/Window/setImmediate
 
 ## 0.3.0 [edot-browser-0.3.0-release-notes]
 

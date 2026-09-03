@@ -6,4 +6,4 @@
  */
 export function createLogger(config: {
     logLevel: string;
-}): import('@opentelemetry/api').DiagLogger;
+}): import("@opentelemetry/api").DiagLogger;

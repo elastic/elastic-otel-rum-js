@@ -19,11 +19,11 @@
 export function detectResource(attribs: Record<string, AttributeValue>, serviceName: string | undefined, serviceVersion: string | undefined): Record<string, AttributeValue>;
 /**
  * @param {string} userAgent
- * @returns {{name: string; version: string} | undefined}
+ * @returns {{name: string; version: string | undefined} | undefined}
  */
 export function getPlatformInfo(userAgent: string): {
     name: string;
-    version: string;
+    version: string | undefined;
 } | undefined;
 /**
  * @param {string} userAgent
