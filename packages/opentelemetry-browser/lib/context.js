@@ -87,10 +87,6 @@ export const AsyncApisContextManager = {
 
 // -- helper functions
 /**
- * @typedef {(...args: any[]) => any} AnyFunction
- */
-
-/**
  * @template F
  * @param {F} fn
  * @param {import('@opentelemetry/api').ContextManager} manager
