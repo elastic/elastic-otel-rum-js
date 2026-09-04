@@ -17,18 +17,16 @@ export type InstrumentationsConfigMap = {
     "errors": import("@opentelemetry/browser-instrumentation/experimental/errors").ErrorsInstrumentationConfig;
     "web-vitals": import("@opentelemetry/browser-instrumentation/experimental/web-vitals").WebVitalsInstrumentationConfig;
 };
-export type BrowserSdkConfiguration = {
-    disabled?: boolean | undefined;
-    serviceName?: string | undefined;
-    serviceVersion?: string | undefined;
-    logLevel?: string | undefined;
+/**
+ * Configuration that is defined in upstream SDK
+ */
+export type SdkConfig = import("@opentelemetry/browser-sdk").RootConfig;
+/**
+ * Configuration properties that are only in EDOT
+ */
+export type EdotConfig = {
     sampleRate?: number | undefined;
-    resourceAttributes?: Record<string, import("./detector.js").AttributeValue> | undefined;
-    otlpEndpoint?: string | undefined;
-    /**
-     * // other options
-     */
-    exportHeaders?: Record<string, string> | undefined;
     instrumentations?: Partial<InstrumentationsConfigMap> | undefined;
 };
-export type DefaultConfigProps = "logLevel" | "sampleRate" | "serviceName" | "resourceAttributes" | "otlpEndpoint" | "exportHeaders";
+export type BrowserSdkConfiguration = SdkConfig & EdotConfig;
+export type DefaultConfigProps = "logLevel" | "serviceName" | "resourceAttributes" | "sampleRate" | "exportConfig";
