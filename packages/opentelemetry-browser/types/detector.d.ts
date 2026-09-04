@@ -4,19 +4,12 @@
  * @property {string} platform
  */
 /**
- * @template T
- * @typedef {T | Array<T | undefined | null>} MaybeArray<T>
- */
-/**
- * @typedef {MaybeArray<number> | MaybeArray<boolean> | MaybeArray<string>} AttributeValue
- */
-/**
- * @param {Record<string, AttributeValue>} attribs
+ * @param {import('@opentelemetry/api').Attributes} attribs
  * @param {string | undefined} serviceName
  * @param {string | undefined} serviceVersion
- * @returns {Record<string, AttributeValue>}
+ * @returns {import('@opentelemetry/api').Attributes}
  */
-export function detectResource(attribs: Record<string, AttributeValue>, serviceName: string | undefined, serviceVersion: string | undefined): Record<string, AttributeValue>;
+export function detectResource(attribs: import("@opentelemetry/api").Attributes, serviceName: string | undefined, serviceVersion: string | undefined): import("@opentelemetry/api").Attributes;
 /**
  * @param {string} userAgent
  * @returns {{name: string; version: string | undefined} | undefined}
@@ -40,8 +33,3 @@ export type UserAgentData = {
     }[];
     platform: string;
 };
-/**
- * <T>
- */
-export type MaybeArray<T> = T | Array<T | undefined | null>;
-export type AttributeValue = MaybeArray<number> | MaybeArray<boolean> | MaybeArray<string>;
