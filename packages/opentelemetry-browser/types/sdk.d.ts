@@ -20,7 +20,17 @@ export type InstrumentationsConfigMap = {
 /**
  * Configuration that is defined in upstream SDK
  */
-export type SdkConfig = import("@opentelemetry/browser-sdk").RootConfig;
+export type SdkConfig = {
+    disabled?: boolean | undefined;
+    logLevel?: "warn" | "none" | "error" | "info" | "debug" | "verbose" | "all" | undefined;
+    serviceName?: string | undefined;
+    serviceVersion?: string | undefined;
+    resourceAttributes?: import("@opentelemetry/api").Attributes | undefined;
+    exportConfig?: {
+        url?: string;
+        headers?: Record<string, string>;
+    } | undefined;
+};
 /**
  * Configuration properties that are only in EDOT
  */

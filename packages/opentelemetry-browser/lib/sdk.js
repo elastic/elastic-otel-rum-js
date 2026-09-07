@@ -44,8 +44,15 @@ import {detectResource} from './detector.js';
 
 /**
  * Configuration that is defined in upstream SDK
- * @typedef {import('@opentelemetry/browser-sdk').RootConfig} SdkConfig
+ * @typedef {Object} SdkConfig
+ * @property {boolean} [disabled]
+ * @property {Lowercase<keyof typeof import('@opentelemetry/api').DiagLogLevel>} [logLevel]
+ * @property {string} [serviceName]
+ * @property {string} [serviceVersion]
+ * @property {import('@opentelemetry/api').Attributes} [resourceAttributes]
+ * @property {{url?: string; headers?: Record<string, string>}} [exportConfig]
  */
+
 /**
  * Configuration properties that are only in EDOT
  * @typedef {Object} EdotConfig
@@ -62,10 +69,10 @@ const NOOP_SDK = {shutdown: () => Promise.resolve()};
 // To control multiple calls to `startBrowserSdk`
 let sdkStarted = false;
 
-/** @typedef {'logLevel' | 'serviceName' | 'resourceAttributes' | 'sampleRate' | 'exportConfig'} DefaultConfigProps*/
+/** @typedef { 'logLevel' | 'serviceName' | 'resourceAttributes' | 'sampleRate' | 'exportConfig'} DefaultConfigProps*/
 /** @type {Required<Pick<BrowserSdkConfiguration, DefaultConfigProps>>} */
 const defaultConfig = {
-    logLevel: 'INFO',
+    logLevel: 'info',
     sampleRate: 1,
     serviceName: 'unknown_service:web',
     resourceAttributes: {},
