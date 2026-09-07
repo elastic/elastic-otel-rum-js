@@ -96,8 +96,8 @@ export function startBrowserSdk(cfg = {}) {
     // logger and disable it before starting logs/traces to avoid
     // the override message from old and new logger
     /** @type {keyof typeof import('@opentelemetry/api').DiagLogLevel} */
-    // @ts-expect-error - we handle any other string that is not a log level
-    const logLevel = (cfg.logLevel ?? defaultConfig.logLevel).toUpperCase();
+    // @ts-expect-error - `createLogger` handles upercasing and wrong values
+    const logLevel = cfg.logLevel ?? defaultConfig.logLevel;
     diag.setLogger(createLogger({logLevel}), {logLevel: DiagLogLevel.ALL});
     diag.debug(`Browser SDK intialization`, cfg);
 
