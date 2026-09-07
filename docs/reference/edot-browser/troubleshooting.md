@@ -17,7 +17,7 @@ products:
 
 If telemetry doesn't appear in {{product.observability}}, try the following:
 
-- Confirm the `otlpEndpoint` option points to your reverse proxy (not directly to {{product.observability}}) and doesn't include signal paths like `/v1/traces`.
+- Confirm the `exportConfig.url` option points to your reverse proxy (not directly to {{product.observability}}) and doesn't include signal paths like `/v1/traces`.
 - Check the browser console for network errors or OpenTelemetry-related messages. Cross-Origin Resource Sharing (CORS) errors often mean the reverse proxy is not sending the right `Access-Control-Allow-Origin` or preflight response.
 - Ensure the reverse proxy can reach your EDOT Collector or {{ecloud}} Managed OTLP endpoint. To do so, check proxy logs for connection or authorization failures.
 - Ensure service name is set and doesn't contain special characters.
@@ -31,7 +31,7 @@ If the troubleshooting steps above don't resolve your issue, you can reach the t
 
 * **Open an issue in the [EDOT Browser repo](https://github.com/elastic/elastic-otel-rum-js/issues/new)** if the issue relates to:
 
-  - EDOT Browser-specific behavior or configuration options (for example, `startBrowserSdk`, `otlpEndpoint`)
+  - EDOT Browser-specific behavior or configuration options (for example, `startBrowserSdk`, `exportConfig`)
   - Elastic-specific defaults or signal configuration
   - EDOT Browser packaging or installation
   - Sending data to {{product.observability}}

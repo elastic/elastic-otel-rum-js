@@ -50,13 +50,15 @@ import { startBrowserSdk } from '@elastic/opentelemetry-browser';
 
 startBrowserSdk({
   serviceName: 'my-web-app',
-  otlpEndpoint: 'https://telemetry.example.com',
   logLevel: 'info',
+  exportConfig: {
+    url: 'https://telemetry.example.com',
+  }
 });
 ```
 
 - `serviceName` identifies the browser application in {{product.observability}}.
-- `otlpEndpoint` points to a reverse proxy, not directly to {{product.observability}}.
+- `exportConfig.url.url` points to a reverse proxy, not directly to {{product.observability}}.
 - `logLevel` controls diagnostic output in the browser console.
 
 ## Supported configuration settings [supported-configuration-settings]
@@ -68,16 +70,18 @@ Configuration is passed as an object to `startBrowserSdk`. The following options
 | `serviceName`         | `string`                 | Logical name of the frontend service. Defaults to `unknown_service:web` if not set. |
 | `serviceVersion`      | `string`                 | Version of the application. Optional. |
 | `logLevel`            | `string`                 | Diagnostic log level (`error`, `warn`, `info`, `debug`, `verbose`). Defaults to `info`. |
-| `otlpEndpoint`        | `string`                 | Base URL of the OTLP export endpoint (reverse proxy). Do not include signal paths such as `/v1/traces`. Defaults to `http://localhost:4318`. |
 | `sampleRate`          | `number`                 | Trace sampling ratio (0–1). Defaults to `1` (100%). |
 | `resourceAttributes`  | `Record<string, any>`    | Optional resource attributes to attach to telemetry. For example: `{ 'deployment.environment.name': 'production' }`. |
-| `exportHeaders`       | `Record<string, string>` | Headers to send with export requests. Defaults to `{}`. The reverse proxy typically injects `Authorization`; do not put API keys here in browser code. |
 | `disabled`            | `boolean`                | If `true`, the SDK does not start. |
 | `instrumentations`    | `Record<string, Object>` | Per-instrumentation config. Set `{ enabled: false }` for a key to turn off that instrumentation. Refer to [instrumentations details](#otel_browser_instrumentations-details) for more information. |
+| `exportConfig`    | `{ url?: string; headers?: Record<string, string>}` | Configuration for exporters of the different signals. |
+| `exportConfig.url`    | `string` | Base URL of the OTLP export endpoint (reverse proxy). Do not include signal paths such as `/v1/traces`. Defaults to `http://localhost:4318`. |
+| `exportConfig.headers`    | `Record<string, string>` | Headers to send with export requests. Defaults to `{}`. The reverse proxy typically injects `Authorization`; do not put API keys here in browser code. |
+
 
 ## Export endpoint configuration [export-endpoint-configuration]
 
-Configure `otlpEndpoint` to point to a server that accepts OTLP traffic. Use the base URL of the server only: do not include signal paths such as `/v1/traces`, `/v1/metrics`, or `/v1/logs`. The SDK appends these paths when exporting each signal.
+Configure `exportConfig.url` to point to a server that accepts OTLP traffic. Use the base URL of the server only: do not include signal paths such as `/v1/traces`, `/v1/metrics`, or `/v1/logs`. The SDK appends these paths when exporting each signal.
 
 For security reasons Elastic recommends to configure a reverse proxy that forwards OTLP traffic to {{product.observability}}. Refer to [Proxy and CORS configuration](proxy-cors.md) for more details.
 
@@ -96,8 +100,10 @@ import { startBrowserSdk } from '@elastic/opentelemetry-browser';
 
 startBrowserSdk({
   serviceName: 'my-web-app',
-  otlpEndpoint: 'https://telemetry.example.com',
   logLevel: 'debug',
+  exportConfig: {
+    url: 'https://telemetry.example.com',
+  }
 });
 ```
 

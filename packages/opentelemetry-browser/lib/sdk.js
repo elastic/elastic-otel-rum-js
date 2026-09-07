@@ -134,7 +134,6 @@ export function startBrowserSdk(cfg = {}) {
             headers: config.exportConfig.headers,
         },
     });
-    const tracerProvider = trace.getTracerProvider();
 
     const logsSdk = startLogsSdk({
         logLevel,
@@ -144,7 +143,6 @@ export function startBrowserSdk(cfg = {}) {
             headers: config.exportConfig.headers,
         },
     });
-    const loggerProvider = logs.getLoggerProvider();
 
     // metrics signal configuration
     // possible `startMetricsSdk` function
