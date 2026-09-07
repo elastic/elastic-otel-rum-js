@@ -58,7 +58,7 @@ startBrowserSdk({
 ```
 
 - `serviceName` identifies the browser application in {{product.observability}}.
-- `exportConfig.url.url` points to a reverse proxy, not directly to {{product.observability}}.
+- `exportConfig.url` points to a reverse proxy, not directly to {{product.observability}}.
 - `logLevel` controls diagnostic output in the browser console.
 
 ## Supported configuration settings [supported-configuration-settings]
@@ -69,7 +69,7 @@ Configuration is passed as an object to `startBrowserSdk`. The following options
 |-----------------------|--------------------------|-------------|
 | `serviceName`         | `string`                 | Logical name of the frontend service. Defaults to `unknown_service:web` if not set. |
 | `serviceVersion`      | `string`                 | Version of the application. Optional. |
-| `logLevel`            | `string`                 | Diagnostic log level (`error`, `warn`, `info`, `debug`, `verbose`). Defaults to `info`. |
+| `logLevel` | `"none" \| "error" \| "warn" \| "info" \| "debug" \| "verbose" \| "all"` | Diagnostic log level for the SDK internal logger. Defaults to `info`. Values are lowercase; the SDK accepts them case-insensitively. |
 | `sampleRate`          | `number`                 | Trace sampling ratio (0–1). Defaults to `1` (100%). |
 | `resourceAttributes`  | `Record<string, any>`    | Optional resource attributes to attach to telemetry. For example: `{ 'deployment.environment.name': 'production' }`. |
 | `disabled`            | `boolean`                | If `true`, the SDK does not start. |

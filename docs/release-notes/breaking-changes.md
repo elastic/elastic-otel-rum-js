@@ -38,7 +38,7 @@ At runtime the old configuration options will be ignored and EDOT will export to
 endpoint `http://localhost:4318`.
 **Action**<br> Put the `otlpEndpoint` configuration value into the new key `exportConfig.url`.
 Put the `exportHeaders` configuration value into the new key `exportConfig.headers`.
-Refer to [PR #97](https://github.com/elastic/elastic-otel-rum-js/pull/100).
+Refer to [PR #100](https://github.com/elastic/elastic-otel-rum-js/pull/100).
 ::::
 
 
