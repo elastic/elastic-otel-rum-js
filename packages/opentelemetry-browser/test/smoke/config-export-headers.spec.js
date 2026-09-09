@@ -10,7 +10,7 @@ test('should add the configured heades in export requests', async ({page}) => {
     const collector = createCollector(page);
     const config = encodeURIComponent(
         JSON.stringify({
-            exportHeaders: {foo: 'bar'},
+            exportConfig: {headers: {foo: 'bar'}},
         })
     );
     await page.goto(`/fixtures/use-document-load.html?config=${config}`);

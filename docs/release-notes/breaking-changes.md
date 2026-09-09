@@ -30,6 +30,18 @@ Breaking changes can impact your applications, potentially disrupting normal ope
 
 ## Next version [edot-browser-X.X.X-breaking-changes]
 
+::::{dropdown} Configuration change for export
+The export configuration (url, headers) has been grouped to a new key named
+`exportConfig`. This aligns with the configuration type of the upstream SDK.
+**Impact**<br> This change produces a compilation error if you use the SDK with TypeScript.
+At runtime the old configuration options will be ignored and EDOT will export to the default
+endpoint `http://localhost:4318`.
+**Action**<br> Put the `otlpEndpoint` configuration value into the new key `exportConfig.url`.
+Put the `exportHeaders` configuration value into the new key `exportConfig.headers`.
+Refer to [PR #100](https://github.com/elastic/elastic-otel-rum-js/pull/100).
+::::
+
+
 ::::{dropdown} Configuration change in fetch instrumentation
 The configuration key for `fetch` instrumentation has changed from
 `@opentelemetry/instrumentation-fetch` to a shorter name `fetch`.

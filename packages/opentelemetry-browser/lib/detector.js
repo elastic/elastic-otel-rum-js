@@ -21,21 +21,12 @@ import {EDOT_VERSION} from './version.js';
  */
 
 /**
- * @template T
- * @typedef {T | Array<T | undefined | null>} MaybeArray<T>
- */
-/**
- * @typedef {MaybeArray<number> | MaybeArray<boolean> | MaybeArray<string>} AttributeValue
- */
-
-/**
- * @param {Record<string, AttributeValue>} attribs
+ * @param {import('@opentelemetry/api').Attributes} attribs
  * @param {string | undefined} serviceName
  * @param {string | undefined} serviceVersion
- * @returns {Record<string, AttributeValue>}
+ * @returns {import('@opentelemetry/api').Attributes}
  */
 export function detectResource(attribs, serviceName, serviceVersion) {
-    /** @type {MaybeArray<number>} */
     if (typeof serviceName === 'string' && serviceName) {
         attribs['service.name'] = serviceName;
     }

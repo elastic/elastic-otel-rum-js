@@ -4,7 +4,6 @@
  */
 
 import {diag, DiagLogLevel, metrics, trace} from '@opentelemetry/api';
-import {logs} from '@opentelemetry/api-logs';
 import {startLogsSdk} from '@opentelemetry/browser-sdk/logs';
 import {startTracesSdk} from '@opentelemetry/browser-sdk/traces';
 import {OTLPMetricExporter} from '@opentelemetry/exporter-metrics-otlp-http';
@@ -43,18 +42,24 @@ import {detectResource} from './detector.js';
  */
 
 /**
- * @typedef {Object} BrowserSdkConfiguration
+ * Configuration that is defined in upstream SDK
+ * @typedef {Object} SdkConfig
  * @property {boolean} [disabled]
+ * @property {Lowercase<keyof typeof import('@opentelemetry/api').DiagLogLevel>} [logLevel]
  * @property {string} [serviceName]
  * @property {string} [serviceVersion]
- * @property {string} [logLevel] // defaults to 'info'
+ * @property {import('@opentelemetry/api').Attributes} [resourceAttributes]
+ * @property {{url?: string; headers?: Record<string, string>}} [exportConfig]
+ */
+
+/**
+ * Configuration properties that are only in EDOT
+ * @typedef {Object} EdotConfig
  * @property {number} [sampleRate] // defaults to 1
- * @property {Record<string, import('./detector.js').AttributeValue>} [resourceAttributes]
- * @property {string} [otlpEndpoint] // defaults to 'http://localhost:4318'
- * @property {Record<string, string>} [exportHeaders] // defaults to {}
- *
- * // other options
  * @property {Partial<InstrumentationsConfigMap>} [instrumentations]
+ */
+/**
+ * @typedef {SdkConfig & EdotConfig} BrowserSdkConfiguration
  */
 
 // SDK returned when invalid config or some error happens at start
@@ -63,15 +68,16 @@ const NOOP_SDK = {shutdown: () => Promise.resolve()};
 // To control multiple calls to `startBrowserSdk`
 let sdkStarted = false;
 
-/** @typedef {'logLevel' | 'sampleRate' | 'serviceName' | 'resourceAttributes' | 'otlpEndpoint' | 'exportHeaders'} DefaultConfigProps*/
+/** @typedef { 'logLevel' | 'serviceName' | 'resourceAttributes' | 'sampleRate' | 'exportConfig'} DefaultConfigProps*/
 /** @type {Required<Pick<BrowserSdkConfiguration, DefaultConfigProps>>} */
 const defaultConfig = {
     logLevel: 'info',
     sampleRate: 1,
     serviceName: 'unknown_service:web',
     resourceAttributes: {},
-    otlpEndpoint: 'http://localhost:4318',
-    exportHeaders: {},
+    exportConfig: {
+        url: 'http://localhost:4318',
+    },
 };
 
 /**
@@ -90,8 +96,8 @@ export function startBrowserSdk(cfg = {}) {
     // logger and disable it before starting logs/traces to avoid
     // the override message from old and new logger
     /** @type {keyof typeof import('@opentelemetry/api').DiagLogLevel} */
-    // @ts-expect-error - we handle any other string that is not a log level
-    const logLevel = (cfg.logLevel ?? defaultConfig.logLevel).toUpperCase();
+    // @ts-expect-error - `createLogger` handles upercasing and wrong values
+    const logLevel = cfg.logLevel ?? defaultConfig.logLevel;
     diag.setLogger(createLogger({logLevel}), {logLevel: DiagLogLevel.ALL});
     diag.debug(`Browser SDK intialization`, cfg);
 
@@ -102,10 +108,10 @@ export function startBrowserSdk(cfg = {}) {
     /** @type {URL} */
     let endpointUrl;
     try {
-        endpointUrl = new URL(config?.otlpEndpoint);
+        endpointUrl = new URL(config?.exportConfig?.url || '');
     } catch (urlErr) {
         diag.error(
-            `The value "${config.otlpEndpoint}" for "otlpEndpoint" configuration is not an URL. SDK won't start.`
+            `The value "${config?.exportConfig?.url}" for "exportConfig.url" configuration is not an URL. SDK won't start.`
         );
         return NOOP_SDK;
     }
@@ -131,27 +137,25 @@ export function startBrowserSdk(cfg = {}) {
         sampler: new TraceIdRatioBasedSampler(config.sampleRate),
         exportConfig: {
             url: appendPath(endpointUrl, 'v1/traces').href,
-            headers: config.exportHeaders,
+            headers: config.exportConfig.headers,
         },
     });
-    const tracerProvider = trace.getTracerProvider();
 
     const logsSdk = startLogsSdk({
         logLevel,
         resourceAttributes,
         exportConfig: {
             url: appendPath(endpointUrl, 'v1/logs').href,
-            headers: config.exportHeaders,
+            headers: config.exportConfig.headers,
         },
     });
-    const loggerProvider = logs.getLoggerProvider();
 
     // metrics signal configuration
     // possible `startMetricsSdk` function
     const metricsReader = new PeriodicExportingMetricReader({
         exporter: new OTLPMetricExporter({
             url: appendPath(endpointUrl, 'v1/metrics').href,
-            headers: config.exportHeaders,
+            headers: config.exportConfig.headers,
         }),
     });
     const meterProvider = new MeterProvider({

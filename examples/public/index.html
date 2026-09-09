@@ -36,8 +36,10 @@
             logLevel: 'debug',
             serviceName: 'otel-browser-example-app',
             serviceVersion: '0.0.1',
-            otlpEndpoint: otelEnv.otlpEndpoint || `${location.protocol}//${location.host}`,
-            exportHeaders: otelEnv.exportHeaders || {},
+            exportConfig: {
+                url: otelEnv.otlpEndpoint || `${location.protocol}//${location.host}`,
+                headers: otelEnv.exportHeaders || {},
+            }
         })
     </script>
 </head>
