@@ -12,7 +12,7 @@ export type InstrumentationsConfigMap = {
     "@opentelemetry/instrumentation-document-load": import("@opentelemetry/instrumentation-document-load").DocumentLoadInstrumentationConfig;
     "fetch": import("@opentelemetry/browser-instrumentation/experimental/fetch").FetchInstrumentationConfig;
     "@opentelemetry/instrumentation-long-task": import("@opentelemetry/instrumentation-long-task").LongtaskInstrumentationConfig;
-    "@opentelemetry/instrumentation-user-interaction": import("@opentelemetry/instrumentation-user-interaction").UserInteractionInstrumentationConfig;
+    "user-action": import("@opentelemetry/browser-instrumentation/experimental/user-action").UserActionInstrumentationConfig;
     "xhr": import("@opentelemetry/browser-instrumentation/experimental/xhr").XhrInstrumentationConfig;
     "errors": import("@opentelemetry/browser-instrumentation/experimental/errors").ErrorsInstrumentationConfig;
     "web-vitals": import("@opentelemetry/browser-instrumentation/experimental/web-vitals").WebVitalsInstrumentationConfig;
