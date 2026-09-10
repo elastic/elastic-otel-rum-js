@@ -43,7 +43,7 @@ User interaction instrumentation (@opentelemetry/instrumentation-user-interactio
 - Replace eventNames with autoCapturedActions (for example ['click']).
 - Replace span hooks (shouldPreventSpanCreation) with applyCustomLogRecordData.
 - Update dashboards/queries that relied on user-interaction spans to use user-action log events instead.
-Refer to [PR #XX](https://github.com/elastic/elastic-otel-rum-js/pull/XX).
+Refer to [PR #101](https://github.com/elastic/elastic-otel-rum-js/pull/101).
 ::::
 
 
