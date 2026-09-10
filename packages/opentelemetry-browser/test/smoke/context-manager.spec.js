@@ -3,6 +3,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+/**
+ * @typedef {Object} ReceivedSpan
+ * @property {string} name
+ * @property {string} spanId
+ * @property {string} parentSpanId
+ */
+
 import {test, expect} from '@playwright/test';
 import {createCollector} from './test-utils';
 
@@ -16,7 +23,10 @@ test('should carry context on different async operations and functions', async (
     let spans = await collector.getSpans();
     collector.clear();
 
-    let parentSpan, childSpan;
+    /** @type {ReceivedSpan} */
+    let parentSpan;
+    /** @type {ReceivedSpan} */
+    let childSpan;
     const buttonIds = [
         'timeout',
         'promise-ctor',
@@ -37,7 +47,7 @@ test('should carry context on different async operations and functions', async (
         // - the spans to be collected
         await page.click(`#${id}`);
         await page.waitForFunction(
-            () => document.getElementById('status').innerText === 'finished'
+            () => document.getElementById('status')?.innerText === 'finished'
         );
         spans = await collector.getSpans();
 
@@ -47,15 +57,8 @@ test('should carry context on different async operations and functions', async (
         expect(childSpan.parentSpanId).toBeDefined();
 
         // Parent span presence means context has been propagated correctly.
-        // Check that comes from the right user action
         parentSpan = spans.find((s) => s.spanId === childSpan.parentSpanId);
         expect(parentSpan).toBeDefined();
-        expect(parentSpan.name).toStrictEqual('click');
-        expect(parentSpan.attributes.target_xpath).toStrictEqual(
-            `//*[@id="${id}"]`
-        );
-        expect(parentSpan.scope.name).toStrictEqual(
-            '@opentelemetry/instrumentation-user-interaction'
-        );
+        expect(parentSpan.name).toStrictEqual(id);
     }
 });

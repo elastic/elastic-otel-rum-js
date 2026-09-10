@@ -19,7 +19,7 @@ import {NavigationInstrumentation} from '@opentelemetry/browser-instrumentation/
 import {DocumentLoadInstrumentation} from '@opentelemetry/instrumentation-document-load';
 import {FetchInstrumentation} from '@opentelemetry/browser-instrumentation/experimental/fetch';
 import {LongTaskInstrumentation} from '@opentelemetry/instrumentation-long-task';
-import {UserInteractionInstrumentation} from '@opentelemetry/instrumentation-user-interaction';
+import {UserActionInstrumentation} from '@opentelemetry/browser-instrumentation/experimental/user-action';
 import {XhrInstrumentation} from '@opentelemetry/browser-instrumentation/experimental/xhr';
 import {ErrorsInstrumentation} from '@opentelemetry/browser-instrumentation/experimental/errors';
 import {WebVitalsInstrumentation} from '@opentelemetry/browser-instrumentation/experimental/web-vitals';
@@ -34,7 +34,7 @@ import {detectResource} from './detector.js';
  *  "@opentelemetry/instrumentation-document-load": import('@opentelemetry/instrumentation-document-load').DocumentLoadInstrumentationConfig;
  *  "fetch": import('@opentelemetry/browser-instrumentation/experimental/fetch').FetchInstrumentationConfig;
  *  "@opentelemetry/instrumentation-long-task": import('@opentelemetry/instrumentation-long-task').LongtaskInstrumentationConfig;
- *  "@opentelemetry/instrumentation-user-interaction": import('@opentelemetry/instrumentation-user-interaction').UserInteractionInstrumentationConfig;
+ *  "user-action": import('@opentelemetry/browser-instrumentation/experimental/user-action').UserActionInstrumentationConfig;
  *  "xhr": import('@opentelemetry/browser-instrumentation/experimental/xhr').XhrInstrumentationConfig;
  *  "errors": import('@opentelemetry/browser-instrumentation/experimental/errors').ErrorsInstrumentationConfig;
  *  "web-vitals": import('@opentelemetry/browser-instrumentation/experimental/web-vitals').WebVitalsInstrumentationConfig;
@@ -175,8 +175,7 @@ export function startBrowserSdk(cfg = {}) {
         fetch: (cfg) => new FetchInstrumentation(cfg),
         '@opentelemetry/instrumentation-long-task': (cfg) =>
             new LongTaskInstrumentation(cfg),
-        '@opentelemetry/instrumentation-user-interaction': (cfg) =>
-            new UserInteractionInstrumentation(cfg),
+        'user-action': (cfg) => new UserActionInstrumentation(cfg),
         xhr: (cfg) => new XhrInstrumentation(cfg),
         errors: (cfg) => new ErrorsInstrumentation(cfg),
         'web-vitals': (cfg) => new WebVitalsInstrumentation(cfg),

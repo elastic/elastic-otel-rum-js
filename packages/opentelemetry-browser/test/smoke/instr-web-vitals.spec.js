@@ -14,12 +14,16 @@ test('should export web vitals', async ({page, browserName}) => {
     // webvitals library won't send the cls unless a visibility change happens
     // the `getLogs` function already does that by default to flush the data
     const logs = await collector.getLogs();
-    expect(logs.length).toBeGreaterThan(0);
+    const webVitalsLogs = logs.filter(
+        (l) =>
+            l.scope.name === '@opentelemetry/browser-instrumentation/web-vitals'
+    );
+    expect(webVitalsLogs.length).toBeGreaterThan(0);
 
     // The number of vitals varies from browsers so we test all records
     // have a valid name
     const webVitals = ['ttfb', 'fcp', 'cls', 'lcp', 'inp'];
-    for (const logRecord of logs) {
+    for (const logRecord of webVitalsLogs) {
         const name = logRecord.attributes['browser.web_vital.name'];
         expect(logRecord.eventName).toEqual('browser.web_vital');
         expect(webVitals.includes(name)).toEqual(true);

@@ -11,7 +11,9 @@ test('should send export requests to the configured endpoint', async ({
 }) => {
     const collector = createCollector(page);
     const config = encodeURIComponent(
-        JSON.stringify({otlpEndpoint: 'http://collector:4318/'})
+        JSON.stringify({
+            exportConfig: {url: 'http://collector:4318/'},
+        })
     );
     await page.goto(`/fixtures/use-document-load.html?config=${config}`);
 
