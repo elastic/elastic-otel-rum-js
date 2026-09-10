@@ -75,7 +75,7 @@ The following instrumentations are included and turned on by default. You can tu
 | Document load   | `@opentelemetry/instrumentation-document-load`    | `@opentelemetry/instrumentation-document-load`    | Yes |
 | Fetch           | `@opentelemetry/browser-instrumentation`          | `fetch`                                           | Yes |
 | XMLHttpRequest  | `@opentelemetry/browser-instrumentation`          | `xhr`                                             | Yes |
-| User interaction| `@opentelemetry/instrumentation-user-interaction` | `@opentelemetry/instrumentation-user-interaction` | Yes |
+| User action     | `@opentelemetry/browser-instrumentation`          | `user-action`                                     | Yes |
 | Long tasks      | `@opentelemetry/instrumentation-long-task`        | `@opentelemetry/instrumentation-long-task`        | Yes |
 | Errors.         | `@opentelemetry/browser-instrumentation`          | `errors`                                          | Yes |
 | Web vitals      | `@opentelemetry/browser-instrumentation`          | `web-vitals`                                      | Yes |

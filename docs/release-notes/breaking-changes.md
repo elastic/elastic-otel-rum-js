@@ -30,6 +30,23 @@ Breaking changes can impact your applications, potentially disrupting normal ope
 
 ## Next version [edot-browser-X.X.X-breaking-changes]
 
+::::{dropdown} Switch to new user action instrumentation
+User interaction instrumentation (@opentelemetry/instrumentation-user-interaction) has been replaced by `user-action` from `@opentelemetry/browser-instrumentation`. The new instrumentation emits log records (for example browser.user_action.click) instead of trace spans.
+**Impact**<br>
+- TypeScript users see a compilation error if they still use the old instrumentation key or options.
+- At runtime, configuration under the old key is ignored.
+- Clicks no longer produce spans. Subsequent fetch / XHR spans are no longer grouped under a click parent span in trace views.
+- User actions are exported on the logs signal (/v1/logs), not traces.
+- submit and other event types previously configured via eventNames are not supported by user-action (only click today). This change produces a compilation error 
+**Action**<br>
+- Change instrumentations['@opentelemetry/instrumentation-user-interaction'] to instrumentations['user-action'].
+- Replace eventNames with autoCapturedActions (for example ['click']).
+- Replace span hooks (shouldPreventSpanCreation) with applyCustomLogRecordData.
+- Update dashboards/queries that relied on user-interaction spans to use user-action log events instead.
+Refer to [PR #XX](https://github.com/elastic/elastic-otel-rum-js/pull/XX).
+::::
+
+
 ::::{dropdown} Configuration change for export
 The export configuration (url, headers) has been grouped to a new key named
 `exportConfig`. This aligns with the configuration type of the upstream SDK.
