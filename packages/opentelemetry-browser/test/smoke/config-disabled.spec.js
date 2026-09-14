@@ -11,11 +11,11 @@ test('should not export if EDOT is disabled via configuration', async ({
 }) => {
     const collector = createCollector(page);
     const config = encodeURIComponent(JSON.stringify({disabled: true}));
-    await page.goto(`/fixtures/use-document-load.html?config=${config}`);
+    await page.goto(`/fixtures/use-navigation-timing.html?config=${config}`);
 
     let error;
     try {
-        await collector.getSpans();
+        await collector.getLogs();
     } catch (err) {
         error = err;
     }
@@ -25,16 +25,16 @@ test('should not export if EDOT is disabled via configuration', async ({
 test('should export if EDOT is enabled via configuration', async ({page}) => {
     const collector = createCollector(page);
     const config = encodeURIComponent(JSON.stringify({disabled: false}));
-    await page.goto(`/fixtures/use-document-load.html?config=${config}`);
+    await page.goto(`/fixtures/use-navigation-timing.html?config=${config}`);
 
-    const spans = await collector.getSpans();
-    expect(spans.length).toBeGreaterThan(0);
+    const logs = await collector.getLogs();
+    expect(logs.length).toBeGreaterThan(0);
 });
 
 test('should export if EDOT has the default configuration', async ({page}) => {
     const collector = createCollector(page);
-    await page.goto('/fixtures/use-document-load.html');
+    await page.goto('/fixtures/use-navigation-timing.html');
 
-    const spans = await collector.getSpans();
-    expect(spans.length).toBeGreaterThan(0);
+    const logs = await collector.getLogs();
+    expect(logs.length).toBeGreaterThan(0);
 });

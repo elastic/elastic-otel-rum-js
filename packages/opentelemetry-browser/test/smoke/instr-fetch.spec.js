@@ -8,7 +8,9 @@ import {createCollector} from './test-utils';
 
 test('should export fetch related spans', async ({page}) => {
     const collector = createCollector(page);
+    /** @type {Record<string, any>} */
     const sameOriginHeaders = {};
+    /** @type {Record<string, any>} */
     const otherOriginHeaders = {};
     page.route('api/method', (route, req) => {
         Object.assign(sameOriginHeaders, req.headers());
@@ -30,11 +32,11 @@ test('should export fetch related spans', async ({page}) => {
     await page.goto('/fixtures/use-fetch.html');
     await page.click('#same-origin');
     await page.waitForFunction(
-        () => document.getElementById('status').innerText === 'finished'
+        () => document.getElementById('status')?.innerText === 'finished'
     );
     await page.click('#other-origin');
     await page.waitForFunction(
-        () => document.getElementById('status').innerText === 'finished'
+        () => document.getElementById('status')?.innerText === 'finished'
     );
 
     const spans = await collector.getSpans({flush: false});

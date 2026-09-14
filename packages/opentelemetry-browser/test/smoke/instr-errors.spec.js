@@ -10,10 +10,9 @@ test('should export unhandled exceptions and promise rejections', async ({
     page,
 }) => {
     const collector = createCollector(page);
-    await page.goto('/fixtures/use-document-load.html');
+    await page.goto('/fixtures/use-navigation-timing.html');
 
     // Discard all telemetry related to page load & web vitals
-    let spans = await collector.getSpans();
     let logs = await collector.getLogs();
     collector.clear();
 
@@ -26,9 +25,12 @@ test('should export unhandled exceptions and promise rejections', async ({
     });
 
     logs = await collector.getLogs();
-    expect(logs).toHaveLength(1);
-    expect(logs[0]?.eventName).toBe('exception');
-    expect(logs[0]?.attributes['exception.message']).toBe(
+    let errorLogs = logs.filter(
+        (l) => l.scope.name === '@opentelemetry/browser-instrumentation/errors'
+    );
+    expect(errorLogs).toHaveLength(1);
+    expect(errorLogs[0]?.eventName).toBe('exception');
+    expect(errorLogs[0]?.attributes['exception.message']).toBe(
         'Somethig wrong happened!'
     );
     collector.clear();
@@ -42,10 +44,13 @@ test('should export unhandled exceptions and promise rejections', async ({
     });
 
     logs = await collector.getLogs();
-    expect(logs).toHaveLength(1);
-    expect(logs[0]?.eventName).toBe('exception');
-    expect(logs[0]?.attributes['exception.message']).toBe(
+    errorLogs = logs.filter(
+        (l) => l.scope.name === '@opentelemetry/browser-instrumentation/errors'
+    );
+    expect(errorLogs).toHaveLength(1);
+    expect(errorLogs[0]?.eventName).toBe('exception');
+    expect(errorLogs[0]?.attributes['exception.message']).toBe(
         'Somethig wrong happened!'
     );
-    expect(logs[0]?.attributes['exception.type']).toBe('Error');
+    expect(errorLogs[0]?.attributes['exception.type']).toBe('Error');
 });

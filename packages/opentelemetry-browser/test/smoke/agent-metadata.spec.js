@@ -8,10 +8,10 @@ import {createCollector} from './test-utils';
 
 test('should export agent metadata default case', async ({page}) => {
     const collector = createCollector(page);
-    await page.goto('/fixtures/use-document-load.html');
+    await page.goto('/fixtures/use-navigation-timing.html');
 
-    const spans = await collector.getSpans();
-    const attribs = spans[0].resource.attributes;
+    const logs = await collector.getLogs();
+    const attribs = logs[0].resource.attributes;
 
     // Test OTel SDK add its metadata
     expect(attribs['telemetry.sdk.language']).toStrictEqual('webjs');

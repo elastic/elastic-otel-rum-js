@@ -8,7 +8,7 @@ import {createCollector} from './test-utils';
 
 test('should export browser navigation related events', async ({page}) => {
     const collector = createCollector(page);
-    await page.goto('/fixtures/use-document-load.html?sync=true');
+    await page.goto('/fixtures/use-navigation-timing.html?sync=true');
 
     // Make a soft navigation
     await page.evaluate(() => history.pushState({}, '', '/with-push.html'));
