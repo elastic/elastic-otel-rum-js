@@ -121,7 +121,8 @@ The following keys are supported:
 
 | Instrumentation   | Key                                              | Scope                                            | Configuration |
 |-------------------|--------------------------------------------------|--------------------------------------------------|---------------|
-| Document load     | `@opentelemetry/instrumentation-document-load`   | `@opentelemetry/instrumentation-document-load`   | [Reference](https://github.com/open-telemetry/opentelemetry-js-contrib/blob/main/packages/instrumentation-document-load/README.md#document-load-instrumentation-options) |
+| Navigation timing | `navigation-timing`                              | `@opentelemetry/browser-instrumentation/navigation-timing` | [Reference](https://github.com/open-telemetry/opentelemetry-browser/tree/main/packages/instrumentation#navigation-timing) |
+| Resource timing   | `resource-timing`                              | `@opentelemetry/browser-instrumentation/resource-timing` | [Reference](https://github.com/open-telemetry/opentelemetry-browser/tree/main/packages/instrumentation#resource-timing) |
 | Fetch             | `fetch`                                          | `@opentelemetry/browser-instrumentation/fetch`   | [Reference](https://github.com/open-telemetry/opentelemetry-browser/tree/main/packages/instrumentation#fetch) |
 | Long task         | `@opentelemetry/instrumentation-long-task`       | `@opentelemetry/instrumentation-long-task`       | [Reference](https://github.com/open-telemetry/opentelemetry-js-contrib/tree/main/packages/instrumentation-long-task#longtask-instrumentation-options) |
 | User action       | `user-action`                                    | `@opentelemetry/browser-instrumentation/user-action`| [Reference](https://github.com/open-telemetry/opentelemetry-browser/tree/main/packages/instrumentation#user-action) |

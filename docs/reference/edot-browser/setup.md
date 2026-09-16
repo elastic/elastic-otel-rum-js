@@ -68,19 +68,9 @@ After EDOT Browser is sending telemetry to {{product.observability}}, your brows
 
 The **User Experience** app currently shows only data from classic Elastic {{product.apm}} Browser agents and does not display EDOT Browser data. For RUM-style dashboards compatible with EDOT Browser, install the [RUM OpenTelemetry Assets](https://github.com/elastic/integrations/tree/main/packages/otel_rum_dashboards) integration from the {{kib}} Integrations catalog. The integration is currently in preview, requires {{kib}} 9.2.1 or later, and on the Integrations page you must turn on **Display beta integrations** to find it.
 
-### Document load spans [document-load-spans]
-
-EDOT Browser measures how long it takes a user's browser to fully load the initial HTML document served by your web server by creating document load spans. It also generates spans to measure the download time of additional resources (such as JavaScript, CSS, fonts, and images) referenced by the initial document.
-
-In the trace view, the `documentLoad` span appears as the root span, with resource spans as its children.
-
 ### Spans from browser fetch and XHR [spans-from-fetch-xhr]
 
 Outgoing HTTP requests made with the browser `fetch` API or `XMLHttpRequest` are captured as `external.http` spans. Each request to your backend APIs or third-party domains appears as an `external.http` span with attributes such as URL, HTTP method, and status code. These spans represent the client-side portion of the request (time in the browser) and, when your backend is instrumented with EDOT, link to the corresponding server-side trace using the trace context (trace ID and span ID) propagated in HTTP headers. In the trace view, you see the browser's `external.http` span as part of the same trace as the backend service spans when propagation is correctly configured.
-
-### User interaction spans and grouping [user-interaction-spans]
-
-EDOT Browser creates user interaction spans for events such as "click" and "submit". These spans represent the user action that triggered subsequent work (for example, a button click that leads to a `fetch` call). In {{kib}}, user interaction spans are used to group related spans: the interaction span is the logical parent or anchor for the cascade of operations that follow (for example, `external.http` requests and any child spans). When you analyze a trace, look for the user interaction span (for example, `userinteraction` or similar) to understand which click or submit caused the associated network and backend activity. This grouping makes it easier to attribute frontend and backend work to specific user actions.
 
 ### End-to-end trace propagation [end-to-end-trace-propagation]
 

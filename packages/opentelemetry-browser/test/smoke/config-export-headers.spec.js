@@ -16,15 +16,13 @@ test('should add the configured headers in export requests', async ({page}) => {
             },
         })
     );
-    await page.goto(`/fixtures/use-document-load.html?config=${config}`);
+    await page.goto(`/fixtures/use-navigation-timing.html?config=${config}`);
 
-    await collector.getSpans();
+    await collector.getLogs();
     const requests = collector.getRequests();
 
     expect(requests.length).toBeGreaterThan(0);
     for (const req of requests) {
         expect(req.headers['foo']).toStrictEqual('bar');
     }
-
-    // TODO: make the fixture send metrics and logs???
 });

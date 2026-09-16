@@ -9,7 +9,7 @@ import {createCollector} from './test-utils';
 test('should export user-action related spans', async ({page}) => {
     const collector = createCollector(page);
 
-    await page.goto('/fixtures/use-document-load.html');
+    await page.goto('/fixtures/use-navigation-timing.html');
     await page.click('body > h1');
 
     const logs = await collector.getLogs();

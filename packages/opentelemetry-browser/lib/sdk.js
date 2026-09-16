@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import {diag, DiagLogLevel, metrics, trace} from '@opentelemetry/api';
+import {diag, DiagLogLevel, metrics} from '@opentelemetry/api';
 import {startLogsSdk} from '@opentelemetry/browser-sdk/logs';
 import {startTracesSdk} from '@opentelemetry/browser-sdk/traces';
 import {OTLPMetricExporter} from '@opentelemetry/exporter-metrics-otlp-http';
@@ -16,7 +16,8 @@ import {TraceIdRatioBasedSampler} from '@opentelemetry/sdk-trace';
 
 import {registerInstrumentations} from '@opentelemetry/instrumentation';
 import {NavigationInstrumentation} from '@opentelemetry/browser-instrumentation/experimental/navigation';
-import {DocumentLoadInstrumentation} from '@opentelemetry/instrumentation-document-load';
+import {NavigationTimingInstrumentation} from '@opentelemetry/browser-instrumentation/experimental/navigation-timing';
+import {ResourceTimingInstrumentation} from '@opentelemetry/browser-instrumentation/experimental/resource-timing';
 import {FetchInstrumentation} from '@opentelemetry/browser-instrumentation/experimental/fetch';
 import {LongTaskInstrumentation} from '@opentelemetry/instrumentation-long-task';
 import {UserActionInstrumentation} from '@opentelemetry/browser-instrumentation/experimental/user-action';
@@ -31,7 +32,8 @@ import {detectResource} from './detector.js';
 /**
  * @typedef {{
  *  "navigation": import('@opentelemetry/browser-instrumentation/experimental/navigation').NavigationInstrumentationConfig;
- *  "@opentelemetry/instrumentation-document-load": import('@opentelemetry/instrumentation-document-load').DocumentLoadInstrumentationConfig;
+ *  "navigation-timing": import('@opentelemetry/browser-instrumentation/experimental/navigation-timing').NavigationTimingInstrumentationConfig;
+ *  "resource-timing": import('@opentelemetry/browser-instrumentation/experimental/resource-timing').ResourceTimingInstrumentationConfig;
  *  "fetch": import('@opentelemetry/browser-instrumentation/experimental/fetch').FetchInstrumentationConfig;
  *  "@opentelemetry/instrumentation-long-task": import('@opentelemetry/instrumentation-long-task').LongtaskInstrumentationConfig;
  *  "user-action": import('@opentelemetry/browser-instrumentation/experimental/user-action').UserActionInstrumentationConfig;
@@ -170,8 +172,8 @@ export function startBrowserSdk(cfg = {}) {
     /** @type {Record<keyof InstrumentationsConfigMap, (cfg: any) => any>} */
     const instrFactories = {
         navigation: (cfg) => new NavigationInstrumentation(cfg),
-        '@opentelemetry/instrumentation-document-load': (cfg) =>
-            new DocumentLoadInstrumentation(cfg),
+        'navigation-timing': (cfg) => new NavigationTimingInstrumentation(cfg),
+        'resource-timing': (cfg) => new ResourceTimingInstrumentation(cfg),
         fetch: (cfg) => new FetchInstrumentation(cfg),
         '@opentelemetry/instrumentation-long-task': (cfg) =>
             new LongTaskInstrumentation(cfg),

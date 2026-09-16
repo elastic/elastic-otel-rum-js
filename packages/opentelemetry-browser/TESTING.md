@@ -53,7 +53,7 @@ Running just one smoke test file. This requires to build the bundle.
 
 ```
 npm run build && cp build/* ./test/smoke/assets
-npx playwright test test/smoke/instr-document-load.spec.ts
+npx playwright test test/smoke/instr-navigation-timing.spec.ts
 ```
 
 

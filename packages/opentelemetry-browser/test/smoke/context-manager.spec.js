@@ -20,12 +20,14 @@ test('should carry context on different async operations and functions', async (
     await page.goto('/fixtures/use-context.html');
 
     // Discard all telemetry related to page load
-    let spans = await collector.getSpans();
+    const logs = collector.getLogs();
+    /** @type {ReceivedSpan[]} */
+    let spans;
     collector.clear();
 
-    /** @type {ReceivedSpan} */
+    /** @type {ReceivedSpan | undefined} */
     let parentSpan;
-    /** @type {ReceivedSpan} */
+    /** @type {ReceivedSpan | undefined} */
     let childSpan;
     const buttonIds = [
         'timeout',
@@ -54,11 +56,11 @@ test('should carry context on different async operations and functions', async (
         // Get the span created in the callback
         childSpan = spans.find((s) => s.name === `${id}-child`);
         expect(childSpan).toBeDefined();
-        expect(childSpan.parentSpanId).toBeDefined();
+        expect(childSpan?.parentSpanId).toBeDefined();
 
         // Parent span presence means context has been propagated correctly.
-        parentSpan = spans.find((s) => s.spanId === childSpan.parentSpanId);
+        parentSpan = spans.find((s) => s.spanId === childSpan?.parentSpanId);
         expect(parentSpan).toBeDefined();
-        expect(parentSpan.name).toStrictEqual(id);
+        expect(parentSpan?.name).toStrictEqual(id);
     }
 });

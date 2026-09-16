@@ -9,7 +9,8 @@ export function startBrowserSdk(cfg?: BrowserSdkConfiguration): {
 };
 export type InstrumentationsConfigMap = {
     "navigation": import("@opentelemetry/browser-instrumentation/experimental/navigation").NavigationInstrumentationConfig;
-    "@opentelemetry/instrumentation-document-load": import("@opentelemetry/instrumentation-document-load").DocumentLoadInstrumentationConfig;
+    "navigation-timing": import("@opentelemetry/browser-instrumentation/experimental/navigation-timing").NavigationTimingInstrumentationConfig;
+    "resource-timing": import("@opentelemetry/browser-instrumentation/experimental/resource-timing").ResourceTimingInstrumentationConfig;
     "fetch": import("@opentelemetry/browser-instrumentation/experimental/fetch").FetchInstrumentationConfig;
     "@opentelemetry/instrumentation-long-task": import("@opentelemetry/instrumentation-long-task").LongtaskInstrumentationConfig;
     "user-action": import("@opentelemetry/browser-instrumentation/experimental/user-action").UserActionInstrumentationConfig;
