@@ -30,6 +30,20 @@ Breaking changes can impact your applications, potentially disrupting normal ope
 
 ## Next version [edot-browser-X.X.X-breaking-changes]
 
+::::{dropdown} Replacement of document load instrumentation for navigation timing
+Document instrumentation (@opentelemetry/instrumentation-document-load) has been replaced by `navigation-timing` from `@opentelemetry/browser-instrumentation`. The new instrumentation emits a log records instead of a trace Span to report the timings.
+**Impact**<br>
+- TypeScript users see a compilation error if they still use the old instrumentation key or options.
+- At runtime, configuration under the old key is ignored.
+- Document load no longer produce spans.
+- Load timings are exported on the logs signal (/v1/logs), not traces.
+**Action**<br>
+- Remove instrumentations['@opentelemetry/instrumentation-document-load'] configutration option.
+- Update dashboards/queries that relied on document-load spans to use navigation-timing log events instead.
+Refer to [PR #102](https://github.com/elastic/elastic-otel-rum-js/pull/102).
+::::
+
+
 ::::{dropdown} Switch to new user action instrumentation
 User interaction instrumentation (@opentelemetry/instrumentation-user-interaction) has been replaced by `user-action` from `@opentelemetry/browser-instrumentation`. The new instrumentation emits log records (for example browser.user_action.click) instead of trace spans.
 **Impact**<br>
