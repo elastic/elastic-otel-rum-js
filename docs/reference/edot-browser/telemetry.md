@@ -51,6 +51,10 @@ EDOT Browser initializes tracing and registers instrumentations that produce spa
 - Each outgoing request using `fetch` or `XMLHttpRequest` is captured as an `external.http` span with attributes such as URL, HTTP method, and status code. These spans represent the client-side portion of the request.
 - Spans for task executions that take longer than 50ms and might impact the user experience. For more information, refer to [PerformanceLongTaskTiming](https://developer.mozilla.org/en-US/docs/Web/API/PerformanceLongTaskTiming).
 
+:::{note}
+Long task spans come from the `@opentelemetry/instrumentation-long-task` instrumentation. This instrumentation is planned to be replaced by [long animation frame](https://developer.mozilla.org/en-US/docs/Web/API/PerformanceLongAnimationFrameTiming) instrumentation in a future release.
+:::
+
 Other browser activity that was previously captured as spans is now emitted as log records. Page and resource load timing, user actions (clicks), and navigation are exported on the logs signal. Refer to [Logs](#logs) for details.
 
 When your backend is instrumented with OpenTelemetry and trace context (trace ID, span ID) is propagated in HTTP headers, the browser’s `external.http` span and the backend spans appear in the same trace, giving you end-to-end visibility in Discover and Service Maps. Refer to [What to expect in {{kib}}](setup.md#what-to-expect-in-kibana) for how these traces appear in the Observability app.
@@ -81,6 +85,7 @@ Automatic log records include:
 - **User actions**: Click events are captured as `browser.user_action.click` log records. This replaces the former user interaction spans.
 - **Navigation**: Initial page loads and in-page (SPA) navigations are captured as `browser.navigation` log records.
 - **Page and resource timing**: Navigation timing and resource timing are captured as log records. This replaces the former document load spans.
+- **Core Web Vitals**: Core Web Vitals (for example LCP, CLS, and INP) are captured as log records, with the measurements in `browser.web_vital.*` attributes. The values are aggregated in {{product.observability}} rather than in the browser.
 - **Errors**: Uncaught errors and unhandled promise rejections are captured as `exception` log records.
 
 In addition, your application can emit its own records:
