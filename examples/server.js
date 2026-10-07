@@ -7,8 +7,8 @@ import {createReadStream, existsSync, readFileSync} from 'fs';
 import {createServer} from 'http';
 import {createGzip} from 'zlib';
 
-import 'dotenv/config';
 import mime from 'mime';
+import {trace} from '@opentelemetry/api';
 
 const serverPort = process.env.PORT || 3000;
 const otlpEndpoint = process.env.OTEL_EXPORTER_OTLP_ENDPOINT;
@@ -72,11 +72,19 @@ const server = createServer((req, res) => {
                 const json = JSON.parse(text);
                 const result = handleApiRequest(json, url);
 
-                res.writeHead(200, 'OK', {'content-type': 'application/json'});
-                res.end(JSON.stringify(result ? result : {ok: 1}));
+                if (result) {
+                    res.writeHead(200, 'OK', {
+                        'content-type': 'application/json',
+                    });
+                    res.end(JSON.stringify(result));
+                } else {
+                    res.writeHead(400, {'content-type': 'text/plain'});
+                    res.end('Not Found');
+                }
             } catch (error) {
                 console.log(`Error in API => ${error}`);
-                res.writeHead(400, 'Bad Request', {
+                trace.getActiveSpan()?.recordException(error);
+                res.writeHead(503, 'Service Unavailable', {
                     'content-type': 'application/json',
                 });
                 res.end(JSON.stringify({ok: 0, error: error.message}));
@@ -130,6 +138,8 @@ const server = createServer((req, res) => {
 function handleApiRequest(json, url) {
     if (url.pathname === '/api/echo') {
         return {ok: 1, result: `(ECHO) ${json.message}`};
+    } else if (url.pathname === '/api/fail') {
+        throw new Error('Service failed');
     }
 }
 

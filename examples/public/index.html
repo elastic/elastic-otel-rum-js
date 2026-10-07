@@ -34,13 +34,13 @@
         })(document, 'script',
         {
             logLevel: 'debug',
-            serviceName: 'otel-browser-example-app',
+            serviceName: 'otel-browser-example-next',
             serviceVersion: '0.0.1',
             exportConfig: {
                 url: otelEnv.otlpEndpoint || `${location.protocol}//${location.host}`,
                 headers: otelEnv.exportHeaders || {},
             }
-        })
+        });
     </script>
 </head>
 <body>
