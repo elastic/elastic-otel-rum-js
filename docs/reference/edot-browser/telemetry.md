@@ -38,7 +38,7 @@ Ensure your reverse proxy and OTLP endpoint accept the `/v1/metrics` path.
 
 In certain scenarios, a trace might occur asynchronously. For instance, a user interaction that initiates an HTTP request to a downstream service and subsequently updates the User Interface with the service response. To maintain context across these asynchronous functions, EDOT incorporates a ContextManager that patches several asynchronous browser APIs, including:
 
-- setTimeout and setImmediate
+- setTimeout
 - Promise methods: then, catch, and finally
 - XMLHttpRequest event handlers
 
@@ -48,10 +48,14 @@ This mechanism ensures that when these asynchronous operations execute, they do 
 
 EDOT Browser initializes tracing and registers instrumentations that produce spans:
 
-- Spans for the initial document load and related navigation timing (document load instrumentation is turned on by default).
 - Each outgoing request using `fetch` or `XMLHttpRequest` is captured as an `external.http` span with attributes such as URL, HTTP method, and status code. These spans represent the client-side portion of the request.
-- Spans for user actions such as "click" and "submit". These interaction spans group the subsequent work (for example `external.http` requests) so you can attribute frontend and backend activity to a specific user action in {{product.observability}}.
 - Spans for task executions that take longer than 50ms and might impact the user experience. For more information, refer to [PerformanceLongTaskTiming](https://developer.mozilla.org/en-US/docs/Web/API/PerformanceLongTaskTiming).
+
+:::{note}
+The `@opentelemetry/instrumentation-long-task` instrumentation has been removed since the API is deprecated. This instrumentation is planned to be replaced by [long animation frame](https://developer.mozilla.org/en-US/docs/Web/API/PerformanceLongAnimationFrameTiming) instrumentation in a future release.
+:::
+
+Other browser activity that was previously captured as spans is now emitted as log records. Page and resource load timing, user actions (clicks), and navigation are exported on the logs signal. Refer to [Logs](#logs) for details.
 
 When your backend is instrumented with OpenTelemetry and trace context (trace ID, span ID) is propagated in HTTP headers, the browser’s `external.http` span and the backend spans appear in the same trace, giving you end-to-end visibility in Discover and Service Maps. Refer to [What to expect in {{kib}}](setup.md#what-to-expect-in-kibana) for how these traces appear in the Observability app.
 
@@ -59,6 +63,7 @@ When your backend is instrumented with OpenTelemetry and trace context (trace ID
 
 - Frontend-to-backend trace continuity depends on your backend and HTTP client propagating the W3C Trace Context headers. If propagation is not configured, browser and backend spans appear as separate traces.
 - Only requests that go through the instrumented `fetch` and `XMLHttpRequest` APIs are captured. Requests made by other mechanisms (for example some third-party scripts, WebSockets, or non-instrumented clients) do not produce spans unless you add custom instrumentation.
+- User actions no longer produce spans, so subsequent `fetch` and `XMLHttpRequest` spans are no longer grouped under a parent click span in the trace view. To correlate network activity with a user action, use the `browser.user_action.click` log records described in [Logs](#logs).
 - Sampling is applied in the browser. High traffic can lead to large trace volume, so configure sampling or export options appropriately.
 - Traces are tied to the page. Cross-tab or cross-origin flows might not form a single trace unless you implement custom context propagation.
 
@@ -73,14 +78,20 @@ Full feature parity with classic Elastic {{product.apm}} RUM agents for tracing 
 
 ### What EDOT Browser currently emits [logs-what-is-emitted]
 
-EDOT Browser configures the LoggerProvider automatically, so you can use the OpenTelemetry Logs API directly from your application code without any additional setup. However, no logs are emitted automatically — your application must explicitly create and emit log records for any log data to be sent.
+EDOT Browser configures the LoggerProvider automatically. Several instrumentations emit structured log records without any additional setup, and your application can emit its own log records using the OpenTelemetry Logs API. All log records are exported over OTLP to the `/v1/logs` path.
 
-When your application emits log records and they are exported over OTLP:
+Automatic log records include:
 
-- **Application logs**: Your application code can obtain a logger from the OpenTelemetry API and emit log records (severity, body, attributes). EDOT Browser exports these records to your configured endpoint on the `/v1/logs` path.
+- **User actions**: Click events are captured as `browser.user_action.click` log records. This replaces the former user interaction spans.
+- **Navigation**: Initial page loads and in-page (SPA) navigations are captured as `browser.navigation` log records.
+- **Page and resource timing**: Navigation timing and resource timing are captured as log records. This replaces the former document load spans.
+- **Core Web Vitals**: Core Web Vitals (for example LCP, CLS, and INP) are captured as log records, with the measurements in `browser.web_vital.*` attributes. The values are aggregated in {{product.observability}} rather than in the browser.
+- **Errors**: Uncaught errors and unhandled promise rejections are captured as `exception` log records.
+
+In addition, your application can emit its own records:
+
+- **Application logs**: Your application code can obtain a logger from the OpenTelemetry API and emit log records (severity, body, attributes).
 - **Resource and context**: Log records are associated with the same resource (for example service name) and can optionally be linked to the active trace context, so you can correlate logs with traces in {{product.observability}}.
-
-There is no requirement to use logs. If your application does not create log records, no log data is sent.
 
 ### Known limitations of browser-side logs [logs-limitations]
 
@@ -89,7 +100,7 @@ There is no requirement to use logs. If your application does not create log rec
 - Logs that are not exported before the user navigates away or closes the tab might be lost unless the SDK supports a reliable flush (for example on `beforeunload`). Be aware that some log data might not reach the backend in edge cases.
 
 :::{note}
-Automatic capture of `console` methods (for example `console.log`, `console.error`) is not provided by EDOT Browser. To send logs to {{product.observability}}, you must use the OpenTelemetry Logs API from your application code. Automatic console instrumentation might be considered in the future.
+Automatic capture of `console` methods (for example `console.log`, `console.error`) is not provided by EDOT Browser. To send application logs to {{product.observability}}, use the OpenTelemetry Logs API from your application code. Automatic console instrumentation might be considered in the future.
 :::
 
 ## Next steps [next-steps]

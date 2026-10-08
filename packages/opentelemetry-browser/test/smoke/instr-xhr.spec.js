@@ -8,7 +8,9 @@ import {createCollector} from './test-utils';
 
 test('should export XMLHttpRequest related spans', async ({page}) => {
     const collector = createCollector(page);
+    /** @type {Record<string, any>} */
     const sameOriginHeaders = {};
+    /** @type {Record<string, any>} */
     const otherOriginHeaders = {};
     page.route('api/method', (route, req) => {
         Object.assign(sameOriginHeaders, req.headers());
@@ -30,17 +32,16 @@ test('should export XMLHttpRequest related spans', async ({page}) => {
     await page.goto('/fixtures/use-xhr.html');
     await page.click('#same-origin');
     await page.waitForFunction(
-        () => document.getElementById('status').innerText === 'finished'
+        () => document.getElementById('status')?.innerText === 'finished'
     );
     await page.click('#other-origin');
     await page.waitForFunction(
-        () => document.getElementById('status').innerText === 'finished'
+        () => document.getElementById('status')?.innerText === 'finished'
     );
 
     const spans = await collector.getSpans({flush: false});
     const fetchSpans = spans.filter(
-        (s) =>
-            s.scope.name === '@opentelemetry/instrumentation-xml-http-request'
+        (s) => s.scope.name === '@opentelemetry/browser-instrumentation/xhr'
     );
 
     // We got spans

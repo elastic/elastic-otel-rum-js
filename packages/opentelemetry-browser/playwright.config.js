@@ -31,14 +31,14 @@ export default defineConfig({
 
     /* Configure projects for major browsers */
     projects: [
-        {
-            name: 'chromium',
-            use: {...devices['Desktop Chrome']},
-        },
-        {
-            name: 'firefox',
-            use: {...devices['Desktop Firefox']},
-        },
+        // {
+        //     name: 'chromium',
+        //     use: {...devices['Desktop Chrome']},
+        // },
+        // {
+        //     name: 'firefox',
+        //     use: {...devices['Desktop Firefox']},
+        // },
 
         // TODO: test in macOS?
         // {
@@ -47,10 +47,10 @@ export default defineConfig({
         // },
 
         /* Test against mobile viewports. */
-        {
-            name: 'Mobile Chrome',
-            use: {...devices['Pixel 5']},
-        },
+        // {
+        //     name: 'Mobile Chrome',
+        //     use: {...devices['Pixel 5']},
+        // },
         // Same here
         // {
         //     name: 'Mobile Safari',

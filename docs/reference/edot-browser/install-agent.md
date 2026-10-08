@@ -52,7 +52,10 @@ import { startBrowserSdk } from '@elastic/opentelemetry-browser';
 
 startBrowserSdk({
   serviceName: 'my-web-app',
-  otlpEndpoint: 'https://telemetry.example.com', // Reverse proxy URL; do not include /v1/traces or other signal paths
+  exportConfig: {
+      // reverse proxy URL; do not include /v1/traces or other signal paths
+      url: 'https://telemetry.example.com'
+    }
 });
 
 // Your application bootstrap code
@@ -70,7 +73,10 @@ The following example shows how to install and initialize the latest version usi
 <script>
   startBrowserSdk({
     serviceName: 'my-web-app',
-    otlpEndpoint: 'https://telemetry.example.com', // Reverse proxy URL; do not include /v1/traces or other signal paths
+    exportConfig: {
+      // reverse proxy URL; do not include /v1/traces or other signal paths
+      url: 'https://telemetry.example.com'
+    }
   });
 </script>
 ```
@@ -90,7 +96,10 @@ To avoid blocking other resources, you can load the script asynchronously. In th
     t.parentNode.insertBefore(j, t);
   })(document, 'script', {
     serviceName: 'my-web-app',
-    otlpEndpoint: 'https://telemetry.example.com'
+    exportConfig: {
+      // reverse proxy URL; do not include /v1/traces or other signal paths
+      url: 'https://telemetry.example.com'
+    }
   });
 </script>
 ```
@@ -112,14 +121,17 @@ import { startBrowserSdk } from '@elastic/opentelemetry-browser';
 
 startBrowserSdk({
   serviceName: 'my-web-app',
-  otlpEndpoint: 'https://telemetry.example.com', // reverse proxy URL; do not include /v1/traces or other signal paths
+  exportConfig: {
+    // reverse proxy URL; do not include /v1/traces or other signal paths
+    url: 'https://telemetry.example.com'
+  } 
 });
 ```
 
 At a minimum, configure:
 
 - `serviceName`: Identifies your frontend application in {{product.observability}}.
-- `otlpEndpoint`: Must point to your reverse proxy (not directly to {{product.observability}}).
+- `exportConfig.url`: Must point to your reverse proxy (not directly to {{product.observability}}).
 
 For all configuration options, refer to [Configure EDOT Browser](configuration.md).
 

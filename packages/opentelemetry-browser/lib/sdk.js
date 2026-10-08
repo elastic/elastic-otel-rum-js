@@ -3,42 +3,25 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import {
-    context,
-    diag,
-    DiagLogLevel,
-    metrics,
-    propagation,
-    trace,
-} from '@opentelemetry/api';
-import {logs} from '@opentelemetry/api-logs';
-import {
-    CompositePropagator,
-    W3CBaggagePropagator,
-    W3CTraceContextPropagator,
-} from '@opentelemetry/core';
-import {OTLPLogExporter} from '@opentelemetry/exporter-logs-otlp-http';
+import {diag, DiagLogLevel, metrics} from '@opentelemetry/api';
+import {startLogsSdk} from '@opentelemetry/browser-sdk/logs';
+import {startTracesSdk} from '@opentelemetry/browser-sdk/traces';
 import {OTLPMetricExporter} from '@opentelemetry/exporter-metrics-otlp-http';
-import {OTLPTraceExporter} from '@opentelemetry/exporter-trace-otlp-http';
-import {BatchLogRecordProcessor, LoggerProvider} from '@opentelemetry/sdk-logs';
+import {resourceFromAttributes} from '@opentelemetry/resources';
 import {
     MeterProvider,
     PeriodicExportingMetricReader,
 } from '@opentelemetry/sdk-metrics';
-import {
-    BatchSpanProcessor,
-    TraceIdRatioBasedSampler,
-    TracerProvider,
-} from '@opentelemetry/sdk-trace';
+import {TraceIdRatioBasedSampler} from '@opentelemetry/sdk-trace';
 
 import {registerInstrumentations} from '@opentelemetry/instrumentation';
-import {BrowserNavigationInstrumentation} from '@opentelemetry/instrumentation-browser-navigation';
-import {DocumentLoadInstrumentation} from '@opentelemetry/instrumentation-document-load';
-import {FetchInstrumentation} from '@opentelemetry/instrumentation-fetch';
-import {LongTaskInstrumentation} from '@opentelemetry/instrumentation-long-task';
-import {UserInteractionInstrumentation} from '@opentelemetry/instrumentation-user-interaction';
-import {XMLHttpRequestInstrumentation} from '@opentelemetry/instrumentation-xml-http-request';
-import {ExceptionInstrumentation} from '@opentelemetry/instrumentation-web-exception';
+import {NavigationInstrumentation} from '@opentelemetry/browser-instrumentation/experimental/navigation';
+import {NavigationTimingInstrumentation} from '@opentelemetry/browser-instrumentation/experimental/navigation-timing';
+import {ResourceTimingInstrumentation} from '@opentelemetry/browser-instrumentation/experimental/resource-timing';
+import {FetchInstrumentation} from '@opentelemetry/browser-instrumentation/experimental/fetch';
+import {UserActionInstrumentation} from '@opentelemetry/browser-instrumentation/experimental/user-action';
+import {XhrInstrumentation} from '@opentelemetry/browser-instrumentation/experimental/xhr';
+import {ErrorsInstrumentation} from '@opentelemetry/browser-instrumentation/experimental/errors';
 import {WebVitalsInstrumentation} from '@opentelemetry/browser-instrumentation/experimental/web-vitals';
 
 import {AsyncApisContextManager} from './context.js';
@@ -47,56 +30,73 @@ import {detectResource} from './detector.js';
 
 /**
  * @typedef {{
- *  "@opentelemetry/instrumentation-browser-navigation": import('@opentelemetry/instrumentation-browser-navigation').BrowserNavigationInstrumentationConfig;
- *  "@opentelemetry/instrumentation-document-load": import('@opentelemetry/instrumentation-document-load').DocumentLoadInstrumentationConfig;
- *  "@opentelemetry/instrumentation-fetch": import('@opentelemetry/instrumentation-fetch').FetchInstrumentationConfig;
- *  "@opentelemetry/instrumentation-long-task": import('@opentelemetry/instrumentation-long-task').LongtaskInstrumentationConfig;
- *  "@opentelemetry/instrumentation-user-interaction": import('@opentelemetry/instrumentation-user-interaction').UserInteractionInstrumentationConfig;
- *  "@opentelemetry/instrumentation-xml-http-request": import('@opentelemetry/instrumentation-xml-http-request').XMLHttpRequestInstrumentationConfig;
- *  "@opentelemetry/instrumentation-web-exception": import('@opentelemetry/instrumentation-web-exception').GlobalErrorsInstrumentationConfig;
- *  "@opentelemetry/instrumentation-web-vitals": import('@opentelemetry/browser-instrumentation/experimental/web-vitals').WebVitalsInstrumentationConfig;
+ *  "navigation": import('@opentelemetry/browser-instrumentation/experimental/navigation').NavigationInstrumentationConfig;
+ *  "navigation-timing": import('@opentelemetry/browser-instrumentation/experimental/navigation-timing').NavigationTimingInstrumentationConfig;
+ *  "resource-timing": import('@opentelemetry/browser-instrumentation/experimental/resource-timing').ResourceTimingInstrumentationConfig;
+ *  "fetch": import('@opentelemetry/browser-instrumentation/experimental/fetch').FetchInstrumentationConfig;
+ *  "user-action": import('@opentelemetry/browser-instrumentation/experimental/user-action').UserActionInstrumentationConfig;
+ *  "xhr": import('@opentelemetry/browser-instrumentation/experimental/xhr').XhrInstrumentationConfig;
+ *  "errors": import('@opentelemetry/browser-instrumentation/experimental/errors').ErrorsInstrumentationConfig;
+ *  "web-vitals": import('@opentelemetry/browser-instrumentation/experimental/web-vitals').WebVitalsInstrumentationConfig;
  * }} InstrumentationsConfigMap
  */
 
 /**
- * @typedef {Object} BrowserSdkConfiguration
+ * Configuration that is defined in upstream SDK
+ * @typedef {Object} SdkConfig
  * @property {boolean} [disabled]
+ * @property {Lowercase<keyof typeof import('@opentelemetry/api').DiagLogLevel>} [logLevel]
  * @property {string} [serviceName]
  * @property {string} [serviceVersion]
- * @property {string} [logLevel] // defaults to 'info'
+ * @property {import('@opentelemetry/api').Attributes} [resourceAttributes]
+ * @property {{url?: string; headers?: Record<string, string>}} [exportConfig]
+ */
+
+/**
+ * Configuration properties that are only in EDOT
+ * @typedef {Object} EdotConfig
  * @property {number} [sampleRate] // defaults to 1
- * @property {Record<string, import('./detector.js').AttributeValue>} [resourceAttributes]
- * @property {string} [otlpEndpoint] // defaults to 'http://localhost:4318'
- * @property {Record<string, string>} [exportHeaders] // defaults to {}
- *
- * // other options
  * @property {Partial<InstrumentationsConfigMap>} [instrumentations]
  */
+/**
+ * @typedef {SdkConfig & EdotConfig} BrowserSdkConfiguration
+ */
+
+// SDK returned when invalid config or some error happens at start
+const NOOP_SDK = {shutdown: () => Promise.resolve()};
 
 // To control multiple calls to `startBrowserSdk`
 let sdkStarted = false;
 
-/** @type {BrowserSdkConfiguration} */
+/** @typedef { 'logLevel' | 'serviceName' | 'resourceAttributes' | 'sampleRate' | 'exportConfig'} DefaultConfigProps*/
+/** @type {Required<Pick<BrowserSdkConfiguration, DefaultConfigProps>>} */
 const defaultConfig = {
     logLevel: 'info',
     sampleRate: 1,
     serviceName: 'unknown_service:web',
     resourceAttributes: {},
-    otlpEndpoint: 'http://localhost:4318',
-    exportHeaders: {},
+    exportConfig: {
+        url: 'http://localhost:4318',
+    },
 };
 
 /**
  * @param {BrowserSdkConfiguration} cfg
  * @returns {{
- *      forceFlush: () => Promise<void>
+ *      shutdown: () => Promise<void>;
  * }}
  */
 export function startBrowserSdk(cfg = {}) {
     if (sdkStarted || cfg.disabled) {
-        return;
+        return NOOP_SDK;
     }
 
+    // The upstream SDKs already set a logger but we want to print
+    // some messages before using them. We need to setup our own
+    // logger and disable it before starting logs/traces to avoid
+    // the override message from old and new logger
+    /** @type {keyof typeof import('@opentelemetry/api').DiagLogLevel} */
+    // @ts-expect-error - `createLogger` handles upercasing and wrong values
     const logLevel = cfg.logLevel ?? defaultConfig.logLevel;
     diag.setLogger(createLogger({logLevel}), {logLevel: DiagLogLevel.ALL});
     diag.debug(`Browser SDK intialization`, cfg);
@@ -108,114 +108,86 @@ export function startBrowserSdk(cfg = {}) {
     /** @type {URL} */
     let endpointUrl;
     try {
-        endpointUrl = new URL(config.otlpEndpoint);
+        endpointUrl = new URL(config?.exportConfig?.url || '');
     } catch (urlErr) {
         diag.error(
-            `The value "${config.otlpEndpoint}" for "otlpEndpoint" configuration is not an URL. SDK won't start.`
+            `The value "${config?.exportConfig?.url}" for "exportConfig.url" configuration is not an URL. SDK won't start.`
         );
-        return;
+        return NOOP_SDK;
     }
 
     // Detect resource
-    const resource = detectResource(
+    const resourceAttributes = detectResource(
         config.resourceAttributes,
         serviceName,
         serviceVersion
     );
 
+    // Disable our logger to let the upstream take its place
+    // TODO: if upstream exports its method to register a logger
+    // we could get rid of this
+    diag.disable();
+
     // NOTE: export payloads can be seen in DevTools network tab in JSON format
-    // so IMHO it would be redundant to use console exporters
-
-    // Traces depend on context manager & propagation
-    AsyncApisContextManager.enable();
-    context.setGlobalContextManager(AsyncApisContextManager);
-    propagation.setGlobalPropagator(
-        new CompositePropagator({
-            propagators: [
-                new W3CTraceContextPropagator(),
-                new W3CBaggagePropagator(),
-            ],
-        })
-    );
-
-    // traces signal configuration
-    const tracesEndpoint = appendPath(endpointUrl, 'v1/traces').href;
-    const spanProcessor = new BatchSpanProcessor({
-        exporter: new OTLPTraceExporter({
-            url: tracesEndpoint,
-            headers: config.exportHeaders,
-        }),
-    });
-    const tracerProvider = new TracerProvider({
-        resource,
+    // so IMHO it would be redundant to use console exporters in traces signal
+    const tracesSdk = startTracesSdk({
+        logLevel,
+        resourceAttributes,
+        contextManager: AsyncApisContextManager.enable(),
         sampler: new TraceIdRatioBasedSampler(config.sampleRate),
-        spanProcessors: [spanProcessor],
+        exportConfig: {
+            url: appendPath(endpointUrl, 'v1/traces').href,
+            headers: config.exportConfig.headers,
+        },
     });
-    trace.setGlobalTracerProvider(tracerProvider);
+
+    const logsSdk = startLogsSdk({
+        logLevel,
+        resourceAttributes,
+        exportConfig: {
+            url: appendPath(endpointUrl, 'v1/logs').href,
+            headers: config.exportConfig.headers,
+        },
+    });
 
     // metrics signal configuration
-    const metricsEndpoint = appendPath(endpointUrl, 'v1/metrics').href;
+    // possible `startMetricsSdk` function
     const metricsReader = new PeriodicExportingMetricReader({
         exporter: new OTLPMetricExporter({
-            url: metricsEndpoint,
-            headers: config.exportHeaders,
+            url: appendPath(endpointUrl, 'v1/metrics').href,
+            headers: config.exportConfig.headers,
         }),
     });
     const meterProvider = new MeterProvider({
-        resource,
+        resource: resourceFromAttributes(resourceAttributes),
         readers: [metricsReader],
     });
     metrics.setGlobalMeterProvider(meterProvider);
-
-    // logs signal configuration
-    const logsEndpoint = appendPath(endpointUrl, 'v1/logs').href;
-    const logsProcessor = new BatchLogRecordProcessor({
-        exporter: new OTLPLogExporter({
-            url: logsEndpoint,
-            headers: config.exportHeaders,
-        }),
-    });
-    const loggerProvider = new LoggerProvider({
-        resource,
-        processors: [logsProcessor],
-    });
-    logs.setGlobalLoggerProvider(loggerProvider);
 
     // Resgister instrumentations. The `registerInstrumentations` enabled all of them
     // regardless of the configuration so EDOT only add the ones that are not disabled
     // by configuration
     /** @type {Record<keyof InstrumentationsConfigMap, (cfg: any) => any>} */
     const instrFactories = {
-        '@opentelemetry/instrumentation-browser-navigation': (cfg) =>
-            new BrowserNavigationInstrumentation(cfg),
-        '@opentelemetry/instrumentation-document-load': (cfg) =>
-            new DocumentLoadInstrumentation(cfg),
-        '@opentelemetry/instrumentation-fetch': (cfg) =>
-            new FetchInstrumentation(cfg),
-        '@opentelemetry/instrumentation-long-task': (cfg) =>
-            new LongTaskInstrumentation(cfg),
-        '@opentelemetry/instrumentation-user-interaction': (cfg) =>
-            new UserInteractionInstrumentation(cfg),
-        '@opentelemetry/instrumentation-xml-http-request': (cfg) =>
-            new XMLHttpRequestInstrumentation(cfg),
-        '@opentelemetry/instrumentation-web-exception': (cfg) =>
-            new ExceptionInstrumentation(cfg),
-        '@opentelemetry/instrumentation-web-vitals': (cfg) =>
-            new WebVitalsInstrumentation(cfg),
+        navigation: (cfg) => new NavigationInstrumentation(cfg),
+        'navigation-timing': (cfg) => new NavigationTimingInstrumentation(cfg),
+        'resource-timing': (cfg) => new ResourceTimingInstrumentation(cfg),
+        fetch: (cfg) => new FetchInstrumentation(cfg),
+        'user-action': (cfg) => new UserActionInstrumentation(cfg),
+        xhr: (cfg) => new XhrInstrumentation(cfg),
+        errors: (cfg) => new ErrorsInstrumentation(cfg),
+        'web-vitals': (cfg) => new WebVitalsInstrumentation(cfg),
     };
 
-    const httpSemconvConfig = {semconvStabilityOptIn: 'http'};
     const instrumentations = config.instrumentations || {};
     const enabledInstrumentations = [];
-    for (const key of Object.keys(instrFactories)) {
-        let instrConfig = instrumentations[key];
-        if (
-            key === '@opentelemetry/instrumentation-fetch' ||
-            key === '@opentelemetry/instrumentation-xml-http-request'
-        ) {
-            instrConfig = {...httpSemconvConfig, ...instrConfig};
-        }
 
+    /** @type {Array<keyof InstrumentationsConfigMap>} */
+    // @ts-expect-error - the object defined above only has the allowed keys
+    const instrKeys = Object.keys(instrFactories);
+
+    for (const key of instrKeys) {
+        const instrConfig = instrumentations[key];
         const isDisabled = instrConfig?.enabled === false;
         if (!isDisabled) {
             enabledInstrumentations.push(instrFactories[key](instrConfig));
@@ -227,12 +199,20 @@ export function startBrowserSdk(cfg = {}) {
     sdkStarted = true;
 
     return {
-        forceFlush() {
-            return Promise.all([
-                tracerProvider.forceFlush(),
-                meterProvider.forceFlush(),
-                loggerProvider.forceFlush(),
-            ]).then(() => {});
+        shutdown() {
+            return Promise.allSettled([
+                tracesSdk.shutdown(),
+                logsSdk.shutdown(),
+                meterProvider.shutdown(),
+            ]).then((results) => {
+                for (const res of results) {
+                    if (res.status === 'rejected') {
+                        diag.warn(
+                            `Error shutting down SDK. Reason: ${res.reason}`
+                        );
+                    }
+                }
+            });
         },
     };
 }

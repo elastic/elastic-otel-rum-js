@@ -23,108 +23,137 @@
             <script>
                 const statusElem = document.querySelector('#status');
                 function getTracer(name) {
-                    const otelApiSymbol = Symbol.for('opentelemetry.js.api.1'); // TODO: check when update the major version
-                    const traceApi = globalThis[otelApiSymbol].trace;
-                    return traceApi.getTracer(name);
+                    // TODO: check when update the major version
+                    const otelApiSymbol = Symbol.for('opentelemetry.js.api.1');
+                    // It's odd that the `trace` API is actually the tracer provider
+                    const tracerProvider = globalThis[otelApiSymbol].trace;
+                    return tracerProvider.getTracer(name);
                 }
                 // NOTE: we wait until document loaded to make sure EDOT is started
-                // We do this because we want `@opentelemetry/instrumentation-user-interaction`
-                // to be enbled. IMHO is think this is not complete specifically for 'click'
-                // events
+                // `@opentelemetry/browser-instrumentation/user-action` emits logs when user clicks
+                // so we have to create our own parent spans
                 window.addEventListener('load', () => {
-                    // Registering at this moment the click event we will get
-                    // user interaction spans
                     document.querySelector('#timeout').addEventListener('click', () => {
-                        statusElem.innerText = 'started';
-                        setTimeout(() => {
-                            getTracer('default').startSpan('timeout-child').end();
-                            statusElem.innerText = 'finished';
-                        }, 1);
+                        getTracer('default').startActiveSpan('timeout', (parentSpan) => {
+                            console.log('timeout - with context');
+                            statusElem.innerText = 'started';
+                            setTimeout(() => {
+                                getTracer('default').startSpan('timeout-child').end();
+                                statusElem.innerText = 'finished';
+                                parentSpan.end();
+                                console.log('timeout - finished');
+                            }, 1);
+                        });
                     });
                     document.querySelector('#promise-ctor').addEventListener('click', () => {
-                        statusElem.innerText = 'started';
-                        new Promise((resolve) => {
-                            getTracer('default').startSpan('promise-ctor-child').end();
-                            resolve();
-                            statusElem.innerText = 'finished';
+                        getTracer('default').startActiveSpan('promise-ctor', (parentSpan) => {
+                            statusElem.innerText = 'started';
+                            new Promise((resolve) => {
+                                getTracer('default').startSpan('promise-ctor-child').end();
+                                resolve();
+                                statusElem.innerText = 'finished';
+                                parentSpan.end();
+                            });
                         });
                     });
                     document.querySelector('#promise-then-success').addEventListener('click', () => {
-                        statusElem.innerText = 'started';
-                        Promise.resolve().then(() => {
-                            getTracer('default').startSpan('promise-then-success-child').end();
-                            statusElem.innerText = 'finished';
+                        getTracer('default').startActiveSpan('promise-then-success', (parentSpan) => {
+                            statusElem.innerText = 'started';
+                            Promise.resolve().then(() => {
+                                getTracer('default').startSpan('promise-then-success-child').end();
+                                statusElem.innerText = 'finished';
+                                parentSpan.end();
+                            });
                         });
                     });
                     document.querySelector('#promise-then-failure').addEventListener('click', () => {
-                        statusElem.innerText = 'started';
-                        Promise.reject().then(
-                            () => undefined,
-                            () => {
-                                getTracer('default').startSpan('promise-then-failure-child').end();
-                                statusElem.innerText = 'finished';
-                            }
-                        );
+                        getTracer('default').startActiveSpan('promise-then-failure', (parentSpan) => {
+                            statusElem.innerText = 'started';
+                            Promise.reject().then(
+                                () => undefined,
+                                () => {
+                                    getTracer('default').startSpan('promise-then-failure-child').end();
+                                    statusElem.innerText = 'finished';
+                                    parentSpan.end();
+                                }
+                            );
+                        });
                     });
                     document.querySelector('#promise-catch').addEventListener('click', () => {
-                        statusElem.innerText = 'started';
-                        Promise.reject().catch(() => {
-                            getTracer('default').startSpan('promise-catch-child').end();
-                            statusElem.innerText = 'finished';
+                        getTracer('default').startActiveSpan('promise-catch', (parentSpan) => {
+                            statusElem.innerText = 'started';
+                            Promise.reject().catch(() => {
+                                getTracer('default').startSpan('promise-catch-child').end();
+                                statusElem.innerText = 'finished';
+                                parentSpan.end();
+                            });
                         });
                     });
                     document.querySelector('#promise-finally').addEventListener('click', () => {
-                        statusElem.innerText = 'started';
-                        Promise.reject().finally(() => {
-                            getTracer('default').startSpan('promise-finally-child').end();
-                            statusElem.innerText = 'finished';
+                        getTracer('default').startActiveSpan('promise-finally', (parentSpan) => {
+                            statusElem.innerText = 'started';
+                            Promise.reject().finally(() => {
+                                getTracer('default').startSpan('promise-finally-child').end();
+                                statusElem.innerText = 'finished';
+                                parentSpan.end();
+                            });
                         });
                     });
                     document.querySelector('#xhr-event').addEventListener('click', () => {
-                        statusElem.innerText = 'started';
-                        const xhr = new XMLHttpRequest();
-                        const method = "GET";
-                        const url = "/";
-                        xhr.open(method, url, true);
-                        xhr.addEventListener('readystatechange', () => {
-                            if (xhr.readyState === XMLHttpRequest.DONE) {
-                                getTracer('default').startSpan('xhr-event-child').end();
-                                statusElem.innerText = 'finished';
-                            }
+                        getTracer('default').startActiveSpan('xhr-event', (parentSpan) => {
+                            statusElem.innerText = 'started';
+                            const xhr = new XMLHttpRequest();
+                            xhr.open('GET', '/', true);
+                            xhr.addEventListener('readystatechange', () => {
+                                if (xhr.readyState === XMLHttpRequest.DONE) {
+                                    getTracer('default').startSpan('xhr-event-child').end();
+                                    statusElem.innerText = 'finished';
+                                }
+                            });
+                            xhr.addEventListener('loadend', () => {
+                                parentSpan.end();
+                            });
+                            xhr.send();
                         });
-                        xhr.send();
                     });
                     document.querySelector('#xhr-prop').addEventListener('click', () => {
-                        statusElem.innerText = 'started';
-                        const xhr = new XMLHttpRequest();
-                        const method = "GET";
-                        const url = "/";
-                        xhr.open(method, url, true);
-                        xhr.onreadystatechange = () => {
-                            if (xhr.readyState === XMLHttpRequest.DONE) {
-                                getTracer('default').startSpan('xhr-prop-child').end();
-                                statusElem.innerText = 'finished';
-                            }
-                        };
-                        xhr.send();
+                        getTracer('default').startActiveSpan('xhr-prop', (parentSpan) => {
+                            statusElem.innerText = 'started';
+                            const xhr = new XMLHttpRequest();
+                            xhr.open('GET', '/', true);
+                            xhr.onreadystatechange = () => {
+                                if (xhr.readyState === XMLHttpRequest.DONE) {
+                                    getTracer('default').startSpan('xhr-prop-child').end();
+                                    statusElem.innerText = 'finished';
+                                }
+                            };
+                            xhr.onloadend = () => {
+                                parentSpan.end();
+                            };
+                            xhr.send();
+                        });
                     });
                     document.querySelector('#xhr-target-prop').addEventListener('click', () => {
-                        statusElem.innerText = 'started';
-                        const xhr = new XMLHttpRequest();
-                        const method = "GET";
-                        const url = "/";
-                        xhr.open(method, url, true);
-                        xhr.onloadend = () => {
-                            getTracer('default').startSpan('xhr-target-prop-child').end();
-                            statusElem.innerText = 'finished';
-                        };
-                        xhr.send();
+                        getTracer('default').startActiveSpan('xhr-target-prop', (parentSpan) => {
+                            statusElem.innerText = 'started';
+                            const xhr = new XMLHttpRequest();
+                            xhr.open('GET', '/', true);
+                            xhr.onloadend = () => {
+                                getTracer('default').startSpan('xhr-target-prop-child').end();
+                                statusElem.innerText = 'finished';
+                                parentSpan.end();
+                            };
+                            xhr.send();
+                        });
                     });
                     document.querySelector('#fetch').addEventListener('click', () => {
-                        statusElem.innerText = 'started';
-                        fetch('/').then(() => {
+                        getTracer('default').startActiveSpan('fetch', (parentSpan) => {
+                            statusElem.innerText = 'started';
+                            fetch('/').then(() => {
                             getTracer('default').startSpan('fetch-child').end();
-                            statusElem.innerText = 'finished';
+                                statusElem.innerText = 'finished';
+                                parentSpan.end();
+                            });
                         });
                     });
                 });

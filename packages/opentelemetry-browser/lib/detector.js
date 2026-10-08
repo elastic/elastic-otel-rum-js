@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import {resourceFromAttributes} from '@opentelemetry/resources';
 import {SDK_INFO} from '@opentelemetry/core';
 
 import {
@@ -22,21 +21,12 @@ import {EDOT_VERSION} from './version.js';
  */
 
 /**
- * @template T
- * @typedef {T | Array<T | undefined | null>} MaybeArray<T>
- */
-/**
- * @typedef {MaybeArray<number> | MaybeArray<boolean> | MaybeArray<string>} AttributeValue
- */
-
-/**
- * @param {Record<string, AttributeValue>} attribs
+ * @param {import('@opentelemetry/api').Attributes} attribs
  * @param {string | undefined} serviceName
  * @param {string | undefined} serviceVersion
- * @returns {import('@opentelemetry/resources').Resource}
+ * @returns {import('@opentelemetry/api').Attributes}
  */
 export function detectResource(attribs, serviceName, serviceVersion) {
-    /** @type {MaybeArray<number>} */
     if (typeof serviceName === 'string' && serviceName) {
         attribs['service.name'] = serviceName;
     }
@@ -81,7 +71,7 @@ export function detectResource(attribs, serviceName, serviceVersion) {
     // ['screen.height']: window.screen.height,
     // ['screen.size']: computeScreenSize(window.screen.width),
 
-    return resourceFromAttributes({...attribs, ...SDK_INFO});
+    return {...attribs, ...SDK_INFO};
 }
 
 // -- helper functions
@@ -89,7 +79,7 @@ export function detectResource(attribs, serviceName, serviceVersion) {
 
 /**
  * @param {string} userAgent
- * @returns {{name: string; version: string} | undefined}
+ * @returns {{name: string; version: string | undefined} | undefined}
  */
 export function getPlatformInfo(userAgent) {
     /** @type {Array<[string,RegExp[]]>} */

@@ -50,13 +50,15 @@ import { startBrowserSdk } from '@elastic/opentelemetry-browser';
 
 startBrowserSdk({
   serviceName: 'my-web-app',
-  otlpEndpoint: 'https://telemetry.example.com',
   logLevel: 'info',
+  exportConfig: {
+    url: 'https://telemetry.example.com',
+  }
 });
 ```
 
 - `serviceName` identifies the browser application in {{product.observability}}.
-- `otlpEndpoint` points to a reverse proxy, not directly to {{product.observability}}.
+- `exportConfig.url` points to a reverse proxy, not directly to {{product.observability}}.
 - `logLevel` controls diagnostic output in the browser console.
 
 ## Supported configuration settings [supported-configuration-settings]
@@ -67,17 +69,19 @@ Configuration is passed as an object to `startBrowserSdk`. The following options
 |-----------------------|--------------------------|-------------|
 | `serviceName`         | `string`                 | Logical name of the frontend service. Defaults to `unknown_service:web` if not set. |
 | `serviceVersion`      | `string`                 | Version of the application. Optional. |
-| `logLevel`            | `string`                 | Diagnostic log level (`error`, `warn`, `info`, `debug`, `verbose`). Defaults to `info`. |
-| `otlpEndpoint`        | `string`                 | Base URL of the OTLP export endpoint (reverse proxy). Do not include signal paths such as `/v1/traces`. Defaults to `http://localhost:4318`. |
+| `logLevel` | `"none" \| "error" \| "warn" \| "info" \| "debug" \| "verbose" \| "all"` | Diagnostic log level for the SDK internal logger. Defaults to `info`. Values are lowercase; the SDK accepts them case-insensitively. |
 | `sampleRate`          | `number`                 | Trace sampling ratio (0–1). Defaults to `1` (100%). |
 | `resourceAttributes`  | `Record<string, any>`    | Optional resource attributes to attach to telemetry. For example: `{ 'deployment.environment.name': 'production' }`. |
-| `exportHeaders`       | `Record<string, string>` | Headers to send with export requests. Defaults to `{}`. The reverse proxy typically injects `Authorization`; do not put API keys here in browser code. |
 | `disabled`            | `boolean`                | If `true`, the SDK does not start. |
 | `instrumentations`    | `Record<string, Object>` | Per-instrumentation config. Set `{ enabled: false }` for a key to turn off that instrumentation. Refer to [instrumentations details](#otel_browser_instrumentations-details) for more information. |
+| `exportConfig`    | `{ url?: string; headers?: Record<string, string>}` | Configuration for exporters of the different signals. |
+| `exportConfig.url`    | `string` | Base URL of the OTLP export endpoint (reverse proxy). Do not include signal paths such as `/v1/traces`. Defaults to `http://localhost:4318`. |
+| `exportConfig.headers`    | `Record<string, string>` | Headers to send with export requests. Defaults to `{}`. The reverse proxy typically injects `Authorization`; do not put API keys here in browser code. |
+
 
 ## Export endpoint configuration [export-endpoint-configuration]
 
-Configure `otlpEndpoint` to point to a server that accepts OTLP traffic. Use the base URL of the server only: do not include signal paths such as `/v1/traces`, `/v1/metrics`, or `/v1/logs`. The SDK appends these paths when exporting each signal.
+Configure `exportConfig.url` to point to a server that accepts OTLP traffic. Use the base URL of the server only: do not include signal paths such as `/v1/traces`, `/v1/metrics`, or `/v1/logs`. The SDK appends these paths when exporting each signal.
 
 For security reasons Elastic recommends to configure a reverse proxy that forwards OTLP traffic to {{product.observability}}. Refer to [Proxy and CORS configuration](proxy-cors.md) for more details.
 
@@ -96,8 +100,10 @@ import { startBrowserSdk } from '@elastic/opentelemetry-browser';
 
 startBrowserSdk({
   serviceName: 'my-web-app',
-  otlpEndpoint: 'https://telemetry.example.com',
   logLevel: 'debug',
+  exportConfig: {
+    url: 'https://telemetry.example.com',
+  }
 });
 ```
 
@@ -109,19 +115,20 @@ This section provides additional details about configuration settings that requi
 
 ### `instrumentations` details [otel_browser_instrumentations-details]
 
-An object whose keys are the scope names of the available instrumentations in EDOT and whose values are the corresponding configuration objects.
+An object whose keys are the configuration keys of the available instrumentations in EDOT and whose values are the corresponding configuration objects. The scope name is the instrumentation identifier attached to exported telemetry.
 
 The following keys are supported:
 
-| Instrumentation   | Key (scope name)                                 | Configuration |
-|-------------------|--------------------------------------------------|---------------|
-| Document load     | `@opentelemetry/instrumentation-document-load`   | [Reference](https://github.com/open-telemetry/opentelemetry-js-contrib/blob/main/packages/instrumentation-document-load/README.md#document-load-instrumentation-options) |
-| Fetch             | `@opentelemetry/instrumentation-fetch`           | [Reference](https://github.com/open-telemetry/opentelemetry-js/tree/main/experimental/packages/opentelemetry-instrumentation-fetch#fetch-instrumentation-options) |
-| Long task         | `@opentelemetry/instrumentation-long-task`       | [Reference](https://github.com/open-telemetry/opentelemetry-js-contrib/tree/main/packages/instrumentation-long-task#longtask-instrumentation-options) |
-| User interaction  | `@opentelemetry/instrumentation-user-interaction`| [Reference](https://github.com/open-telemetry/opentelemetry-js-contrib/tree/main/packages/instrumentation-user-interaction#send-spans-for-different-events) |
-| XMLHttpRequest    | `@opentelemetry/instrumentation-xml-http-request`| [Reference](https://github.com/open-telemetry/opentelemetry-js/tree/main/experimental/packages/opentelemetry-instrumentation-xml-http-request#xhr-instrumentation-options) |
-| Web exception     | `@opentelemetry/instrumentation-web-exception`   | [Reference](https://github.com/open-telemetry/opentelemetry-js-contrib/tree/main/packages/instrumentation-web-exception#configuration) |
-| Web vitals        | `@opentelemetry/instrumentation-web-vitals`      | [Reference](https://github.com/open-telemetry/opentelemetry-browser/blob/main/packages/instrumentation/README.md#configuration-1) |
+| Instrumentation   | Key                                              | Scope                                            | Configuration |
+|-------------------|--------------------------------------------------|--------------------------------------------------|---------------|
+| Navigation timing | `navigation-timing`                              | `@opentelemetry/browser-instrumentation/navigation-timing` | [Reference](https://github.com/open-telemetry/opentelemetry-browser/tree/main/packages/instrumentation#navigation-timing) |
+| Resource timing   | `resource-timing`                              | `@opentelemetry/browser-instrumentation/resource-timing` | [Reference](https://github.com/open-telemetry/opentelemetry-browser/tree/main/packages/instrumentation#resource-timing) |
+| Fetch             | `fetch`                                          | `@opentelemetry/browser-instrumentation/fetch`   | [Reference](https://github.com/open-telemetry/opentelemetry-browser/tree/main/packages/instrumentation#fetch) |
+| User action       | `user-action`                                    | `@opentelemetry/browser-instrumentation/user-action`| [Reference](https://github.com/open-telemetry/opentelemetry-browser/tree/main/packages/instrumentation#user-action) |
+| XMLHttpRequest    | `xhr`                                            | `@opentelemetry/browser-instrumentation/xhr`     | [Reference](https://github.com/open-telemetry/opentelemetry-browser/tree/main/packages/instrumentation#xhr-xmlhttprequest) |
+| Errors            | `errors`                                         | `@opentelemetry/browser-instrumentation/errors`   | [Reference](https://github.com/open-telemetry/opentelemetry-browser/tree/main/packages/instrumentation#errors) |
+| Web vitals        | `web-vitals`                                     | `@opentelemetry/browser-instrumentation/web-vitals` | [Reference](https://github.com/open-telemetry/opentelemetry-browser/blob/main/packages/instrumentation/README.md#web-vitals) |
+| Navigation        | `navigation`                                     | `@opentelemetry/browser-instrumentation/navigation` | [Reference](https://github.com/open-telemetry/opentelemetry-browser/blob/main/packages/instrumentation/README.md#navigation) |
 
 ## Next steps [next-steps]
 

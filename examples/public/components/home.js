@@ -6,9 +6,9 @@
 const template = `
     <h2 class="content-subhead">Home Component</h2>
     <p>
-        This is the Home component. It just loads some static assets that should appear in the trace
-        as child spans of the "document-load" span. Also the static assets lie the main CSS files and
-        the JS ones should be present as well.
+        This is the Home component. It just loads some static assets that should appear as resource timing
+        log events. Also the navigation timing data should be send as a log. Also the static assets lie the
+        main CSS files and the JS ones should be present as well.
     </p>
 
     <div class="pure-g">

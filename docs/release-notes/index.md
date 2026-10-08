@@ -32,6 +32,28 @@ To check for security updates, go to [Security announcements for the Elastic sta
 % ### Chores [edot-browser-X.X.X-chores]
 % *
 
+## X.X.X [edot-browser-X.X.X-release-notes]
+
+### Features and enhancements [edot-browser-X.X.X-features-enhancements]
+
+* Align configuration with the upstream [browser-sdk](https://github.com/open-telemetry/opentelemetry-browser/tree/main/packages/sdk).
+
+### Chores [edot-browser-X.X.X-chores]
+
+* Use the new upstream `@opentelemetry/browser-sdk` package to setup traces and logs signal.
+* Switch to the new upstream `navigation` instrumentation from  `@opentelemetry/browser-sdk` package.
+  * It replaces the former `@opentelemetry/instrumentation-browser-navigation`. the new instrumentation is a port
+    from [opentelemetry-js-contrib](https://github.com/open-telemetry/opentelemetry-js-contrib) to
+    [opentelemetry-browser](https://github.com/open-telemetry/opentelemetry-browser). There are no changes in the data
+    model rather than the scope.
+  * This change breaks the configuration interface of instrumentation switching the configuration key form the full
+    scope to a shorter name `navigation`.
+* Update `typescript` package to match the version in [opentelemetry-browser](https://github.com/open-telemetry/opentelemetry-browser).
+  * SDK has ben updated to retun a no-op SDK to conform to the types in the previous version.
+  * Internal JSDoc comments have been updated for better type checking.
+* Remove patching of `window.setImmediate` function in the context manager. The function is deprecated and not available
+  in the majority of browsers. Ref: https://developer.mozilla.org/en-US/docs/Web/API/Window/setImmediate
+
 ## 0.3.0 [edot-browser-0.3.0-release-notes]
 
 ### Chores [edot-browser-0.3.0-chores]

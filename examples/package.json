@@ -8,10 +8,11 @@
   "scripts": {
     "edot:update": "cd ../packages/opentelemetry-browser && npm run build && cp build/* ../../examples/public/assets",
     "//start:todo": "instrument the server?",
-    "start": "npm run edot:update && node ./server.js"
+    "start": "npm run edot:update && node --env-file=.env --import @elastic/opentelemetry-node ./server.js"
   },
   "dependencies": {
-    "dotenv": "^17.2.3",
+    "@elastic/opentelemetry-node": "^1.18.0",
+    "@opentelemetry/api": "^1.9.1",
     "mime": "^4.1.0"
   }
 }
