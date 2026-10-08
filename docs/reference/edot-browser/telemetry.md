@@ -52,7 +52,7 @@ EDOT Browser initializes tracing and registers instrumentations that produce spa
 - Spans for task executions that take longer than 50ms and might impact the user experience. For more information, refer to [PerformanceLongTaskTiming](https://developer.mozilla.org/en-US/docs/Web/API/PerformanceLongTaskTiming).
 
 :::{note}
-Long task spans come from the `@opentelemetry/instrumentation-long-task` instrumentation. This instrumentation is planned to be replaced by [long animation frame](https://developer.mozilla.org/en-US/docs/Web/API/PerformanceLongAnimationFrameTiming) instrumentation in a future release.
+The `@opentelemetry/instrumentation-long-task` instrumentation has been removed since the API is deprecated. This instrumentation is planned to be replaced by [long animation frame](https://developer.mozilla.org/en-US/docs/Web/API/PerformanceLongAnimationFrameTiming) instrumentation in a future release.
 :::
 
 Other browser activity that was previously captured as spans is now emitted as log records. Page and resource load timing, user actions (clicks), and navigation are exported on the logs signal. Refer to [Logs](#logs) for details.

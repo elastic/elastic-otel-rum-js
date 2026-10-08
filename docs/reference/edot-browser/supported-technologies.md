@@ -77,8 +77,7 @@ The following instrumentations are included and turned on by default. You can tu
 | Fetch             | `@opentelemetry/browser-instrumentation`   | `fetch`                                    | Yes |
 | XMLHttpRequest    | `@opentelemetry/browser-instrumentation`   | `xhr`                                      | Yes |
 | User action       | `@opentelemetry/browser-instrumentation`   | `user-action`                              | Yes |
-| Long tasks        | `@opentelemetry/instrumentation-long-task` | `@opentelemetry/instrumentation-long-task` | Yes |
-| Errors.           | `@opentelemetry/browser-instrumentation`   | `errors`                                   | Yes |
+| Errors            | `@opentelemetry/browser-instrumentation`   | `errors`                                   | Yes |
 | Web vitals        | `@opentelemetry/browser-instrumentation`   | `web-vitals`                               | Yes |
 | Navigation        | `@opentelemetry/browser-instrumentation`   | `navigation`                               | Yes |
 
@@ -91,7 +90,7 @@ By default, EDOT Browser:
 - Configures an OTLP exporter
 - Applies Elastic-specific defaults (for example, resource detection or attribute normalization)
 
-To turn off an instrumentation, pass `instrumentations` to `startBrowserSdk` with the instrumentation key and `{ enabled: false }` (for example, `instrumentations: { '@opentelemetry/instrumentation-long-task': { enabled: false } }`).
+To turn off an instrumentation, pass `instrumentations` to `startBrowserSdk` with the instrumentation key and `{ enabled: false }` (for example, `instrumentations: { 'web-vitals': { enabled: false } }`).
 
 ## Version compatibility [version-compatibility]
 
