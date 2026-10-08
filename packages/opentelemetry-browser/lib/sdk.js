@@ -19,7 +19,6 @@ import {NavigationInstrumentation} from '@opentelemetry/browser-instrumentation/
 import {NavigationTimingInstrumentation} from '@opentelemetry/browser-instrumentation/experimental/navigation-timing';
 import {ResourceTimingInstrumentation} from '@opentelemetry/browser-instrumentation/experimental/resource-timing';
 import {FetchInstrumentation} from '@opentelemetry/browser-instrumentation/experimental/fetch';
-import {LongTaskInstrumentation} from '@opentelemetry/instrumentation-long-task';
 import {UserActionInstrumentation} from '@opentelemetry/browser-instrumentation/experimental/user-action';
 import {XhrInstrumentation} from '@opentelemetry/browser-instrumentation/experimental/xhr';
 import {ErrorsInstrumentation} from '@opentelemetry/browser-instrumentation/experimental/errors';
@@ -35,7 +34,6 @@ import {detectResource} from './detector.js';
  *  "navigation-timing": import('@opentelemetry/browser-instrumentation/experimental/navigation-timing').NavigationTimingInstrumentationConfig;
  *  "resource-timing": import('@opentelemetry/browser-instrumentation/experimental/resource-timing').ResourceTimingInstrumentationConfig;
  *  "fetch": import('@opentelemetry/browser-instrumentation/experimental/fetch').FetchInstrumentationConfig;
- *  "@opentelemetry/instrumentation-long-task": import('@opentelemetry/instrumentation-long-task').LongtaskInstrumentationConfig;
  *  "user-action": import('@opentelemetry/browser-instrumentation/experimental/user-action').UserActionInstrumentationConfig;
  *  "xhr": import('@opentelemetry/browser-instrumentation/experimental/xhr').XhrInstrumentationConfig;
  *  "errors": import('@opentelemetry/browser-instrumentation/experimental/errors').ErrorsInstrumentationConfig;
@@ -175,8 +173,6 @@ export function startBrowserSdk(cfg = {}) {
         'navigation-timing': (cfg) => new NavigationTimingInstrumentation(cfg),
         'resource-timing': (cfg) => new ResourceTimingInstrumentation(cfg),
         fetch: (cfg) => new FetchInstrumentation(cfg),
-        '@opentelemetry/instrumentation-long-task': (cfg) =>
-            new LongTaskInstrumentation(cfg),
         'user-action': (cfg) => new UserActionInstrumentation(cfg),
         xhr: (cfg) => new XhrInstrumentation(cfg),
         errors: (cfg) => new ErrorsInstrumentation(cfg),
