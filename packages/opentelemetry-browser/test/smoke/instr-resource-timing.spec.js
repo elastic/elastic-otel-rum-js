@@ -100,3 +100,42 @@ test('should export resource timing related to XHR requests', async ({
 
     expect(xhrLog).toBeDefined();
 });
+
+test('should not export resource timing related to export requests', async ({
+    page,
+}) => {
+    const collector = createCollector(page);
+    page.route('api/method', (route, req) => {
+        route.fulfill({
+            status: 200,
+            contentType: 'text/plain',
+            body: 'Response for the same origin request',
+        });
+    });
+    await page.goto('/fixtures/use-xhr.html');
+
+    // Get the 1st batch fo logs from the navigation
+    let logs = await collector.getLogs();
+    expect(logs.length).toBeGreaterThan(0);
+
+    // Now do the fetch and check
+    await page.click('#same-origin');
+    await page.waitForFunction(
+        () => document.getElementById('status')?.innerText === 'finished'
+    );
+    // Get the XHR span & logs
+    const spans = await collector.getSpans({flush: false});
+    expect(spans.length).toEqual(1);
+
+    const exportLogs = (await collector.getLogs()).filter((l) => {
+        const scopeName = l.scope.name;
+        const urlFull = l.attributes['url.full'];
+        return (
+            scopeName ===
+                '@opentelemetry/browser-instrumentation/resource-timing' &&
+            urlFull &&
+            /\/v1\/(traces|logs|metrics)$/.test(urlFull)
+        );
+    });
+    expect(exportLogs.length).toEqual(0);
+});

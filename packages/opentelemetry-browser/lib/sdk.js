@@ -130,31 +130,34 @@ export function startBrowserSdk(cfg = {}) {
 
     // NOTE: export payloads can be seen in DevTools network tab in JSON format
     // so IMHO it would be redundant to use console exporters in traces signal
+    const tracesUrl = appendPath(endpointUrl, 'v1/traces').href;
     const tracesSdk = startTracesSdk({
         logLevel,
         resourceAttributes,
         contextManager: AsyncApisContextManager.enable(),
         sampler: new TraceIdRatioBasedSampler(config.sampleRate),
         exportConfig: {
-            url: appendPath(endpointUrl, 'v1/traces').href,
+            url: tracesUrl,
             headers: config.exportConfig.headers,
         },
     });
 
+    const logsUrl = appendPath(endpointUrl, 'v1/logs').href;
     const logsSdk = startLogsSdk({
         logLevel,
         resourceAttributes,
         exportConfig: {
-            url: appendPath(endpointUrl, 'v1/logs').href,
+            url: logsUrl,
             headers: config.exportConfig.headers,
         },
     });
 
     // metrics signal configuration
     // possible `startMetricsSdk` function
+    const metricsUrl = appendPath(endpointUrl, 'v1/metrics').href;
     const metricsReader = new PeriodicExportingMetricReader({
         exporter: new OTLPMetricExporter({
-            url: appendPath(endpointUrl, 'v1/metrics').href,
+            url: metricsUrl,
             headers: config.exportConfig.headers,
         }),
     });
@@ -171,7 +174,17 @@ export function startBrowserSdk(cfg = {}) {
     const instrFactories = {
         navigation: (cfg) => new NavigationInstrumentation(cfg),
         'navigation-timing': (cfg) => new NavigationTimingInstrumentation(cfg),
-        'resource-timing': (cfg) => new ResourceTimingInstrumentation(cfg),
+        'resource-timing': (cfg) => {
+            // This intrumentation must gnore export URLs.
+            // ref: https://github.com/elastic/elastic-otel-rum-js/issues/108
+            const config = cfg ?? {};
+            if (Array.isArray(config.ignoreUrls)) {
+                config.ignoreUrls.push(tracesUrl, logsUrl, metricsUrl);
+            } else {
+                config.ignoreUrls = [tracesUrl, logsUrl, metricsUrl];
+            }
+            return new ResourceTimingInstrumentation(config);
+        },
         fetch: (cfg) => new FetchInstrumentation(cfg),
         'user-action': (cfg) => new UserActionInstrumentation(cfg),
         xhr: (cfg) => new XhrInstrumentation(cfg),
