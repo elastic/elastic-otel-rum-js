@@ -193,26 +193,37 @@ export function startBrowserSdk(cfg = {}) {
     };
 
     const instrumentations = config.instrumentations || {};
-    const enabledInstrumentations = [];
 
     /** @type {Array<keyof InstrumentationsConfigMap>} */
     // @ts-expect-error - the object defined above only has the allowed keys
     const instrKeys = Object.keys(instrFactories);
 
-    for (const key of instrKeys) {
-        const instrConfig = instrumentations[key];
-        const isDisabled = instrConfig?.enabled === false;
-        if (!isDisabled) {
-            enabledInstrumentations.push(instrFactories[key](instrConfig));
+    // Create all instrumentations
+    /** @type {Array<import('@opentelemetry/instrumentation').Instrumentation>} */
+    const instrumentationInstances = instrKeys.map((key) => {
+        const config = instrumentations[key];
+        return instrFactories[key](config);
+    });
+    // register them (which enables all)
+    const disableInstrumentations = registerInstrumentations({
+        instrumentations: instrumentationInstances,
+    });
+
+    // Disable the ones with { enabled: false } in configuration
+    instrumentationInstances.forEach((instr) => {
+        const config = instr.getConfig();
+        console.log('instr', instr.instrumentationName, config);
+        if (config.enabled === false) {
+            instr.disable();
         }
-    }
-    registerInstrumentations({instrumentations: enabledInstrumentations});
+    });
 
     // Flag as started
     sdkStarted = true;
 
     return {
         shutdown() {
+            disableInstrumentations();
             return Promise.allSettled([
                 tracesSdk.shutdown(),
                 logsSdk.shutdown(),
