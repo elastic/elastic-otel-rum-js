@@ -130,31 +130,34 @@ export function startBrowserSdk(cfg = {}) {
 
     // NOTE: export payloads can be seen in DevTools network tab in JSON format
     // so IMHO it would be redundant to use console exporters in traces signal
+    const tracesUrl = appendPath(endpointUrl, 'v1/traces').href;
     const tracesSdk = startTracesSdk({
         logLevel,
         resourceAttributes,
         contextManager: AsyncApisContextManager.enable(),
         sampler: new TraceIdRatioBasedSampler(config.sampleRate),
         exportConfig: {
-            url: appendPath(endpointUrl, 'v1/traces').href,
+            url: tracesUrl,
             headers: config.exportConfig.headers,
         },
     });
 
+    const logsUrl = appendPath(endpointUrl, 'v1/logs').href;
     const logsSdk = startLogsSdk({
         logLevel,
         resourceAttributes,
         exportConfig: {
-            url: appendPath(endpointUrl, 'v1/logs').href,
+            url: logsUrl,
             headers: config.exportConfig.headers,
         },
     });
 
     // metrics signal configuration
     // possible `startMetricsSdk` function
+    const metricsUrl = appendPath(endpointUrl, 'v1/metrics').href;
     const metricsReader = new PeriodicExportingMetricReader({
         exporter: new OTLPMetricExporter({
-            url: appendPath(endpointUrl, 'v1/metrics').href,
+            url: metricsUrl,
             headers: config.exportConfig.headers,
         }),
     });
@@ -171,7 +174,17 @@ export function startBrowserSdk(cfg = {}) {
     const instrFactories = {
         navigation: (cfg) => new NavigationInstrumentation(cfg),
         'navigation-timing': (cfg) => new NavigationTimingInstrumentation(cfg),
-        'resource-timing': (cfg) => new ResourceTimingInstrumentation(cfg),
+        'resource-timing': (cfg) => {
+            // This intrumentation must gnore export URLs.
+            // ref: https://github.com/elastic/elastic-otel-rum-js/issues/108
+            const config = cfg ?? {};
+            if (Array.isArray(config.ignoreUrls)) {
+                config.ignoreUrls.push(tracesUrl, logsUrl, metricsUrl);
+            } else {
+                config.ignoreUrls = [tracesUrl, logsUrl, metricsUrl];
+            }
+            return new ResourceTimingInstrumentation(config);
+        },
         fetch: (cfg) => new FetchInstrumentation(cfg),
         'user-action': (cfg) => new UserActionInstrumentation(cfg),
         xhr: (cfg) => new XhrInstrumentation(cfg),
@@ -180,26 +193,37 @@ export function startBrowserSdk(cfg = {}) {
     };
 
     const instrumentations = config.instrumentations || {};
-    const enabledInstrumentations = [];
 
     /** @type {Array<keyof InstrumentationsConfigMap>} */
     // @ts-expect-error - the object defined above only has the allowed keys
     const instrKeys = Object.keys(instrFactories);
 
-    for (const key of instrKeys) {
-        const instrConfig = instrumentations[key];
-        const isDisabled = instrConfig?.enabled === false;
-        if (!isDisabled) {
-            enabledInstrumentations.push(instrFactories[key](instrConfig));
+    // Create all instrumentations
+    /** @type {Array<import('@opentelemetry/instrumentation').Instrumentation>} */
+    const instrumentationInstances = instrKeys.map((key) => {
+        const config = instrumentations[key];
+        return instrFactories[key](config);
+    });
+    // register them (which enables all)
+    const disableInstrumentations = registerInstrumentations({
+        instrumentations: instrumentationInstances,
+    });
+
+    // Disable the ones with { enabled: false } in configuration
+    instrumentationInstances.forEach((instr) => {
+        const config = instr.getConfig();
+        console.log('instr', instr.instrumentationName, config);
+        if (config.enabled === false) {
+            instr.disable();
         }
-    }
-    registerInstrumentations({instrumentations: enabledInstrumentations});
+    });
 
     // Flag as started
     sdkStarted = true;
 
     return {
         shutdown() {
+            disableInstrumentations();
             return Promise.allSettled([
                 tracesSdk.shutdown(),
                 logsSdk.shutdown(),
