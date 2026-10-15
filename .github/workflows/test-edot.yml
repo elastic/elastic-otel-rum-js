@@ -9,12 +9,14 @@ on:
     paths:
       - 'packages/opentelemetry-browser/**'
       - '.github/workflows/test-edot.yml'
+      - 'scripts/report-bundle-size.js'
   pull_request:
     branches:
       - main
     paths:
       - 'packages/opentelemetry-browser/**'
       - '.github/workflows/test-edot.yml'
+      - 'scripts/report-bundle-size.js'
 
       # Cancel jobs running for old commits on a PR. Allow concurrent runs on 'main'.
 concurrency:
@@ -44,6 +46,9 @@ jobs:
       working-directory: packages/opentelemetry-browser
     - name: Run Smoke tests
       run: npm run test:smoke
+      working-directory: packages/opentelemetry-browser
+    - name: Report bundle sizes
+      run: npm run --silent report:bundle-size
       working-directory: packages/opentelemetry-browser
     - uses: actions/upload-artifact@v4
       if: ${{ !cancelled() }}
