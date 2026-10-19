@@ -103,6 +103,26 @@ In addition, your application can emit its own records:
 Automatic capture of `console` methods (for example `console.log`, `console.error`) is not provided by EDOT Browser. To send application logs to {{product.observability}}, use the OpenTelemetry Logs API from your application code. Automatic console instrumentation might be considered in the future.
 :::
 
+## Sessions [sessions]
+
+EDOT Browser groups telemetry from the same user into sessions. Spans and log records include these attributes:
+
+- `session.id`: a random UUID shared by all tabs and windows of the application. It survives page reloads.
+- `session.previous_id`: the `session.id` of the session that ended right before the current one, when known.
+- `browser.tab.id`: a random UUID for the current tab or window. It survives page reloads within the same tab. This attribute is not part of the OpenTelemetry semantic conventions yet.
+
+A `session.start` log record is emitted every time a new session starts.
+
+A session ends after a period without telemetry (30 minutes by default) or when it reaches its maximum duration (4 hours by default). Refer to [session details](configuration.md#otel_browser_session-details) to change these values.
+
+Session attributes are not added to metrics to avoid high-cardinality attributes.
+
+### Known limitations of sessions [sessions-limitations]
+
+- Sessions are stored in `localStorage` and tab identifiers in `sessionStorage`. If web storage is not available (for example storage is blocked for the site), EDOT Browser does not add session attributes, since they would not persist across page reloads.
+- Duplicating a tab copies its `sessionStorage`, so the duplicated tab reports the same `browser.tab.id` as the original one.
+- Any telemetry, including background requests, counts as activity and extends the session.
+
 ## Next steps [next-steps]
 
 - Refer to [Set up EDOT Browser](setup.md), [Install the agent](install-agent.md), and [Proxy and CORS](proxy-cors.md) for installation and export configuration.

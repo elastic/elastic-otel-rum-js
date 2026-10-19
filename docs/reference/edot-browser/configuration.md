@@ -74,6 +74,7 @@ Configuration is passed as an object to `startBrowserSdk`. The following options
 | `resourceAttributes`  | `Record<string, any>`    | Optional resource attributes to attach to telemetry. For example: `{ 'deployment.environment.name': 'production' }`. |
 | `disabled`            | `boolean`                | If `true`, the SDK does not start. |
 | `instrumentations`    | `Record<string, Object>` | Per-instrumentation config. Set `{ enabled: false }` for a key to turn off that instrumentation. Refer to [instrumentations details](#otel_browser_instrumentations-details) for more information. |
+| `session`             | `{ enabled?: boolean; inactivityTimeout?: number; maxDuration?: number }` | Session tracking. Refer to [session details](#otel_browser_session-details) for more information. |
 | `exportConfig`    | `{ url?: string; headers?: Record<string, string>}` | Configuration for exporters of the different signals. |
 | `exportConfig.url`    | `string` | Base URL of the OTLP export endpoint (reverse proxy). Do not include signal paths such as `/v1/traces`. Defaults to `http://localhost:4318`. |
 | `exportConfig.headers`    | `Record<string, string>` | Headers to send with export requests. Defaults to `{}`. The reverse proxy typically injects `Authorization`; do not put API keys here in browser code. |
@@ -129,6 +130,16 @@ The following keys are supported:
 | Errors            | `errors`                                         | `@opentelemetry/browser-instrumentation/errors`   | [Reference](https://github.com/open-telemetry/opentelemetry-browser/tree/main/packages/instrumentation#errors) |
 | Web vitals        | `web-vitals`                                     | `@opentelemetry/browser-instrumentation/web-vitals` | [Reference](https://github.com/open-telemetry/opentelemetry-browser/blob/main/packages/instrumentation/README.md#web-vitals) |
 | Navigation        | `navigation`                                     | `@opentelemetry/browser-instrumentation/navigation` | [Reference](https://github.com/open-telemetry/opentelemetry-browser/blob/main/packages/instrumentation/README.md#navigation) |
+
+### `session` details [otel_browser_session-details]
+
+EDOT Browser adds `session.id`, `session.previous_id` (after a session rotates) and `browser.tab.id` attributes to spans and log records. Refer to [Sessions](telemetry.md#sessions) for details.
+
+| Option              | Type      | Description |
+|---------------------|-----------|-------------|
+| `enabled`           | `boolean` | Set to `false` to turn off session tracking. Defaults to `true`. |
+| `inactivityTimeout` | `number`  | Seconds without telemetry after which the session ends. Defaults to `1800` (30 minutes). |
+| `maxDuration`       | `number`  | Maximum session length in seconds, regardless of activity. Defaults to `14400` (4 hours). |
 
 ## Next steps [next-steps]
 

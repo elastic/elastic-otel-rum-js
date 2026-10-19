@@ -37,6 +37,7 @@ export type SdkConfig = {
 export type EdotConfig = {
     sampleRate?: number | undefined;
     instrumentations?: Partial<InstrumentationsConfigMap> | undefined;
+    session?: import("./session.js").SessionConfig | undefined;
 };
 export type BrowserSdkConfiguration = SdkConfig & EdotConfig;
 export type DefaultConfigProps = "logLevel" | "serviceName" | "resourceAttributes" | "sampleRate" | "exportConfig";

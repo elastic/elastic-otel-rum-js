@@ -37,6 +37,9 @@ To check for security updates, go to [Security announcements for the Elastic sta
 ### Features and enhancements [edot-browser-X.X.X-features-enhancements]
 
 * Align configuration with the upstream [browser-sdk](https://github.com/open-telemetry/opentelemetry-browser/tree/main/packages/sdk).
+* Add session tracking. Spans and log records include `session.id`, `session.previous_id` and `browser.tab.id`
+  attributes, and a `session.start` event is emitted when a session starts.
+  Ref: https://github.com/elastic/elastic-otel-rum-js/issues/115
 
 ### Chores [edot-browser-X.X.X-chores]
 

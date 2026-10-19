@@ -66,3 +66,37 @@ export const EVENT_BROWSER_WEB_VITAL = 'browser.web_vital';
  * @example YourApp/1.0.0 grpc-java-okhttp/1.27.2
  */
 export const ATTR_USER_AGENT_ORIGINAL = 'user_agent.original';
+
+/**
+ * A unique id to identify a session.
+ *
+ * @example 00112233-4455-6677-8899-aabbccddeeff
+ *
+ * @experimental This attribute is experimental and is subject to breaking changes in minor releases of `@opentelemetry/semantic-conventions`.
+ */
+export const ATTR_SESSION_ID = 'session.id';
+
+/**
+ * The previous `session.id` for this user, when known.
+ *
+ * @example 00112233-4455-6677-8899-aabbccddeeff
+ *
+ * @experimental This attribute is experimental and is subject to breaking changes in minor releases of `@opentelemetry/semantic-conventions`.
+ */
+export const ATTR_SESSION_PREVIOUS_ID = 'session.previous_id';
+
+/**
+ * Indicates that a new session has been started, optionally linking to the prior session.
+ *
+ * @experimental This event is experimental and is subject to breaking changes in minor releases of `@opentelemetry/semantic-conventions`.
+ */
+export const EVENT_SESSION_START = 'session.start';
+
+/**
+ * A unique id to identify a browser tab or window. Multiple tabs can share the same `session.id`.
+ *
+ * @example 00112233-4455-6677-8899-aabbccddeeff
+ *
+ * @note Not defined in semantic conventions yet. EDOT specific until the Browser SIG settles on a name.
+ */
+export const ATTR_BROWSER_TAB_ID = 'browser.tab.id';

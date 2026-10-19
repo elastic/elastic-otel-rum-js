@@ -4,6 +4,7 @@
  */
 
 import {diag, DiagLogLevel, metrics} from '@opentelemetry/api';
+import {logs} from '@opentelemetry/api-logs';
 import {startLogsSdk} from '@opentelemetry/browser-sdk/logs';
 import {startTracesSdk} from '@opentelemetry/browser-sdk/traces';
 import {OTLPMetricExporter} from '@opentelemetry/exporter-metrics-otlp-http';
@@ -27,6 +28,17 @@ import {WebVitalsInstrumentation} from '@opentelemetry/browser-instrumentation/e
 import {AsyncApisContextManager} from './context.js';
 import {createLogger} from './logging.js';
 import {detectResource} from './detector.js';
+import {
+    ATTR_SESSION_ID,
+    ATTR_SESSION_PREVIOUS_ID,
+    EVENT_SESSION_START,
+} from './semconv.js';
+import {
+    createSessionManager,
+    SessionLogRecordProcessor,
+    SessionSpanProcessor,
+} from './session.js';
+import {EDOT_VERSION} from './version.js';
 
 /**
  * @typedef {{
@@ -57,6 +69,7 @@ import {detectResource} from './detector.js';
  * @typedef {Object} EdotConfig
  * @property {number} [sampleRate] // defaults to 1
  * @property {Partial<InstrumentationsConfigMap>} [instrumentations]
+ * @property {import('./session.js').SessionConfig} [session]
  */
 /**
  * @typedef {SdkConfig & EdotConfig} BrowserSdkConfiguration
@@ -128,6 +141,18 @@ export function startBrowserSdk(cfg = {}) {
     // we could get rid of this
     diag.disable();
 
+    const sessionManager = createSessionManager(config.session, (session) => {
+        /** @type {import('@opentelemetry/api').Attributes} */
+        const attributes = {[ATTR_SESSION_ID]: session.id};
+        if (session.previousId) {
+            attributes[ATTR_SESSION_PREVIOUS_ID] = session.previousId;
+        }
+        logs.getLogger('@elastic/opentelemetry-browser', EDOT_VERSION).emit({
+            eventName: EVENT_SESSION_START,
+            attributes,
+        });
+    });
+
     // NOTE: export payloads can be seen in DevTools network tab in JSON format
     // so IMHO it would be redundant to use console exporters in traces signal
     const tracesUrl = appendPath(endpointUrl, 'v1/traces').href;
@@ -136,6 +161,9 @@ export function startBrowserSdk(cfg = {}) {
         resourceAttributes,
         contextManager: AsyncApisContextManager.enable(),
         sampler: new TraceIdRatioBasedSampler(config.sampleRate),
+        processors: sessionManager && [
+            new SessionSpanProcessor(sessionManager),
+        ],
         exportConfig: {
             url: tracesUrl,
             headers: config.exportConfig.headers,
@@ -146,11 +174,17 @@ export function startBrowserSdk(cfg = {}) {
     const logsSdk = startLogsSdk({
         logLevel,
         resourceAttributes,
+        processors: sessionManager && [
+            new SessionLogRecordProcessor(sessionManager),
+        ],
         exportConfig: {
             url: logsUrl,
             headers: config.exportConfig.headers,
         },
     });
+    // Resolve the session eagerly so `session.start` is emitted on load
+    // rather than with the first piece of telemetry.
+    sessionManager?.getSession();
 
     // metrics signal configuration
     // possible `startMetricsSdk` function
