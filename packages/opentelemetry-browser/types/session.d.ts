@@ -7,6 +7,16 @@
  */
 export function createSessionManager(config?: SessionConfig, onSessionStart?: (session: SessionState) => void): SessionManager | undefined;
 /**
+ * Invalid values fall back to defaults and out-of-range values are clamped,
+ * so a bad config never disables sessions nor rotates them on every event.
+ * @param {SessionConfig} config
+ * @returns {{inactivityTimeout: number, maxDuration: number}} seconds
+ */
+export function resolveSessionTimeouts(config: SessionConfig): {
+    inactivityTimeout: number;
+    maxDuration: number;
+};
+/**
  * UUID v4 as required by semantic conventions. IDs feed sampling decisions so
  * a CSPRNG is preferred; `randomUUID` needs a secure context while
  * `getRandomValues` does not.

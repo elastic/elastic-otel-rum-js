@@ -138,8 +138,10 @@ EDOT Browser adds `session.id`, `session.previous_id` (after a session rotates) 
 | Option              | Type      | Description |
 |---------------------|-----------|-------------|
 | `enabled`           | `boolean` | Set to `false` to turn off session tracking. Defaults to `true`. |
-| `inactivityTimeout` | `number`  | Seconds without telemetry after which the session ends. Defaults to `1800` (30 minutes). |
-| `maxDuration`       | `number`  | Maximum session length in seconds, regardless of activity. Defaults to `14400` (4 hours). |
+| `inactivityTimeout` | `number`  | Seconds without telemetry after which the session ends. Defaults to `1800` (30 minutes). Must be between `300` (5 minutes) and `maxDuration`. |
+| `maxDuration`       | `number`  | Maximum session length in seconds, regardless of activity. Defaults to `14400` (4 hours). Must be between `1800` (30 minutes) and `86400` (24 hours). |
+
+Invalid values fall back to the default and out-of-range values are clamped to the closest limit. In both cases a warning is logged.
 
 ## Next steps [next-steps]
 
