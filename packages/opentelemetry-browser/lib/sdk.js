@@ -34,9 +34,12 @@ import {
     EVENT_SESSION_START,
 } from './semconv.js';
 import {
+    createSessionApi,
     createSessionManager,
+    resolveActivityEvents,
     SessionLogRecordProcessor,
     SessionSpanProcessor,
+    trackUserActivity,
 } from './session.js';
 import {EDOT_VERSION} from './version.js';
 
@@ -78,7 +81,10 @@ import {EDOT_VERSION} from './version.js';
 const EDOT_SCOPE_NAME = '@elastic/opentelemetry-browser';
 
 // SDK returned when invalid config or some error happens at start
-const NOOP_SDK = {shutdown: () => Promise.resolve()};
+const NOOP_SDK = {
+    shutdown: () => Promise.resolve(),
+    session: createSessionApi(undefined),
+};
 
 // To control multiple calls to `startBrowserSdk`
 let sdkStarted = false;
@@ -99,6 +105,7 @@ const defaultConfig = {
  * @param {BrowserSdkConfiguration} cfg
  * @returns {{
  *      shutdown: () => Promise<void>;
+ *      session: import('./session.js').SessionApi;
  * }}
  */
 export function startBrowserSdk(cfg = {}) {
@@ -184,9 +191,15 @@ export function startBrowserSdk(cfg = {}) {
             headers: config.exportConfig.headers,
         },
     });
-    // Resolve the session eagerly so `session.start` is emitted on load
-    // rather than with the first piece of telemetry.
-    sessionManager?.getSession();
+    // Start eagerly so `session.start` is emitted on load rather than with
+    // the first piece of telemetry.
+    sessionManager?.start();
+    const stopActivityTracking =
+        sessionManager &&
+        trackUserActivity(
+            sessionManager,
+            resolveActivityEvents(config.session ?? {})
+        );
 
     // metrics signal configuration
     // possible `startMetricsSdk` function
@@ -258,7 +271,10 @@ export function startBrowserSdk(cfg = {}) {
     sdkStarted = true;
 
     return {
+        session: createSessionApi(sessionManager),
         shutdown() {
+            stopActivityTracking?.();
+            sessionManager?.shutdown();
             disableInstrumentations();
             return Promise.allSettled([
                 tracesSdk.shutdown(),

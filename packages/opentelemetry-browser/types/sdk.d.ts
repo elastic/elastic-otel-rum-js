@@ -2,10 +2,12 @@
  * @param {BrowserSdkConfiguration} cfg
  * @returns {{
  *      shutdown: () => Promise<void>;
+ *      session: import('./session.js').SessionApi;
  * }}
  */
 export function startBrowserSdk(cfg?: BrowserSdkConfiguration): {
     shutdown: () => Promise<void>;
+    session: import("./session.js").SessionApi;
 };
 export type InstrumentationsConfigMap = {
     "navigation": import("@opentelemetry/browser-instrumentation/experimental/navigation").NavigationInstrumentationConfig;
@@ -22,7 +24,7 @@ export type InstrumentationsConfigMap = {
  */
 export type SdkConfig = {
     disabled?: boolean | undefined;
-    logLevel?: "warn" | "none" | "error" | "info" | "debug" | "verbose" | "all" | undefined;
+    logLevel?: "warn" | "error" | "none" | "info" | "debug" | "verbose" | "all" | undefined;
     serviceName?: string | undefined;
     serviceVersion?: string | undefined;
     resourceAttributes?: import("@opentelemetry/api").Attributes | undefined;

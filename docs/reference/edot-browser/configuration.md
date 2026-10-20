@@ -74,7 +74,7 @@ Configuration is passed as an object to `startBrowserSdk`. The following options
 | `resourceAttributes`  | `Record<string, any>`    | Optional resource attributes to attach to telemetry. For example: `{ 'deployment.environment.name': 'production' }`. |
 | `disabled`            | `boolean`                | If `true`, the SDK does not start. |
 | `instrumentations`    | `Record<string, Object>` | Per-instrumentation config. Set `{ enabled: false }` for a key to turn off that instrumentation. Refer to [instrumentations details](#otel_browser_instrumentations-details) for more information. |
-| `session`             | `{ enabled?: boolean; inactivityTimeout?: number; maxDuration?: number }` | Session tracking. Refer to [session details](#otel_browser_session-details) for more information. |
+| `session`             | `{ enabled?: boolean; inactivityTimeout?: number; maxDuration?: number; activityEvents?: string[] }` | Session tracking. Refer to [session details](#otel_browser_session-details) for more information. |
 | `exportConfig`    | `{ url?: string; headers?: Record<string, string>}` | Configuration for exporters of the different signals. |
 | `exportConfig.url`    | `string` | Base URL of the OTLP export endpoint (reverse proxy). Do not include signal paths such as `/v1/traces`. Defaults to `http://localhost:4318`. |
 | `exportConfig.headers`    | `Record<string, string>` | Headers to send with export requests. Defaults to `{}`. The reverse proxy typically injects `Authorization`; do not put API keys here in browser code. |
@@ -138,10 +138,38 @@ EDOT Browser adds `session.id`, `session.previous_id` (after a session rotates),
 | Option              | Type      | Description |
 |---------------------|-----------|-------------|
 | `enabled`           | `boolean` | Set to `false` to turn off session tracking. Defaults to `true`. |
-| `inactivityTimeout` | `number`  | Seconds without telemetry after which the session ends. Defaults to `1800` (30 minutes). Must be between `300` (5 minutes) and `maxDuration`. |
+| `inactivityTimeout` | `number`  | Seconds without user activity after which the session ends. Defaults to `1800` (30 minutes). Must be between `300` (5 minutes) and `maxDuration`. |
 | `maxDuration`       | `number`  | Maximum session length in seconds, regardless of activity. Defaults to `14400` (4 hours). Must be between `1800` (30 minutes) and `86400` (24 hours). |
+| `activityEvents`    | `string[]` | DOM events that count as user activity. Defaults to `["pointerdown", "keydown", "scroll", "wheel"]`. Must be a non-empty list of event names. Events not triggered by the user (for example `dispatchEvent` calls) are ignored. A tab becoming visible extends an active session but does not start a new one. |
 
 Incorrect values fall back to the default and out-of-range values are clamped to the closest limit. In both cases EDOT Browser logs a warning.
+
+#### Observe sessions
+
+`startBrowserSdk` returns a `session` object to read the current session and to react when sessions start or end:
+
+```js
+const sdk = startBrowserSdk({/* ... */});
+
+sdk.session.getSession(); // { id, previousId, startTimestamp }, or undefined when no session is active
+
+const unsubscribe = sdk.session.addObserver({
+  onSessionStarted(session, previous) {
+    console.log('Session started', session.id, 'after', previous?.id);
+  },
+  onSessionEnded(session) {
+    console.log('Session ended', session.id);
+  },
+});
+```
+
+Both callbacks are optional and run synchronously. The observer has the same shape as the upstream `@opentelemetry/browser-sdk/session` one.
+
+- `onSessionEnded` is called when the session expires, even if the application produces no telemetry, and when another tab replaces the session.
+- `onSessionStarted` is called when this tab starts a session or adopts one started by another tab. Observers added after `startBrowserSdk` returns do not receive the initial session, use `getSession()` for it.
+- Browsers throttle timers in background tabs, so `onSessionEnded` can be delayed until the tab is used again.
+
+Both methods are no-ops when sessions are disabled or web storage is not available.
 
 ## Next steps [next-steps]
 

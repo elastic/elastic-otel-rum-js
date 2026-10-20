@@ -16,6 +16,28 @@ import {
  * @property {boolean} [enabled] // defaults to true
  * @property {number} [inactivityTimeout] // seconds, defaults to 30 minutes
  * @property {number} [maxDuration] // seconds, defaults to 4 hours
+ * @property {string[]} [activityEvents] // DOM events that count as user activity
+ */
+
+/**
+ * Public view of a session.
+ * @typedef {Object} SessionInfo
+ * @property {string} id
+ * @property {string} [previousId]
+ * @property {number} startTimestamp
+ */
+
+/**
+ * Same shape as the upstream `SessionObserver`, with optional callbacks.
+ * @typedef {Object} SessionObserver
+ * @property {(session: SessionInfo, previous?: SessionInfo) => void} [onSessionStarted]
+ * @property {(session: SessionInfo) => void} [onSessionEnded]
+ */
+
+/**
+ * @typedef {Object} SessionApi
+ * @property {() => SessionInfo | undefined} getSession
+ * @property {(observer: SessionObserver) => () => void} addObserver
  */
 
 /**
@@ -34,10 +56,19 @@ import {
  * @property {number} [maxDuration] seconds
  * @property {(session: SessionState) => void} [onSessionStart]
  * @property {() => number} [now]
+ * @property {{setTimeout: (fn: () => void, ms: number) => unknown, clearTimeout: (timer: any) => void}} [timers]
  */
 
 export const SESSION_STORAGE_KEY = 'elastic_otel_browser.session';
 export const TAB_STORAGE_KEY = 'elastic_otel_browser.tab';
+
+/** @type {readonly string[]} */
+export const DEFAULT_ACTIVITY_EVENTS = Object.freeze([
+    'pointerdown',
+    'keydown',
+    'scroll',
+    'wheel',
+]);
 
 const DEFAULT_INACTIVITY_TIMEOUT_S = 30 * 60;
 const DEFAULT_MAX_DURATION_S = 4 * 60 * 60;
@@ -59,33 +90,131 @@ export class SessionManager {
             (opts.maxDuration ?? DEFAULT_MAX_DURATION_S) * 1000;
         this._onSessionStart = opts.onSessionStart;
         this._now = opts.now ?? Date.now;
+        // Resolved on each call so patched timers (e.g. fake clocks) apply
+        this._timers = opts.timers ?? {
+            setTimeout: (fn, ms) => globalThis.setTimeout(fn, ms),
+            clearTimeout: (timer) => globalThis.clearTimeout(timer),
+        };
+        /** @type {unknown} */
+        this._timer = undefined;
         /** @type {SessionState | undefined} */
         this._cached = undefined;
         this._persistent = true;
+        // Session this tab last announced to observers
+        /** @type {SessionState | undefined} */
+        this._active = undefined;
+        /** @type {SessionState | undefined} */
+        this._lastEnded = undefined;
+        this._lastActivityCheck = 0;
+        /** @type {Set<SessionObserver>} */
+        this._observers = new Set();
         this._tabId = getOrCreateTabId(opts.tabStorage);
+    }
+
+    /**
+     * Continues the stored session or starts a new one. Loading the page
+     * counts as activity.
+     */
+    start() {
+        this._resolve(this._now(), {extend: true, renew: true});
     }
 
     /**
      * Implements upstream `SessionProvider` so it can be plugged into
      * `@opentelemetry/browser-sdk/session` processors.
-     * @returns {string}
+     * @returns {string | null}
      */
     getSessionId() {
-        return this.getSession().id;
+        return this.getSession()?.id ?? null;
     }
 
     /**
-     * Returns the active session, rotating it if expired. Every call counts
-     * as activity since it happens when telemetry is produced.
-     * @returns {SessionState}
+     * Returns the active session, or `undefined` once it expired and the
+     * user has not come back. Reading never extends nor renews the session:
+     * telemetry can be produced without a user around (polling, replay), so
+     * only {@link recordActivity} does.
+     * @returns {SessionState | undefined}
      */
     getSession() {
-        const now = this._now();
-        const stored = this._read();
+        return this._resolve(this._now(), {extend: false, renew: false});
+    }
 
-        if (!stored || this._isExpired(stored, now)) {
-            /** @type {SessionState} */
-            const session = {
+    /**
+     * Marks user activity, extending the session or renewing an expired one.
+     * With `renew: false` an expired session stays ended, which is what
+     * passive signals like a tab becoming visible need.
+     * @param {{renew?: boolean}} [opts]
+     */
+    recordActivity({renew = true} = {}) {
+        const now = this._now();
+        if (renew) {
+            // Timeouts are at least minutes so skipping bursts never hides an expiry
+            if (now - this._lastActivityCheck < ACTIVITY_WRITE_THROTTLE_MS) {
+                return;
+            }
+            this._lastActivityCheck = now;
+        }
+        this._resolve(now, {extend: true, renew});
+    }
+
+    /**
+     * Callbacks run synchronously, in registration order. `onSessionEnded`
+     * is reported by an expiry timer, or on the next read if the timer was
+     * throttled (background tabs) or the session was replaced by another tab.
+     * @param {SessionObserver} observer
+     * @returns {() => void} unsubscribe
+     */
+    addObserver(observer) {
+        const entry = {...observer};
+        this._observers.add(entry);
+        return () => {
+            this._observers.delete(entry);
+        };
+    }
+
+    shutdown() {
+        this._clearTimer();
+    }
+
+    /** @returns {import('@opentelemetry/api').Attributes} */
+    getAttributes() {
+        const session = this.getSession();
+        /** @type {import('@opentelemetry/api').Attributes} */
+        const attributes = {[ATTR_BROWSER_TAB_ID]: this._tabId};
+        if (session) {
+            attributes[ATTR_SESSION_ID] = session.id;
+            if (session.previousId) {
+                attributes[ATTR_SESSION_PREVIOUS_ID] = session.previousId;
+            }
+        }
+        return attributes;
+    }
+
+    /**
+     * @param {number} now
+     * @param {{extend: boolean, renew: boolean}} mode
+     * @returns {SessionState | undefined}
+     */
+    _resolve(now, {extend, renew}) {
+        const stored = this._read();
+        /** @type {SessionState | undefined} */
+        let session;
+        let created = false;
+        let extended = false;
+
+        if (stored && !this._isExpired(stored, now)) {
+            session = stored;
+            if (
+                extend &&
+                now - stored.lastActivityTimestamp >= ACTIVITY_WRITE_THROTTLE_MS
+            ) {
+                stored.lastActivityTimestamp = now;
+                this._write(stored);
+                extended = true;
+            }
+        } else if (renew || !stored) {
+            created = true;
+            session = {
                 id: generateUUID(),
                 previousId:
                     stored &&
@@ -97,29 +226,94 @@ export class SessionManager {
             };
             this._write(session);
             diag.debug('Session started', session);
-            this._onSessionStart?.(session);
-            return session;
         }
 
-        if (now - stored.lastActivityTimestamp >= ACTIVITY_WRITE_THROTTLE_MS) {
-            stored.lastActivityTimestamp = now;
-            this._write(stored);
+        const changed = this._sync(session, created);
+        if (session && (changed || extended)) {
+            this._arm(session);
         }
-        return stored;
+        return session;
     }
 
-    /** @returns {import('@opentelemetry/api').Attributes} */
-    getAttributes() {
-        const session = this.getSession();
-        /** @type {import('@opentelemetry/api').Attributes} */
-        const attributes = {
-            [ATTR_SESSION_ID]: session.id,
-            [ATTR_BROWSER_TAB_ID]: this._tabId,
-        };
-        if (session.previousId) {
-            attributes[ATTR_SESSION_PREVIOUS_ID] = session.previousId;
+    /**
+     * Announces to observers when the session this tab is on changes.
+     * @param {SessionState | undefined} session
+     * @param {boolean} created whether this tab just created it
+     * @returns {boolean} whether the active session changed
+     */
+    _sync(session, created) {
+        const previous = this._active;
+        if (previous?.id === session?.id) {
+            return false;
         }
-        return attributes;
+
+        // State is updated before callbacks: they emit telemetry that
+        // re-enters this class.
+        if (previous) {
+            this._active = undefined;
+            this._lastEnded = previous;
+            this._clearTimer();
+            this._notify((o) => o.onSessionEnded?.(toSessionInfo(previous)));
+        }
+        if (session) {
+            this._active = {...session};
+            if (created) {
+                this._onSessionStart?.(session);
+            }
+            const ended = this._lastEnded;
+            this._notify((o) =>
+                o.onSessionStarted?.(
+                    toSessionInfo(session),
+                    ended && toSessionInfo(ended)
+                )
+            );
+        }
+        return true;
+    }
+
+    /** @param {(observer: SessionObserver) => void} call */
+    _notify(call) {
+        for (const observer of [...this._observers]) {
+            try {
+                call(observer);
+            } catch (err) {
+                diag.warn('Session observer failed', err);
+            }
+        }
+    }
+
+    /**
+     * Timers are throttled in background tabs, so reads also detect expiry.
+     * Storage is re-checked when it fires since another tab may have
+     * extended the session.
+     * @param {SessionState} session
+     */
+    _arm(session) {
+        this._clearTimer();
+        const expiresAt = Math.min(
+            session.lastActivityTimestamp + this._inactivityMs,
+            session.startTimestamp + this._maxDurationMs
+        );
+        this._timer = this._timers.setTimeout(
+            () => {
+                this._timer = undefined;
+                const current = this._resolve(this._now(), {
+                    extend: false,
+                    renew: false,
+                });
+                if (current) {
+                    this._arm(current);
+                }
+            },
+            Math.max(0, expiresAt - this._now())
+        );
+    }
+
+    _clearTimer() {
+        if (this._timer !== undefined) {
+            this._timers.clearTimeout(this._timer);
+            this._timer = undefined;
+        }
     }
 
     /**
@@ -220,6 +414,92 @@ export function resolveSessionTimeouts(config) {
     return {inactivityTimeout, maxDuration};
 }
 
+/**
+ * Invalid values fall back to defaults so a typo never leaves sessions
+ * without any activity signal.
+ * @param {SessionConfig} config
+ * @returns {string[]}
+ */
+export function resolveActivityEvents(config) {
+    const events = config.activityEvents;
+    if (events === undefined) {
+        return [...DEFAULT_ACTIVITY_EVENTS];
+    }
+    if (
+        !Array.isArray(events) ||
+        events.length === 0 ||
+        !events.every((e) => typeof e === 'string' && e.length > 0)
+    ) {
+        diag.warn(
+            `Invalid "session.activityEvents" value. Using ${DEFAULT_ACTIVITY_EVENTS.join(', ')}.`
+        );
+        return [...DEFAULT_ACTIVITY_EVENTS];
+    }
+    return [...events];
+}
+
+/**
+ * Listens in the capture phase so handlers calling `stopPropagation()`
+ * can't hide activity. Untrusted events are ignored so scripts dispatching
+ * synthetic events can't keep a session alive.
+ * @param {{recordActivity: (opts?: {renew?: boolean}) => void}} manager
+ * @param {readonly string[]} events
+ * @param {(event: Event) => boolean} [isTrusted]
+ * @returns {() => void} stop tracking
+ */
+export function trackUserActivity(
+    manager,
+    events,
+    isTrusted = (event) => event.isTrusted
+) {
+    const win = globalThis.window;
+    if (!win) {
+        return () => {};
+    }
+    const doc = globalThis.document;
+    const onActivity = (/** @type {Event} */ event) => {
+        if (isTrusted(event)) {
+            manager.recordActivity();
+        }
+    };
+    // Someone looking at the tab is presence, not intent: it can extend a
+    // session but not start one.
+    const onVisibility = () => {
+        if (doc.visibilityState === 'visible') {
+            manager.recordActivity({renew: false});
+        }
+    };
+    const options = {capture: true, passive: true};
+    for (const event of events) {
+        win.addEventListener(event, onActivity, options);
+    }
+    doc?.addEventListener('visibilitychange', onVisibility, options);
+    return () => {
+        for (const event of events) {
+            win.removeEventListener(event, onActivity, options);
+        }
+        doc?.removeEventListener('visibilitychange', onVisibility, options);
+    };
+}
+
+/**
+ * Public session API. A no-op when sessions are unavailable so callers
+ * don't need to check.
+ * @param {SessionManager | undefined} manager
+ * @returns {SessionApi}
+ */
+export function createSessionApi(manager) {
+    return {
+        getSession() {
+            const session = manager?.getSession();
+            return session && toSessionInfo(session);
+        },
+        addObserver(observer) {
+            return manager ? manager.addObserver(observer) : () => {};
+        },
+    };
+}
+
 /** @typedef {import('@opentelemetry/sdk-trace').SpanProcessor} SpanProcessor */
 
 /**
@@ -289,6 +569,18 @@ export function generateUUID() {
 }
 
 // -- helper functions
+
+/**
+ * @param {SessionState} session
+ * @returns {SessionInfo}
+ */
+function toSessionInfo(session) {
+    return {
+        id: session.id,
+        previousId: session.previousId,
+        startTimestamp: session.startTimestamp,
+    };
+}
 
 /**
  * @param {string} name

@@ -39,6 +39,10 @@ To check for security updates, go to [Security announcements for the Elastic sta
 * Align configuration with the upstream [browser-sdk](https://github.com/open-telemetry/opentelemetry-browser/tree/main/packages/sdk).
 * Add session tracking. Spans and log records include `session.id`, `session.previous_id`, and `browser.tab.id` attributes. A `session.start` event is emitted when a session starts.
   Ref: https://github.com/elastic/elastic-otel-rum-js/issues/115
+* Sessions now expire based on user activity (`session.activityEvents`) instead of telemetry. Telemetry produced
+  after a session expired has no `session.id` until the next user interaction. `startBrowserSdk` returns
+  `session.getSession()` and `session.addObserver()` to observe when sessions start and end.
+  Ref: https://github.com/elastic/elastic-otel-rum-js/issues/81
 
 ### Chores [edot-browser-X.X.X-chores]
 

@@ -136,6 +136,181 @@ test('should rotate an active session after 4 hours', async ({page}) => {
     expect(clicks[10].attributes['session.previous_id']).toStrictEqual(firstId);
 });
 
+test('should not let telemetry extend the session', async ({page}) => {
+    const collector = createCollector(page);
+    await page.clock.install();
+    await page.goto(FIXTURE);
+
+    await page.click('body > h1');
+    await page.clock.fastForward('29:00');
+    // Produces fetch spans and logs but is not user activity
+    await page.evaluate(() => fetch('/').then((r) => r.text()));
+    await page.clock.fastForward('29:00');
+    await page.click('body > h1');
+
+    const {clicks} = await getClickLogs(collector, 2);
+    expect(clicks[1].attributes['session.id']).not.toStrictEqual(
+        clicks[0].attributes['session.id']
+    );
+});
+
+test('should extend the session on user activity without telemetry', async ({
+    page,
+}) => {
+    const collector = createCollector(page);
+    await page.clock.install();
+    await page.goto(FIXTURE);
+
+    await page.click('body > h1');
+    await page.clock.fastForward('29:00');
+    await page.keyboard.press('a');
+    await page.clock.fastForward('29:00');
+    await page.click('body > h1');
+
+    const {clicks} = await getClickLogs(collector, 2);
+    expect(clicks[1].attributes['session.id']).toStrictEqual(
+        clicks[0].attributes['session.id']
+    );
+});
+
+test('should use the configured activity events', async ({page}) => {
+    const collector = createCollector(page);
+    const config = encodeURIComponent(
+        JSON.stringify({session: {activityEvents: ['keydown']}})
+    );
+    await page.clock.install();
+    await page.goto(`${FIXTURE}?config=${config}`);
+
+    await page.click('body > h1');
+    await page.clock.fastForward('29:00');
+    // pointerdown is not in the configured events so this click can't extend
+    await page.click('body > h1');
+    await page.clock.fastForward('29:00');
+    await page.click('body > h1');
+
+    const {clicks} = await getClickLogs(collector, 3);
+    expect(clicks[1].attributes['session.id']).toStrictEqual(
+        clicks[0].attributes['session.id']
+    );
+    expect(clicks[2].attributes['session.id']).not.toStrictEqual(
+        clicks[0].attributes['session.id']
+    );
+});
+
+test('should not tag telemetry produced after the session expired', async ({
+    page,
+}) => {
+    const collector = createCollector(page);
+    await page.clock.install();
+    await page.goto(FIXTURE);
+
+    await page.click('body > h1');
+    await page.clock.fastForward('31:00');
+    await page.evaluate(() => fetch('/').then((r) => r.text()));
+
+    const spans = await collector.getSpans();
+    const [fetchSpan] = spans.filter(
+        (s) => s.scope.name === '@opentelemetry/browser-instrumentation/fetch'
+    );
+    expect(fetchSpan.attributes['session.id']).toBeUndefined();
+    expect(fetchSpan.attributes['session.previous_id']).toBeUndefined();
+    expect(fetchSpan.attributes['browser.tab.id']).toBeDefined();
+
+    // The next user interaction starts a new session
+    await page.click('body > h1');
+    const {clicks} = await getClickLogs(collector, 2);
+    expect(clicks[1].attributes['session.id']).toBeDefined();
+    expect(clicks[1].attributes['session.previous_id']).toStrictEqual(
+        clicks[0].attributes['session.id']
+    );
+});
+
+test('should ignore synthetic events as user activity', async ({page}) => {
+    const collector = createCollector(page);
+    await page.clock.install();
+    await page.goto(FIXTURE);
+
+    await page.click('body > h1');
+    await page.clock.fastForward('29:00');
+    await page.evaluate(() =>
+        window.dispatchEvent(new KeyboardEvent('keydown', {key: 'a'}))
+    );
+    await page.clock.fastForward('29:00');
+    await page.click('body > h1');
+
+    const {clicks} = await getClickLogs(collector, 2);
+    expect(clicks[1].attributes['session.id']).not.toStrictEqual(
+        clicks[0].attributes['session.id']
+    );
+});
+
+test('should notify session observers when the session ends and starts', async ({
+    page,
+}) => {
+    await page.clock.install();
+    await page.goto(FIXTURE);
+
+    const initial = await page.evaluate(() =>
+        // @ts-expect-error - set by the injected snippet
+        globalThis.edotBrowser.session.getSession()
+    );
+    await page.evaluate(() => {
+        // @ts-expect-error - test globals
+        globalThis.sessionEvents = [];
+        // @ts-expect-error - set by the injected snippet
+        globalThis.edotBrowser.session.addObserver({
+            onSessionStarted: (/** @type {any} */ s, /** @type {any} */ p) =>
+                // @ts-expect-error - test globals
+                globalThis.sessionEvents.push(['started', s, p]),
+            onSessionEnded: (/** @type {any} */ s) =>
+                // @ts-expect-error - test globals
+                globalThis.sessionEvents.push(['ended', s]),
+        });
+    });
+
+    // The expiry timer reports the end without any telemetry or interaction
+    await page.clock.fastForward('31:00');
+    // @ts-expect-error - test globals
+    let events = await page.evaluate(() => globalThis.sessionEvents);
+    expect(events.map((e) => e[0])).toStrictEqual(['ended']);
+    expect(events[0][1].id).toStrictEqual(initial.id);
+    expect(
+        await page.evaluate(() =>
+            // @ts-expect-error - set by the injected snippet
+            globalThis.edotBrowser.session.getSession()
+        )
+    ).toBeUndefined();
+
+    await page.click('body > h1');
+    // @ts-expect-error - test globals
+    events = await page.evaluate(() => globalThis.sessionEvents);
+    expect(events.map((e) => e[0])).toStrictEqual(['ended', 'started']);
+    expect(events[1][1].id).not.toStrictEqual(initial.id);
+    expect(events[1][1].previousId).toStrictEqual(initial.id);
+    expect(events[1][2].id).toStrictEqual(initial.id);
+});
+
+test('should keep an active session alive while the tab is visible again', async ({
+    page,
+}) => {
+    const collector = createCollector(page);
+    await page.clock.install();
+    await page.goto(FIXTURE);
+
+    await page.click('body > h1');
+    await page.clock.fastForward('29:00');
+    await page.evaluate(() =>
+        document.dispatchEvent(new Event('visibilitychange'))
+    );
+    await page.clock.fastForward('29:00');
+    await page.click('body > h1');
+
+    const {clicks} = await getClickLogs(collector, 2);
+    expect(clicks[1].attributes['session.id']).toStrictEqual(
+        clicks[0].attributes['session.id']
+    );
+});
+
 test('should not add session attributes when disabled', async ({page}) => {
     const collector = createCollector(page);
     const config = encodeURIComponent(
@@ -149,4 +324,17 @@ test('should not add session attributes when disabled', async ({page}) => {
         expect(log.attributes['session.id']).toBeUndefined();
         expect(log.attributes['browser.tab.id']).toBeUndefined();
     }
+
+    const session = await page.evaluate(() =>
+        // @ts-expect-error - set by the injected snippet
+        globalThis.edotBrowser.session.getSession()
+    );
+    expect(session).toBeUndefined();
+    expect(
+        await page.evaluate(
+            () =>
+                // @ts-expect-error - set by the injected snippet
+                typeof globalThis.edotBrowser.session.addObserver({})
+        )
+    ).toStrictEqual('function');
 });
