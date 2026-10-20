@@ -141,6 +141,20 @@ test('SessionManager - rotates after inactivity and keeps previous id', () => {
     assert.strictEqual(started.length, 2);
 });
 
+test('SessionManager - drops previous id older than 24 hours', () => {
+    const {create, clock} = setup();
+    const manager = create();
+    manager.getSession();
+
+    clock.now += 24 * 60 * 60 * 1000;
+    const session = manager.getSession();
+    assert.strictEqual(session.previousId, undefined);
+    assert.strictEqual(
+        manager.getAttributes()['session.previous_id'],
+        undefined
+    );
+});
+
 test('SessionManager - activity extends the session until max duration', () => {
     const {create, clock} = setup();
     const manager = create();

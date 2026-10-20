@@ -43,6 +43,8 @@ const DEFAULT_INACTIVITY_TIMEOUT_S = 30 * 60;
 const DEFAULT_MAX_DURATION_S = 4 * 60 * 60;
 // Bounds localStorage writes when telemetry is emitted in bursts
 const ACTIVITY_WRITE_THROTTLE_MS = 5_000;
+// RUM session spec: no session ID is kept around for more than 24 hours
+const PREVIOUS_ID_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
 export class SessionManager {
     /** @param {SessionManagerOptions} opts */
@@ -82,7 +84,11 @@ export class SessionManager {
             /** @type {SessionState} */
             const session = {
                 id: generateUUID(),
-                previousId: stored?.id,
+                previousId:
+                    stored &&
+                    now - stored.startTimestamp < PREVIOUS_ID_MAX_AGE_MS
+                        ? stored.id
+                        : undefined,
                 startTimestamp: now,
                 lastActivityTimestamp: now,
             };

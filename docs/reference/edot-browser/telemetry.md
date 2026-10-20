@@ -108,7 +108,7 @@ Automatic capture of `console` methods (for example `console.log`, `console.erro
 EDOT Browser groups telemetry from the same user into sessions. Spans and log records include these attributes:
 
 - `session.id`: a random UUID shared by all tabs and windows of the application. It survives page reloads.
-- `session.previous_id`: the `session.id` of the session that ended right before the current one, when known.
+- `session.previous_id`: the `session.id` of the session that ended right before the current one, when it started less than 24 hours ago.
 - `browser.tab.id`: a random UUID for the current tab or window. It survives page reloads within the same tab. This attribute is not part of the OpenTelemetry semantic conventions yet.
 
 A `session.start` log record is emitted every time a new session starts.
