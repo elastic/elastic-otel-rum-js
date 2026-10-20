@@ -75,6 +75,8 @@ import {EDOT_VERSION} from './version.js';
  * @typedef {SdkConfig & EdotConfig} BrowserSdkConfiguration
  */
 
+const EDOT_SCOPE_NAME = '@elastic/opentelemetry-browser';
+
 // SDK returned when invalid config or some error happens at start
 const NOOP_SDK = {shutdown: () => Promise.resolve()};
 
@@ -147,7 +149,7 @@ export function startBrowserSdk(cfg = {}) {
         if (session.previousId) {
             attributes[ATTR_SESSION_PREVIOUS_ID] = session.previousId;
         }
-        logs.getLogger('@elastic/opentelemetry-browser', EDOT_VERSION).emit({
+        logs.getLogger(EDOT_SCOPE_NAME, EDOT_VERSION).emit({
             eventName: EVENT_SESSION_START,
             attributes,
         });
