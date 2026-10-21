@@ -338,3 +338,51 @@ test('should not add session attributes when disabled', async ({page}) => {
         )
     ).toStrictEqual('function');
 });
+
+test('should stop tracking the session on shutdown', async ({page}) => {
+    await page.clock.install();
+    await page.goto(FIXTURE);
+
+    await page.evaluate(async () => {
+        // @ts-expect-error - test globals
+        globalThis.sessionEvents = [];
+        // @ts-expect-error - set by the injected snippet
+        globalThis.edotBrowser.session.addObserver({
+            onSessionStarted: () =>
+                // @ts-expect-error - test globals
+                globalThis.sessionEvents.push('started'),
+            onSessionEnded: () =>
+                // @ts-expect-error - test globals
+                globalThis.sessionEvents.push('ended'),
+        });
+        // @ts-expect-error - set by the injected snippet
+        await globalThis.edotBrowser.shutdown();
+    });
+
+    // Neither the expiry timer nor user activity reach the session anymore
+    await page.clock.fastForward('31:00');
+    await page.click('body > h1');
+    // @ts-expect-error - test globals
+    expect(await page.evaluate(() => globalThis.sessionEvents)).toStrictEqual(
+        []
+    );
+});
+
+test('should expose a no-op session API when the SDK does not start', async ({
+    page,
+}) => {
+    const config = encodeURIComponent(JSON.stringify({disabled: true}));
+    await page.goto(`${FIXTURE}?config=${config}`);
+
+    const result = await page.evaluate(() => {
+        // @ts-expect-error - set by the injected snippet
+        const {session} = globalThis.edotBrowser;
+        const unsubscribe = session.addObserver({});
+        unsubscribe();
+        return {
+            session: session.getSession(),
+            unsubscribe: typeof unsubscribe,
+        };
+    });
+    expect(result).toStrictEqual({session: undefined, unsubscribe: 'function'});
+});

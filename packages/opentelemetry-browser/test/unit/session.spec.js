@@ -384,6 +384,34 @@ test('SessionManager - adopts a session rotated by another tab', () => {
     assert.strictEqual(tabA.getSessionId(), rotated.id);
 });
 
+test('SessionManager - only the tab creating a session reports its start', () => {
+    const {create, started, sessionStorage} = setup();
+    const tabA = create();
+    tabA.start();
+    const first = tabA.getSessionId();
+    // Joining an existing session does not start one
+    const tabB = create(new MemoryStorage());
+    tabB.start();
+    assert.strictEqual(tabB.getSessionId(), first);
+
+    // Neither does adopting a session rotated by another tab
+    const rotated = {
+        id: generateUUID(),
+        startTimestamp: 1_000_000,
+        lastActivityTimestamp: 1_000_000,
+    };
+    sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(rotated));
+    tabA.recordActivity();
+    tabB.getSession();
+    assert.strictEqual(tabA.getSessionId(), rotated.id);
+    assert.strictEqual(tabB.getSessionId(), rotated.id);
+
+    assert.deepStrictEqual(
+        started.map((s) => s.id),
+        [first]
+    );
+});
+
 test('SessionManager - ignores malformed stored data', () => {
     const {create, sessionStorage} = setup();
     sessionStorage.setItem(SESSION_STORAGE_KEY, '{"id": 42}');
