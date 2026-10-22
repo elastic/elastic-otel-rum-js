@@ -27,7 +27,7 @@ Ensure your reverse proxy and OTLP endpoint accept the `/v1/metrics` path.
 
 ### Known limitations of browser-side metrics [metrics-limitations]
 
-- Metrics are collected in the user’s browser and represent a single session or page. There is no server-side aggregation, each export batch reflects one client’s view.
+- Metrics are collected in the user’s browser and represent a single session or page. There is no server-side aggregation, so each export batch reflects one client’s view.
 - Browsers have limited resources. High-cardinality or high-frequency metrics can affect performance and export payload size. Use caution with unbounded attributes (for example user IDs, dynamic URLs) on metrics.
 - Metrics are only sent when the SDK exports (for example on an interval or when the page is unloaded). Temporary or single-page sessions might produce few data points.
 - Browser environments vary (device, network, extensions). Metric values might be noisier or less consistent than server-side metrics.
@@ -36,7 +36,7 @@ Ensure your reverse proxy and OTLP endpoint accept the `/v1/metrics` path.
 
 ### Context Manager [traces-context-manager]
 
-In certain scenarios, a trace might occur asynchronously. For instance, a user interaction that initiates an HTTP request to a downstream service and subsequently updates the User Interface with the service response. To maintain context across these asynchronous functions, EDOT incorporates a ContextManager that patches several asynchronous browser APIs, including:
+In certain scenarios, a trace might occur asynchronously. For instance, a user interaction that initiates an HTTP request to a downstream service and subsequently updates the user interface with the service response. To maintain context across these asynchronous functions, EDOT incorporates a ContextManager that patches several asynchronous browser APIs, including:
 
 - setTimeout
 - Promise methods: then, catch, and finally

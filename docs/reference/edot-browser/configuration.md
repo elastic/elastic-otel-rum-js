@@ -84,7 +84,7 @@ Configuration is passed as an object to `startBrowserSdk`. The following options
 
 Configure `exportConfig.url` to point to a server that accepts OTLP traffic. Use the base URL of the server only: do not include signal paths such as `/v1/traces`, `/v1/metrics`, or `/v1/logs`. The SDK appends these paths when exporting each signal.
 
-For security reasons Elastic recommends to configure a reverse proxy that forwards OTLP traffic to {{product.observability}}. Refer to [Proxy and CORS configuration](proxy-cors.md) for more details.
+For security reasons, Elastic recommends configuring a reverse proxy that forwards OTLP traffic to {{product.observability}}. Refer to [Proxy and CORS configuration](proxy-cors.md) for more details.
 
 Use a service name that identifies your frontend application and doesn't contain special characters, so that data is correctly categorized in {{product.observability}}.
 
@@ -133,7 +133,7 @@ The following keys are supported:
 
 ### `session` details [otel_browser_session-details]
 
-EDOT Browser adds `session.id`, `session.previous_id` (after a session rotates) and `browser.tab.id` attributes to spans and log records. Refer to [Sessions](telemetry.md#sessions) for details.
+EDOT Browser adds `session.id`, `session.previous_id` (after a session rotates), and `browser.tab.id` attributes to spans and log records. Refer to [Sessions](telemetry.md#sessions) for details.
 
 | Option              | Type      | Description |
 |---------------------|-----------|-------------|
@@ -141,7 +141,7 @@ EDOT Browser adds `session.id`, `session.previous_id` (after a session rotates) 
 | `inactivityTimeout` | `number`  | Seconds without telemetry after which the session ends. Defaults to `1800` (30 minutes). Must be between `300` (5 minutes) and `maxDuration`. |
 | `maxDuration`       | `number`  | Maximum session length in seconds, regardless of activity. Defaults to `14400` (4 hours). Must be between `1800` (30 minutes) and `86400` (24 hours). |
 
-Invalid values fall back to the default and out-of-range values are clamped to the closest limit. In both cases a warning is logged.
+Incorrect values fall back to the default and out-of-range values are clamped to the closest limit. In both cases EDOT Browser logs a warning.
 
 ## Next steps [next-steps]
 
