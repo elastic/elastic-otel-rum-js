@@ -38,6 +38,12 @@ import {
     SessionLogRecordProcessor,
     SessionSpanProcessor,
 } from './session.js';
+import {
+    createUserApi,
+    UserLogRecordProcessor,
+    UserManager,
+    UserSpanProcessor,
+} from './user.js';
 import {EDOT_VERSION} from './version.js';
 
 /**
@@ -78,7 +84,10 @@ import {EDOT_VERSION} from './version.js';
 const EDOT_SCOPE_NAME = '@elastic/opentelemetry-browser';
 
 // SDK returned when invalid config or some error happens at start
-const NOOP_SDK = {shutdown: () => Promise.resolve()};
+const NOOP_SDK = {
+    shutdown: () => Promise.resolve(),
+    ...createUserApi(undefined),
+};
 
 // To control multiple calls to `startBrowserSdk`
 let sdkStarted = false;
@@ -99,6 +108,8 @@ const defaultConfig = {
  * @param {BrowserSdkConfiguration} cfg
  * @returns {{
  *      shutdown: () => Promise<void>;
+ *      setUser: import('./user.js').UserApi['setUser'];
+ *      clearUser: import('./user.js').UserApi['clearUser'];
  * }}
  */
 export function startBrowserSdk(cfg = {}) {
@@ -155,6 +166,8 @@ export function startBrowserSdk(cfg = {}) {
         });
     });
 
+    const userManager = new UserManager();
+
     // NOTE: export payloads can be seen in DevTools network tab in JSON format
     // so IMHO it would be redundant to use console exporters in traces signal
     const tracesUrl = appendPath(endpointUrl, 'v1/traces').href;
@@ -163,8 +176,11 @@ export function startBrowserSdk(cfg = {}) {
         resourceAttributes,
         contextManager: AsyncApisContextManager.enable(),
         sampler: new TraceIdRatioBasedSampler(config.sampleRate),
-        processors: sessionManager && [
-            new SessionSpanProcessor(sessionManager),
+        processors: [
+            ...(sessionManager
+                ? [new SessionSpanProcessor(sessionManager)]
+                : []),
+            new UserSpanProcessor(userManager),
         ],
         exportConfig: {
             url: tracesUrl,
@@ -176,8 +192,11 @@ export function startBrowserSdk(cfg = {}) {
     const logsSdk = startLogsSdk({
         logLevel,
         resourceAttributes,
-        processors: sessionManager && [
-            new SessionLogRecordProcessor(sessionManager),
+        processors: [
+            ...(sessionManager
+                ? [new SessionLogRecordProcessor(sessionManager)]
+                : []),
+            new UserLogRecordProcessor(userManager),
         ],
         exportConfig: {
             url: logsUrl,
@@ -258,6 +277,7 @@ export function startBrowserSdk(cfg = {}) {
     sdkStarted = true;
 
     return {
+        ...createUserApi(userManager),
         shutdown() {
             disableInstrumentations();
             return Promise.allSettled([

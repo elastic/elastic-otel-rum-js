@@ -39,6 +39,9 @@ To check for security updates, go to [Security announcements for the Elastic sta
 * Align configuration with the upstream [browser-sdk](https://github.com/open-telemetry/opentelemetry-browser/tree/main/packages/sdk).
 * Add session tracking. Spans and log records include `session.id`, `session.previous_id`, and `browser.tab.id` attributes. A `session.start` event is emitted when a session starts.
   Ref: https://github.com/elastic/elastic-otel-rum-js/issues/115
+* Add a user identity API. `startBrowserSdk` returns `setUser()` and `clearUser()` to add `user.id`, `user.email`,
+  `user.full_name`, `elastic.user.account` and custom `elastic.user.attributes.*` attributes to spans and log records.
+  Ref: https://github.com/elastic/elastic-otel-rum-js/issues/124
 
 ### Chores [edot-browser-X.X.X-chores]
 
