@@ -165,11 +165,11 @@ const unsubscribe = sdk.session.addObserver({
 
 Both callbacks are optional and run synchronously. The observer has the same shape as the upstream `@opentelemetry/browser-sdk/session` one.
 
-- `onSessionEnded` is called when the session expires, even if the application produces no telemetry, and when another tab replaces the session.
-- `onSessionStarted` is called when this tab starts a session or adopts one started by another tab. Observers added after `startBrowserSdk` returns do not receive the initial session, use `getSession()` for it.
+- `onSessionEnded` is called when the session expires, even if the application produces no telemetry, when another tab replaces the session, and when its storage is cleared.
+- `onSessionStarted` is called when this tab starts a session or adopts one started by another tab. `previous` is set only when this tab saw the preceding session end. Observers added after `startBrowserSdk` returns do not receive the initial session, use `getSession()` for it.
 - Browsers throttle timers in background tabs, so `onSessionEnded` can be delayed until the tab is used again.
 
-Both methods are no-ops when sessions are disabled or web storage is not available.
+Both methods are no-ops when sessions are disabled, web storage is not available, or after `sdk.shutdown()`.
 
 ## Next steps [next-steps]
 

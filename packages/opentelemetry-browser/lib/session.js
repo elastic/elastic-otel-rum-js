@@ -79,6 +79,10 @@ const MAX_MAX_DURATION_S = 24 * 60 * 60;
 const ACTIVITY_WRITE_THROTTLE_MS = 5_000;
 // RUM session spec: no session ID is kept around for more than 24 hours
 const PREVIOUS_ID_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+// A stored session further ahead than this means the clock was moved back
+const MAX_CLOCK_SKEW_MS = 5 * 60 * 1000;
+// Longer delays overflow in browsers and fire immediately
+const MAX_TIMER_DELAY_MS = 2 ** 31 - 1;
 
 export class SessionManager {
     /** @param {SessionManagerOptions} opts */
@@ -233,7 +237,7 @@ export class SessionManager {
                 this._write(stored);
                 extended = true;
             }
-        } else if (renew || !stored) {
+        } else if (renew) {
             created = true;
             session = {
                 id: generateUUID(),
@@ -353,7 +357,7 @@ export class SessionManager {
                     this._arm(current);
                 }
             },
-            Math.max(0, expiresAt - this._now())
+            Math.min(MAX_TIMER_DELAY_MS, Math.max(0, expiresAt - this._now()))
         );
     }
 
@@ -369,7 +373,12 @@ export class SessionManager {
      * @param {number} now
      */
     _isExpired(session, now) {
+        // Ages would be negative and the session would never end
+        const ahead =
+            Math.max(session.startTimestamp, session.lastActivityTimestamp) -
+            now;
         return (
+            ahead > MAX_CLOCK_SKEW_MS ||
             now - session.lastActivityTimestamp >= this._inactivityMs ||
             now - session.startTimestamp >= this._maxDurationMs
         );

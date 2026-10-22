@@ -122,7 +122,9 @@ Session attributes are not added to metrics to avoid high-cardinality attributes
 - Sessions are stored in `localStorage` and tab identifiers in `sessionStorage`. If web storage is not available (for example storage is blocked for the site), EDOT Browser does not add session attributes, since they would not persist across page reloads.
 - Duplicating a tab copies its `sessionStorage`, so the duplicated tab reports the same `browser.tab.id` as the original one.
 - Only user activity (clicks, key presses and scrolling by default) extends the session. Telemetry produced while the user is idle, such as background requests, does not.
-- After a session expires, telemetry carries `browser.tab.id` but no `session.id` until the next user interaction starts a new session.
+- After a session expires, telemetry carries `browser.tab.id` but no `session.id` until the next user interaction starts a new session. The same happens when `localStorage` is cleared, for example on logout, and the new session has no `session.previous_id`.
+- Loading a page counts as activity. A page that reloads itself with no user present, such as a wall dashboard, keeps its session until the maximum duration.
+- If the device clock moves back by more than 5 minutes, the stored session is treated as expired.
 
 ## Next steps [next-steps]
 

@@ -465,3 +465,65 @@ test('should not notify observers after shutdown when another tab rotates the se
     expect(events.seen).toStrictEqual([]);
     expect(events.after).toBeUndefined();
 });
+
+test('should not start a session from telemetry after the storage was cleared', async ({
+    page,
+}) => {
+    const collector = createCollector(page);
+    await page.goto(FIXTURE);
+    await collector.getLogs();
+
+    collector.clear();
+    await page.evaluate(() => {
+        localStorage.clear();
+        return fetch('/').then((r) => r.text());
+    });
+
+    const spans = await collector.getSpans();
+    const [fetchSpan] = spans.filter(
+        (s) => s.scope.name === '@opentelemetry/browser-instrumentation/fetch'
+    );
+    expect(fetchSpan.attributes['session.id']).toBeUndefined();
+    expect(fetchSpan.attributes['browser.tab.id']).toBeDefined();
+    expect(
+        await page.evaluate(() =>
+            localStorage.getItem('elastic_otel_browser.session')
+        )
+    ).toBeNull();
+});
+
+test('should replace a session dated in the future without spinning on timers', async ({
+    page,
+}) => {
+    const collector = createCollector(page);
+    const planted = {
+        id: '00000000-0000-4000-8000-000000000000',
+        startTimestamp: Date.now() + 40 * 24 * 60 * 60 * 1000,
+        lastActivityTimestamp: Date.now() + 40 * 24 * 60 * 60 * 1000,
+    };
+    await page.addInitScript((session) => {
+        localStorage.setItem(
+            'elastic_otel_browser.session',
+            JSON.stringify(session)
+        );
+        // @ts-expect-error - test globals
+        globalThis.sessionReads = 0;
+        const getItem = Storage.prototype.getItem;
+        Storage.prototype.getItem = function (key) {
+            if (key === 'elastic_otel_browser.session') {
+                // @ts-expect-error - test globals
+                globalThis.sessionReads++;
+            }
+            return getItem.call(this, key);
+        };
+    }, planted);
+    await page.goto(FIXTURE);
+
+    const logs = await collector.getLogs();
+    await page.waitForTimeout(500);
+    // @ts-expect-error - test globals
+    const reads = await page.evaluate(() => globalThis.sessionReads);
+
+    expect.soft(reads).toBeLessThan(50);
+    expect.soft(logs[0].attributes['session.id']).not.toStrictEqual(planted.id);
+});

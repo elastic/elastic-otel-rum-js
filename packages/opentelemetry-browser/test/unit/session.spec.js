@@ -108,12 +108,19 @@ function setup(opts = {}) {
             timers,
             ...opts,
         });
+    /** Like production, where `start()` runs right after creation. */
+    const createStarted = (/** @type {MemoryStorage} */ tab = tabStorage) => {
+        const manager = create(tab);
+        manager.start();
+        return manager;
+    };
     return {
         clock,
         started,
         sessionStorage,
         tabStorage,
         create,
+        createStarted,
         advance,
         activeTimers,
     };
@@ -222,14 +229,14 @@ test('SessionManager - start creates and persists a session', () => {
 });
 
 test('SessionManager - reuses the session across reloads and tabs', () => {
-    const {create, started} = setup();
-    const first = create().getAttributes();
+    const {createStarted, started} = setup();
+    const first = createStarted().getAttributes();
 
-    const reloaded = create().getAttributes();
+    const reloaded = createStarted().getAttributes();
     assert.strictEqual(reloaded['session.id'], first['session.id']);
     assert.strictEqual(reloaded['browser.tab.id'], first['browser.tab.id']);
 
-    const otherTab = create(new MemoryStorage()).getAttributes();
+    const otherTab = createStarted(new MemoryStorage()).getAttributes();
     assert.strictEqual(otherTab['session.id'], first['session.id']);
     assert.notStrictEqual(otherTab['browser.tab.id'], first['browser.tab.id']);
 
@@ -250,8 +257,8 @@ test('SessionManager - start renews an expired session and keeps previous id', (
 });
 
 test('SessionManager - an expired session is not renewed by telemetry', () => {
-    const {create, clock, started, sessionStorage} = setup();
-    const manager = create();
+    const {createStarted, clock, started, sessionStorage} = setup();
+    const manager = createStarted();
     const first = manager.getSession();
     const stored = sessionStorage.getItem(SESSION_STORAGE_KEY);
 
@@ -269,8 +276,8 @@ test('SessionManager - an expired session is not renewed by telemetry', () => {
 });
 
 test('SessionManager - user activity renews an expired session', () => {
-    const {create, clock, started} = setup();
-    const manager = create();
+    const {createStarted, clock, started} = setup();
+    const manager = createStarted();
     const first = manager.getSession();
 
     clock.now += 61_000;
@@ -302,8 +309,8 @@ test('SessionManager - drops previous id older than 24 hours', () => {
 });
 
 test('SessionManager - user activity extends the session until max duration', () => {
-    const {create, clock} = setup();
-    const manager = create();
+    const {createStarted, clock} = setup();
+    const manager = createStarted();
     const first = manager.getSession();
 
     // active every 30s for just under 10 minutes
@@ -346,9 +353,9 @@ test('SessionManager - presence extends an active session but never renews', () 
 });
 
 test('SessionManager - activity in another tab keeps the session alive', () => {
-    const {create, clock} = setup();
-    const tabA = create();
-    const tabB = create(new MemoryStorage());
+    const {createStarted, clock} = setup();
+    const tabA = createStarted();
+    const tabB = createStarted(new MemoryStorage());
     const first = tabA.getSession();
 
     clock.now += 40_000;
@@ -416,18 +423,18 @@ test('SessionManager - only the tab creating a session reports its start', () =>
 });
 
 test('SessionManager - ignores malformed stored data', () => {
-    const {create, sessionStorage} = setup();
+    const {createStarted, sessionStorage} = setup();
     sessionStorage.setItem(SESSION_STORAGE_KEY, '{"id": 42}');
-    const id = create().getSessionId();
+    const id = createStarted().getSessionId();
     assert.match(String(id), UUID_V4);
 
     sessionStorage.setItem(SESSION_STORAGE_KEY, 'not json');
-    assert.match(String(create().getSessionId()), UUID_V4);
+    assert.match(String(createStarted().getSessionId()), UUID_V4);
 });
 
 test('SessionManager - keeps the session in memory when storage writes fail', () => {
-    const {create, sessionStorage, started} = setup();
-    const manager = create();
+    const {createStarted, sessionStorage, started} = setup();
+    const manager = createStarted();
     sessionStorage.failWrites = true;
 
     const id = manager.getSessionId();
@@ -557,8 +564,8 @@ test('SessionManager observers - lazy reads report an expiry the timer missed', 
 });
 
 test('SessionManager observers - report a session rotated by another tab', () => {
-    const {create, sessionStorage} = setup();
-    const tabA = create();
+    const {createStarted, sessionStorage} = setup();
+    const tabA = createStarted();
     const first = tabA.getSession();
     const {calls} = observe(tabA);
 
@@ -672,8 +679,8 @@ test('SessionManager - keeps a single expiry timer', () => {
 });
 
 test('createSessionApi - exposes the current session without internals', () => {
-    const {create} = setup();
-    const manager = create();
+    const {createStarted} = setup();
+    const manager = createStarted();
     const api = createSessionApi(manager);
 
     const session = api.getSession();
@@ -1124,4 +1131,93 @@ test('resolveActivityEvents - warns about likely typos but keeps the events', ()
     assert.strictEqual(warnings.length, 2);
     assert.match(warnings[0], /keyDown/);
     assert.match(warnings[1], /pointerdwon/);
+});
+
+test('SessionManager - cleared storage ends the session and telemetry does not start another', () => {
+    const {create, sessionStorage, started} = setup();
+    const manager = create();
+    manager.start();
+    const first = manager.getSession();
+    const {calls} = observe(manager);
+
+    sessionStorage.clear();
+
+    assert.strictEqual(manager.getSession(), undefined);
+    assert.strictEqual(manager.getAttributes()['session.id'], undefined);
+    assert.deepStrictEqual(calls, [`ended:${first?.id}`]);
+    assert.strictEqual(started.length, 1);
+    assert.strictEqual(sessionStorage.getItem(SESSION_STORAGE_KEY), null);
+});
+
+test('SessionManager - user activity starts a fresh session after storage was cleared', () => {
+    const {create, sessionStorage, started} = setup();
+    const manager = create();
+    manager.start();
+    const first = manager.getSession();
+
+    sessionStorage.clear();
+    manager.recordActivity();
+
+    const second = manager.getSession();
+    assert.ok(second);
+    assert.notStrictEqual(second.id, first?.id);
+    assert.strictEqual(second.previousId, undefined);
+    assert.strictEqual(started.length, 2);
+});
+
+test('SessionManager - a stored session dated in the future is expired', () => {
+    const {create, sessionStorage, clock, started} = setup();
+    const plantedId = generateUUID();
+    const future = clock.now + 10 * 60_000;
+    sessionStorage.setItem(
+        SESSION_STORAGE_KEY,
+        JSON.stringify({
+            id: plantedId,
+            startTimestamp: future,
+            lastActivityTimestamp: future,
+        })
+    );
+    const manager = create();
+    manager.start();
+
+    const session = manager.getSession();
+    assert.ok(session);
+    assert.notStrictEqual(session.id, plantedId);
+    assert.strictEqual(started.length, 1);
+});
+
+test('SessionManager - keeps a session after a small clock correction', () => {
+    const {create, sessionStorage, clock, started} = setup();
+    const id = generateUUID();
+    const slightlyAhead = clock.now + 30_000;
+    sessionStorage.setItem(
+        SESSION_STORAGE_KEY,
+        JSON.stringify({
+            id,
+            startTimestamp: clock.now,
+            lastActivityTimestamp: slightlyAhead,
+        })
+    );
+    const manager = create();
+    manager.start();
+
+    assert.strictEqual(manager.getSession()?.id, id);
+    assert.strictEqual(started.length, 0);
+});
+
+test('SessionManager - never arms a timer longer than browsers support', () => {
+    const {create, clock, activeTimers, advance} = setup({
+        inactivityTimeout: 3_000_000,
+        maxDuration: 3_000_000,
+    });
+    const manager = create();
+    manager.start();
+    const {calls} = observe(manager);
+    const id = manager.getSession()?.id;
+
+    const [timer] = activeTimers();
+    assert.ok(timer.at - clock.now <= 2 ** 31 - 1);
+
+    advance(3_000_000_000 + 1_000);
+    assert.deepStrictEqual(calls, [`ended:${id}`]);
 });
