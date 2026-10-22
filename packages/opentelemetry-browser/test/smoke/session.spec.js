@@ -386,3 +386,82 @@ test('should expose a no-op session API when the SDK does not start', async ({
     });
     expect(result).toStrictEqual({session: undefined, unsubscribe: 'function'});
 });
+
+test('should not print instrumentation details to the console', async ({
+    page,
+}) => {
+    /** @type {string[]} */
+    const messages = [];
+    page.on('console', (msg) => messages.push(msg.text()));
+    await page.goto(FIXTURE);
+
+    expect(messages.filter((m) => m.startsWith('instr'))).toStrictEqual([]);
+});
+
+test('should start with a null session config', async ({page}) => {
+    const collector = createCollector(page);
+    const config = encodeURIComponent(JSON.stringify({session: null}));
+    await page.goto(`${FIXTURE}?config=${config}`);
+
+    const logs = await collector.getLogs();
+    expect(logs.length).toBeGreaterThan(0);
+    expect(logs[0].attributes['session.id']).toMatch(/^[0-9a-f-]{36}$/);
+});
+
+test('should renew the session on a click right after the max duration ended it', async ({
+    page,
+}) => {
+    const collector = createCollector(page);
+    const config = encodeURIComponent(
+        JSON.stringify({session: {maxDuration: 1800}})
+    );
+    await page.clock.install();
+    await page.goto(`${FIXTURE}?config=${config}`);
+
+    // activity processed 3s before the max duration, which ends the session
+    await page.clock.fastForward('29:57');
+    await page.click('body > h1');
+    await page.clock.fastForward('00:04');
+    await page.click('body > h1');
+
+    const {clicks} = await getClickLogs(collector, 2);
+    expect(clicks[0].attributes['session.id']).toBeDefined();
+    expect(clicks[1].attributes['session.id']).toBeDefined();
+    expect(clicks[1].attributes['session.id']).not.toStrictEqual(
+        clicks[0].attributes['session.id']
+    );
+});
+
+test('should not notify observers after shutdown when another tab rotates the session', async ({
+    page,
+}) => {
+    await page.clock.install();
+    await page.goto(FIXTURE);
+
+    const events = await page.evaluate(async () => {
+        /** @type {string[]} */
+        const seen = [];
+        // @ts-expect-error - set by the injected snippet
+        const {session, shutdown} = globalThis.edotBrowser;
+        session.addObserver({
+            onSessionStarted: () => seen.push('started'),
+            onSessionEnded: () => seen.push('ended'),
+        });
+        await shutdown();
+
+        // what another tab rotating the session leaves in the shared storage
+        localStorage.setItem(
+            'elastic_otel_browser.session',
+            JSON.stringify({
+                id: crypto.randomUUID(),
+                startTimestamp: Date.now(),
+                lastActivityTimestamp: Date.now(),
+            })
+        );
+        const after = session.getSession();
+        return {seen, after};
+    });
+
+    expect(events.seen).toStrictEqual([]);
+    expect(events.after).toBeUndefined();
+});

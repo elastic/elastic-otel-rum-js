@@ -6,8 +6,11 @@
 import assert from 'node:assert';
 import {test} from 'node:test';
 
+import {diag, DiagLogLevel} from '@opentelemetry/api';
+
 import {
     createSessionApi,
+    createSessionManager,
     DEFAULT_ACTIVITY_EVENTS,
     generateUUID,
     resolveActivityEvents,
@@ -854,4 +857,271 @@ test('trackUserActivity - is a no-op without a window', (t) => {
     });
     const stop = trackUserActivity({recordActivity() {}}, ['keydown']);
     assert.doesNotThrow(() => stop());
+});
+
+test('SessionManager observers - keep prototype methods and `this`', () => {
+    const {create, advance} = setup();
+    const manager = create();
+    manager.start();
+    class Analytics {
+        constructor() {
+            /** @type {string[]} */
+            this.ended = [];
+        }
+        /** @param {{id: string}} session */
+        onSessionEnded(session) {
+            this.ended.push(session.id);
+        }
+    }
+    const analytics = new Analytics();
+    manager.addObserver(analytics);
+    const first = manager.getSession();
+
+    advance(61_000);
+
+    assert.deepStrictEqual(analytics.ended, [first?.id]);
+});
+
+test('SessionManager observers - report a renewal once when onSessionEnded reads the session', () => {
+    const {create, clock, started} = setup();
+    const manager = create();
+    manager.start();
+    const first = manager.getSession();
+    /** @type {string[]} */
+    const calls = [];
+    manager.addObserver({
+        onSessionEnded: (s) => {
+            calls.push(`ended:${s.id}`);
+            manager.getAttributes();
+        },
+        onSessionStarted: (s) => calls.push(`started:${s.id}`),
+    });
+
+    // No timer fires: the end is found by the activity itself
+    clock.now += 61_000;
+    manager.recordActivity();
+    const second = manager.getSession();
+
+    assert.deepStrictEqual(calls, [
+        `ended:${first?.id}`,
+        `started:${second?.id}`,
+    ]);
+    assert.strictEqual(started.length, 2);
+});
+
+test('SessionManager observers - report a session adopted from another tab once when onSessionEnded reads the session', () => {
+    const {create, sessionStorage} = setup();
+    const tabA = create();
+    tabA.start();
+    const first = tabA.getSession();
+    /** @type {string[]} */
+    const calls = [];
+    tabA.addObserver({
+        onSessionEnded: (s) => {
+            calls.push(`ended:${s.id}`);
+            tabA.getAttributes();
+        },
+        onSessionStarted: (s) => calls.push(`started:${s.id}`),
+    });
+
+    const rotated = {
+        id: generateUUID(),
+        startTimestamp: 1_000_000,
+        lastActivityTimestamp: 1_000_000,
+    };
+    sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(rotated));
+    tabA.getSession();
+
+    assert.deepStrictEqual(calls, [
+        `ended:${first?.id}`,
+        `started:${rotated.id}`,
+    ]);
+});
+
+test('SessionManager - renews on the first activity after the timer ended the session, even within the throttle window', () => {
+    const {create, advance} = setup();
+    const manager = create();
+    manager.start();
+    const first = manager.getSession();
+    for (let i = 0; i < 19; i++) {
+        advance(30_000);
+        manager.recordActivity();
+    }
+    advance(27_000);
+    manager.recordActivity();
+
+    advance(3_000);
+    assert.strictEqual(manager.getSession(), undefined);
+    advance(1_000);
+    manager.recordActivity();
+
+    const second = manager.getSession();
+    assert.ok(second);
+    assert.notStrictEqual(second.id, first?.id);
+});
+
+test('SessionManager - renews on the first activity after an unnoticed expiry, even within the throttle window', () => {
+    const {create, advance, clock} = setup();
+    const manager = create();
+    manager.start();
+    const first = manager.getSession();
+    for (let i = 0; i < 19; i++) {
+        advance(30_000);
+        manager.recordActivity();
+    }
+    advance(27_000);
+    manager.recordActivity();
+
+    // e.g. a throttled background tab: the timer did not fire
+    clock.now += 4_000;
+    manager.recordActivity();
+
+    const second = manager.getSession();
+    assert.ok(second);
+    assert.notStrictEqual(second.id, first?.id);
+});
+
+test('SessionManager - shutdown stops the manager completely', () => {
+    const {create, sessionStorage, activeTimers} = setup();
+    const manager = create();
+    manager.start();
+    const {calls} = observe(manager);
+    manager.shutdown();
+
+    // another tab rotates the session
+    sessionStorage.setItem(
+        SESSION_STORAGE_KEY,
+        JSON.stringify({
+            id: generateUUID(),
+            startTimestamp: 1_000_000,
+            lastActivityTimestamp: 1_000_000,
+        })
+    );
+    manager.recordActivity();
+    const late = manager.addObserver({
+        onSessionStarted: () => calls.push('late'),
+    });
+
+    assert.strictEqual(manager.getSession(), undefined);
+    assert.strictEqual(manager.getAttributes()['session.id'], undefined);
+    assert.deepStrictEqual(calls, []);
+    assert.strictEqual(activeTimers().length, 0);
+    assert.doesNotThrow(() => late());
+});
+
+test('SessionManager observers - previous is only reported when it is the real previous session', () => {
+    const {create, sessionStorage, advance} = setup();
+    const tab = create();
+    tab.start();
+    const first = tab.getSession();
+    const {previous} = observe(tab);
+
+    advance(61_000);
+    // meanwhile other tabs ran two more sessions
+    const second = {
+        id: generateUUID(),
+        previousId: first?.id,
+        startTimestamp: 1_070_000,
+        lastActivityTimestamp: 1_070_000,
+    };
+    const third = {
+        id: generateUUID(),
+        previousId: second.id,
+        startTimestamp: 1_080_000,
+        lastActivityTimestamp: 1_080_000,
+    };
+    sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(third));
+    advance(5_000);
+    tab.getSession();
+
+    assert.strictEqual(tab.getSession()?.previousId, second.id);
+    assert.deepStrictEqual(previous, [undefined]);
+});
+
+test('SessionManager observers - previous is reported when this tab saw it end', () => {
+    const {create, advance} = setup();
+    const tab = create();
+    tab.start();
+    const first = tab.getSession();
+    const {previous} = observe(tab);
+
+    advance(61_000);
+    tab.recordActivity();
+
+    assert.strictEqual(previous.length, 1);
+    assert.strictEqual(previous[0]?.id, first?.id);
+});
+
+test('createSessionManager - tolerates a null or invalid session config', (t) => {
+    const originals = [globalThis.localStorage, globalThis.sessionStorage];
+    // @ts-expect-error - node has no web storage
+    globalThis.localStorage = new MemoryStorage();
+    // @ts-expect-error - node has no web storage
+    globalThis.sessionStorage = new MemoryStorage();
+    t.after(() => {
+        // @ts-expect-error - restore
+        globalThis.localStorage = originals[0];
+        // @ts-expect-error - restore
+        globalThis.sessionStorage = originals[1];
+    });
+
+    for (const value of [null, 'yes', 42, true]) {
+        // @ts-expect-error - testing invalid input
+        assert.doesNotThrow(() => createSessionManager(value));
+        // @ts-expect-error - testing invalid input
+        assert.ok(createSessionManager(value));
+    }
+    assert.doesNotThrow(() => resolveActivityEvents(/** @type {any} */ (null)));
+});
+
+/**
+ * @param {() => void} fn
+ * @returns {string[]} warnings emitted by `fn`
+ */
+function captureWarnings(fn) {
+    /** @type {string[]} */
+    const warnings = [];
+    diag.setLogger(
+        {
+            warn: (msg) => warnings.push(msg),
+            error() {},
+            info() {},
+            debug() {},
+            verbose() {},
+        },
+        {logLevel: DiagLogLevel.WARN, suppressOverrideMessage: true}
+    );
+    try {
+        fn();
+    } finally {
+        diag.disable();
+    }
+    return warnings;
+}
+
+test('resolveActivityEvents - accepts known events without warning', () => {
+    const warnings = captureWarnings(() => {
+        assert.deepStrictEqual(
+            resolveActivityEvents({
+                activityEvents: ['click', 'touchstart', 'pointermove', 'input'],
+            }),
+            ['click', 'touchstart', 'pointermove', 'input']
+        );
+        resolveActivityEvents({});
+    });
+    assert.deepStrictEqual(warnings, []);
+});
+
+test('resolveActivityEvents - warns about likely typos but keeps the events', () => {
+    /** @type {string[]} */
+    let events = [];
+    const warnings = captureWarnings(() => {
+        events = resolveActivityEvents({
+            activityEvents: ['keyDown', 'pointerdwon', 'click'],
+        });
+    });
+    assert.deepStrictEqual(events, ['keyDown', 'pointerdwon', 'click']);
+    assert.strictEqual(warnings.length, 2);
+    assert.match(warnings[0], /keyDown/);
+    assert.match(warnings[1], /pointerdwon/);
 });

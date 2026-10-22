@@ -198,7 +198,7 @@ export function startBrowserSdk(cfg = {}) {
         sessionManager &&
         trackUserActivity(
             sessionManager,
-            resolveActivityEvents(config.session ?? {})
+            resolveActivityEvents(config.session)
         );
 
     // metrics signal configuration
@@ -261,7 +261,7 @@ export function startBrowserSdk(cfg = {}) {
     // Disable the ones with { enabled: false } in configuration
     instrumentationInstances.forEach((instr) => {
         const config = instr.getConfig();
-        console.log('instr', instr.instrumentationName, config);
+        diag.debug(`Instrumentation ${instr.instrumentationName}`, config);
         if (config.enabled === false) {
             instr.disable();
         }

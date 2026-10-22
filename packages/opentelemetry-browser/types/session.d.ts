@@ -1,11 +1,11 @@
 /**
  * Returns `undefined` when sessions cannot outlive a page reload so EDOT
  * doesn't report IDs that would split a single user session.
- * @param {SessionConfig} [config]
+ * @param {SessionConfig | null} [config]
  * @param {(session: SessionState) => void} [onSessionStart]
  * @returns {SessionManager | undefined}
  */
-export function createSessionManager(config?: SessionConfig, onSessionStart?: (session: SessionState) => void): SessionManager | undefined;
+export function createSessionManager(config?: SessionConfig | null, onSessionStart?: (session: SessionState) => void): SessionManager | undefined;
 /**
  * Invalid values fall back to defaults and out-of-range values are clamped,
  * so a bad config never disables sessions nor rotates them on every event.
@@ -19,10 +19,10 @@ export function resolveSessionTimeouts(config: SessionConfig): {
 /**
  * Invalid values fall back to defaults so a typo never leaves sessions
  * without any activity signal.
- * @param {SessionConfig} config
+ * @param {SessionConfig | null | undefined} config
  * @returns {string[]}
  */
-export function resolveActivityEvents(config: SessionConfig): string[];
+export function resolveActivityEvents(config: SessionConfig | null | undefined): string[];
 /**
  * Listens in the capture phase so handlers calling `stopPropagation()`
  * can't hide activity. Untrusted events are ignored so scripts dispatching
@@ -119,8 +119,19 @@ export class SessionManager {
     /** @type {SessionState | undefined} */
     _lastEnded: SessionState | undefined;
     _lastActivityCheck: number;
-    /** @type {Set<SessionObserver>} */
-    _observers: Set<SessionObserver>;
+    _expiresAt: number;
+    _stopped: boolean;
+    /** @type {Set<{observer: SessionObserver}>} */
+    _observers: Set<{
+        observer: SessionObserver;
+    }>;
+    /** @type {Array<{type: 'ended' | 'started', session: SessionState, created?: boolean}>} */
+    _events: Array<{
+        type: "ended" | "started";
+        session: SessionState;
+        created?: boolean;
+    }>;
+    _flushing: boolean;
     _tabId: string;
     /**
      * Continues the stored session or starts a new one. Loading the page
@@ -158,6 +169,7 @@ export class SessionManager {
      * @returns {() => void} unsubscribe
      */
     addObserver(observer: SessionObserver): () => void;
+    /** Stops tracking for good: no timers, reads or notifications. */
     shutdown(): void;
     /** @returns {import('@opentelemetry/api').Attributes} */
     getAttributes(): import("@opentelemetry/api").Attributes;
@@ -171,12 +183,16 @@ export class SessionManager {
         renew: boolean;
     }): SessionState | undefined;
     /**
-     * Announces to observers when the session this tab is on changes.
+     * Updates the session this tab is on and queues what observers must be
+     * told. State changes first and events are delivered in order by a single
+     * loop, so reads made from a callback (telemetry) can't announce the same
+     * change a second time.
      * @param {SessionState | undefined} session
      * @param {boolean} created whether this tab just created it
      * @returns {boolean} whether the active session changed
      */
     _sync(session: SessionState | undefined, created: boolean): boolean;
+    _flush(): void;
     /** @param {(observer: SessionObserver) => void} call */
     _notify(call: (observer: SessionObserver) => void): void;
     /**

@@ -106,8 +106,13 @@ export class SessionManager {
         /** @type {SessionState | undefined} */
         this._lastEnded = undefined;
         this._lastActivityCheck = 0;
-        /** @type {Set<SessionObserver>} */
+        this._expiresAt = 0;
+        this._stopped = false;
+        /** @type {Set<{observer: SessionObserver}>} */
         this._observers = new Set();
+        /** @type {Array<{type: 'ended' | 'started', session: SessionState, created?: boolean}>} */
+        this._events = [];
+        this._flushing = false;
         this._tabId = getOrCreateTabId(opts.tabStorage);
     }
 
@@ -148,8 +153,12 @@ export class SessionManager {
     recordActivity({renew = true} = {}) {
         const now = this._now();
         if (renew) {
-            // Timeouts are at least minutes so skipping bursts never hides an expiry
-            if (now - this._lastActivityCheck < ACTIVITY_WRITE_THROTTLE_MS) {
+            // Never skip once the known session expired: this activity has to
+            // renew it, or the telemetry it triggers would have no session.
+            if (
+                now - this._lastActivityCheck < ACTIVITY_WRITE_THROTTLE_MS &&
+                now < this._expiresAt
+            ) {
                 return;
             }
             this._lastActivityCheck = now;
@@ -165,15 +174,24 @@ export class SessionManager {
      * @returns {() => void} unsubscribe
      */
     addObserver(observer) {
-        const entry = {...observer};
+        if (this._stopped) {
+            return () => {};
+        }
+        // Wrapped so adding the same object twice can be unsubscribed
+        // separately, while its methods keep their `this`.
+        const entry = {observer};
         this._observers.add(entry);
         return () => {
             this._observers.delete(entry);
         };
     }
 
+    /** Stops tracking for good: no timers, reads or notifications. */
     shutdown() {
+        this._stopped = true;
         this._clearTimer();
+        this._observers.clear();
+        this._active = undefined;
     }
 
     /** @returns {import('@opentelemetry/api').Attributes} */
@@ -196,6 +214,9 @@ export class SessionManager {
      * @returns {SessionState | undefined}
      */
     _resolve(now, {extend, renew}) {
+        if (this._stopped) {
+            return undefined;
+        }
         const stored = this._read();
         /** @type {SessionState | undefined} */
         let session;
@@ -236,7 +257,10 @@ export class SessionManager {
     }
 
     /**
-     * Announces to observers when the session this tab is on changes.
+     * Updates the session this tab is on and queues what observers must be
+     * told. State changes first and events are delivered in order by a single
+     * loop, so reads made from a callback (telemetry) can't announce the same
+     * change a second time.
      * @param {SessionState | undefined} session
      * @param {boolean} created whether this tab just created it
      * @returns {boolean} whether the active session changed
@@ -247,33 +271,56 @@ export class SessionManager {
             return false;
         }
 
-        // State is updated before callbacks: they emit telemetry that
-        // re-enters this class.
+        this._active = session && {...session};
         if (previous) {
-            this._active = undefined;
             this._lastEnded = previous;
+            this._expiresAt = 0;
             this._clearTimer();
-            this._notify((o) => o.onSessionEnded?.(toSessionInfo(previous)));
+            this._events.push({type: 'ended', session: previous});
         }
         if (session) {
-            this._active = {...session};
-            if (created) {
-                this._onSessionStart?.(session);
-            }
-            const ended = this._lastEnded;
-            this._notify((o) =>
-                o.onSessionStarted?.(
-                    toSessionInfo(session),
-                    ended && toSessionInfo(ended)
-                )
-            );
+            this._events.push({type: 'started', session, created});
         }
+        this._flush();
         return true;
+    }
+
+    _flush() {
+        if (this._flushing) {
+            return;
+        }
+        this._flushing = true;
+        try {
+            for (let event; (event = this._events.shift()); ) {
+                const {session} = event;
+                if (event.type === 'ended') {
+                    this._notify((o) =>
+                        o.onSessionEnded?.(toSessionInfo(session))
+                    );
+                    continue;
+                }
+                if (event.created) {
+                    this._onSessionStart?.(session);
+                }
+                // Only the real previous session: this tab may have missed
+                // others that ran while it was idle.
+                const ended = this._lastEnded;
+                const previous =
+                    ended && ended.id === session.previousId
+                        ? toSessionInfo(ended)
+                        : undefined;
+                this._notify((o) =>
+                    o.onSessionStarted?.(toSessionInfo(session), previous)
+                );
+            }
+        } finally {
+            this._flushing = false;
+        }
     }
 
     /** @param {(observer: SessionObserver) => void} call */
     _notify(call) {
-        for (const observer of [...this._observers]) {
+        for (const {observer} of [...this._observers]) {
             try {
                 call(observer);
             } catch (err) {
@@ -294,6 +341,7 @@ export class SessionManager {
             session.lastActivityTimestamp + this._inactivityMs,
             session.startTimestamp + this._maxDurationMs
         );
+        this._expiresAt = expiresAt;
         this._timer = this._timers.setTimeout(
             () => {
                 this._timer = undefined;
@@ -366,11 +414,12 @@ export class SessionManager {
 /**
  * Returns `undefined` when sessions cannot outlive a page reload so EDOT
  * doesn't report IDs that would split a single user session.
- * @param {SessionConfig} [config]
+ * @param {SessionConfig | null} [config]
  * @param {(session: SessionState) => void} [onSessionStart]
  * @returns {SessionManager | undefined}
  */
-export function createSessionManager(config = {}, onSessionStart) {
+export function createSessionManager(config, onSessionStart) {
+    config = normalizeSessionConfig(config);
     if (config.enabled === false) {
         return undefined;
     }
@@ -417,11 +466,11 @@ export function resolveSessionTimeouts(config) {
 /**
  * Invalid values fall back to defaults so a typo never leaves sessions
  * without any activity signal.
- * @param {SessionConfig} config
+ * @param {SessionConfig | null | undefined} config
  * @returns {string[]}
  */
 export function resolveActivityEvents(config) {
-    const events = config.activityEvents;
+    const events = config?.activityEvents;
     if (events === undefined) {
         return [...DEFAULT_ACTIVITY_EVENTS];
     }
@@ -434,6 +483,14 @@ export function resolveActivityEvents(config) {
             `Invalid "session.activityEvents" value. Using ${DEFAULT_ACTIVITY_EVENTS.join(', ')}.`
         );
         return [...DEFAULT_ACTIVITY_EVENTS];
+    }
+    // Custom events are valid, so unknown names are kept and only reported
+    for (const name of events) {
+        if (!isKnownEvent(name)) {
+            diag.warn(
+                `Unknown event "${name}" in "session.activityEvents". Event names are case sensitive, check for typos.`
+            );
+        }
     }
     return [...events];
 }
@@ -569,6 +626,67 @@ export function generateUUID() {
 }
 
 // -- helper functions
+
+// Browsers only expose `on<event>` for touch events when touch is
+// supported, so UI events can't be told apart from typos by that alone.
+const KNOWN_EVENTS = new Set([
+    'click',
+    'dblclick',
+    'auxclick',
+    'contextmenu',
+    'mousedown',
+    'mouseup',
+    'mousemove',
+    'pointerdown',
+    'pointerup',
+    'pointermove',
+    'keydown',
+    'keyup',
+    'keypress',
+    'scroll',
+    'wheel',
+    'touchstart',
+    'touchmove',
+    'touchend',
+    'touchcancel',
+    'input',
+    'beforeinput',
+    'change',
+    'submit',
+    'focusin',
+    'focusout',
+    'select',
+    'copy',
+    'cut',
+    'paste',
+    'dragstart',
+    'drop',
+    'resize',
+    'visibilitychange',
+]);
+
+/** @param {string} name */
+function isKnownEvent(name) {
+    return (
+        KNOWN_EVENTS.has(name) ||
+        (typeof window !== 'undefined' && `on${name}` in window)
+    );
+}
+
+/**
+ * @param {unknown} config
+ * @returns {SessionConfig}
+ */
+function normalizeSessionConfig(config) {
+    if (config === undefined || config === null) {
+        return {};
+    }
+    if (typeof config !== 'object') {
+        diag.warn('Invalid "session" configuration. Using the defaults.');
+        return {};
+    }
+    return config;
+}
 
 /**
  * @param {SessionState} session

@@ -140,7 +140,7 @@ EDOT Browser adds `session.id`, `session.previous_id` (after a session rotates),
 | `enabled`           | `boolean` | Set to `false` to turn off session tracking. Defaults to `true`. |
 | `inactivityTimeout` | `number`  | Seconds without user activity after which the session ends. Defaults to `1800` (30 minutes). Must be between `300` (5 minutes) and `maxDuration`. |
 | `maxDuration`       | `number`  | Maximum session length in seconds, regardless of activity. Defaults to `14400` (4 hours). Must be between `1800` (30 minutes) and `86400` (24 hours). |
-| `activityEvents`    | `string[]` | DOM events that count as user activity. Defaults to `["pointerdown", "keydown", "scroll", "wheel"]`. Must be a non-empty list of event names. Events not triggered by the user (for example `dispatchEvent` calls) are ignored. A tab becoming visible extends an active session but does not start a new one. |
+| `activityEvents`    | `string[]` | DOM events that count as user activity. Defaults to `["pointerdown", "keydown", "scroll", "wheel"]`. Must be a non-empty list of event names; unknown names are used as given but log a warning, as event names are case sensitive. Events not triggered by the user (for example `dispatchEvent` calls) are ignored. A tab becoming visible extends an active session but does not start a new one. |
 
 Incorrect values fall back to the default and out-of-range values are clamped to the closest limit. In both cases EDOT Browser logs a warning.
 
