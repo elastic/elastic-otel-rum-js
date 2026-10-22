@@ -86,3 +86,43 @@ export const EVENT_SESSION_START: "session.start";
  * @note Not defined in semantic conventions yet. EDOT specific until the Browser SIG settles on a name.
  */
 export const ATTR_BROWSER_TAB_ID: "browser.tab.id";
+/**
+ * Unique identifier of the user.
+ *
+ * @example a9a7f8b0-1c2d-4e3f-8a9b-0c1d2e3f4a5b
+ *
+ * @experimental This attribute is experimental and is subject to breaking changes in minor releases of `@opentelemetry/semantic-conventions`.
+ */
+export const ATTR_USER_ID: "user.id";
+/**
+ * User email address.
+ *
+ * @example a.einstein@example.com
+ *
+ * @experimental This attribute is experimental and is subject to breaking changes in minor releases of `@opentelemetry/semantic-conventions`.
+ */
+export const ATTR_USER_EMAIL: "user.email";
+/**
+ * User's full name.
+ *
+ * @example Albert Einstein
+ *
+ * @experimental This attribute is experimental and is subject to breaking changes in minor releases of `@opentelemetry/semantic-conventions`.
+ */
+export const ATTR_USER_FULL_NAME: "user.full_name";
+/**
+ * Account (organization or tenant) the user belongs to.
+ *
+ * @example acme-corp
+ *
+ * @note Not defined in semantic conventions. EDOT specific until semantic conventions add an equivalent.
+ */
+export const ATTR_ELASTIC_USER_ACCOUNT: "elastic.user.account";
+/**
+ * Prefix for custom user attributes provided by the application.
+ *
+ * @example elastic.user.attributes.plan
+ *
+ * @note Not defined in semantic conventions. EDOT specific so custom keys cannot clash with `user.*` attributes added to semantic conventions later.
+ */
+export const ATTR_ELASTIC_USER_ATTRIBUTES_PREFIX: "elastic.user.attributes.";

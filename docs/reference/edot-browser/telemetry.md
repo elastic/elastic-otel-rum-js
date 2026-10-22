@@ -123,6 +123,41 @@ Session attributes are not added to metrics to avoid high-cardinality attributes
 - Duplicating a tab copies its `sessionStorage`, so the duplicated tab reports the same `browser.tab.id` as the original one.
 - Any telemetry, including background requests, counts as activity and extends the session.
 
+## User identity [user-identity]
+
+Spans and log records can carry the identity of the signed-in user. Call `setUser` on the object returned by `startBrowserSdk` to identify the user, and `clearUser` to remove the identity, for example on logout:
+
+```js
+const sdk = startBrowserSdk({ /* ... */ });
+
+sdk.setUser({
+  id: 'u-123',
+  email: 'ada@example.com',
+  name: 'Ada Lovelace',
+  account: 'acme',
+  attributes: { plan: 'premium' },
+});
+sdk.clearUser();
+```
+
+Only `id` is required. The identity is added to spans and log records created after the call, so it can be set or changed at any time, such as after the user logs in. Telemetry that was already created is not changed. These attributes are used:
+
+| Field     | Attribute              | Notes |
+|-----------|------------------------|-------|
+| `id`      | `user.id`              | |
+| `email`   | `user.email`           | |
+| `name`    | `user.full_name`       | |
+| `account` | `elastic.user.account` | The organization or tenant of the user. It is not part of the OpenTelemetry semantic conventions yet. |
+| `attributes` | `elastic.user.attributes.<key>` | Custom attributes. Keys must not be empty and values must be strings, finite numbers or booleans. |
+
+Calling `setUser` replaces the whole identity. A call without a non-empty string `id` is ignored and logs a warning. Optional fields that are not non-empty strings, and custom attributes with invalid keys or values, are ignored. Custom attributes use their own prefix, so they never override `user.*` attributes.
+
+User attributes are not added to metrics to avoid high-cardinality attributes. The identity is kept in memory only: it is not persisted across page loads, so call `setUser` again after a reload. It is not tied to sessions either, so ending a session does not clear it.
+
+:::{important}
+`email` and `name` are personal data. EDOT Browser only sends what you pass to `setUser`, so pass only the fields you are allowed to collect.
+:::
+
 ## Next steps [next-steps]
 
 - Refer to [Set up EDOT Browser](setup.md), [Install the agent](install-agent.md), and [Proxy and CORS](proxy-cors.md) for installation and export configuration.
