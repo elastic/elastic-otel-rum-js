@@ -5,6 +5,11 @@ name: release
 # `release-manual`: run from the Actions UI (workflow_dispatch).
 on:
   workflow_dispatch:
+    inputs:
+      sha:
+        description: Short SHA of the commit to release
+        required: true
+        type: string
   push:
     tags:
       - v*.*.*
@@ -117,6 +122,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
+          ref: ${{ inputs.sha }}
 
       - uses: actions/setup-node@v6
         with:
