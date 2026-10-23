@@ -95,6 +95,9 @@ jobs:
       - name: npm ci
         run: npm run ci-all
 
+      - name: Set canary version
+        run: node ./scripts/set-canary-version.js
+
       - name: npm publish
         working-directory: ./packages/opentelemetry-browser
         run: npm publish --tag canary
@@ -133,6 +136,9 @@ jobs:
 
       - name: npm ci
         run: npm run ci-all
+
+      - name: Set canary version
+        run: node ./scripts/set-canary-version.js
 
       - name: npm publish
         working-directory: ./packages/opentelemetry-browser
