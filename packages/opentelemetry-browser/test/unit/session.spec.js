@@ -11,6 +11,8 @@ import {
     resolveSessionTimeouts,
     SESSION_STORAGE_KEY,
     SessionManager,
+    SessionSampler,
+    SamplingDecision,
     TAB_STORAGE_KEY,
 } from '../../lib/session.js';
 
@@ -67,6 +69,7 @@ function setup(opts = {}) {
             maxDuration: 600,
             onSessionStart: (s) => started.push(s),
             now: () => clock.now,
+            sampler: new SessionSampler(1),
             ...opts,
         });
     return {clock, started, sessionStorage, tabStorage, create};
@@ -109,9 +112,10 @@ test('resolveSessionTimeouts - keeps valid values', () => {
 test('resolveSessionTimeouts - falls back to defaults on invalid values', () => {
     for (const value of [0, -1, NaN, Infinity, '600']) {
         assert.deepStrictEqual(
-            // @ts-expect-error - testing invalid input
             resolveSessionTimeouts({
+                // @ts-expect-error - testing invalid input
                 inactivityTimeout: value,
+                // @ts-expect-error - testing invalid input
                 maxDuration: value,
             }),
             {inactivityTimeout: 1800, maxDuration: 14400},
@@ -146,6 +150,7 @@ test('SessionManager - creates and persists a session', () => {
     assert.match(String(attrs['session.id']), UUID_V4);
     assert.match(String(attrs['browser.tab.id']), UUID_V4);
     assert.strictEqual(attrs['session.previous_id'], undefined);
+    assert.strictEqual(attrs['session.sampling_rate'], 1);
     assert.strictEqual(started.length, 1);
 
     const stored = JSON.parse(
@@ -161,10 +166,18 @@ test('SessionManager - reuses the session across reloads and tabs', () => {
     const reloaded = create().getAttributes();
     assert.strictEqual(reloaded['session.id'], first['session.id']);
     assert.strictEqual(reloaded['browser.tab.id'], first['browser.tab.id']);
+    assert.strictEqual(
+        reloaded['session.sampling_rate'],
+        first['session.sampling_rate']
+    );
 
     const otherTab = create(new MemoryStorage()).getAttributes();
     assert.strictEqual(otherTab['session.id'], first['session.id']);
     assert.notStrictEqual(otherTab['browser.tab.id'], first['browser.tab.id']);
+    assert.strictEqual(
+        otherTab['session.sampling_rate'],
+        first['session.sampling_rate']
+    );
 
     assert.strictEqual(started.length, 1);
 });
@@ -222,10 +235,13 @@ test('SessionManager - adopts a session rotated by another tab', () => {
     const tabA = create();
     tabA.getSession();
 
+    /** @type {import('../../lib/session.js').SessionState} */
     const rotated = {
         id: generateUUID(),
         startTimestamp: 1_000_000,
         lastActivityTimestamp: 1_000_000,
+        sampled: true,
+        samplingRate: 1,
     };
     sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(rotated));
 
@@ -259,4 +275,70 @@ test('SessionManager - reuses the tab id stored in tab storage', () => {
         create().getAttributes()['browser.tab.id'],
         'existing-tab'
     );
+});
+
+test('SessionSampler - uses default ratio if gets incorrect param', () => {
+    const badImputs = [NaN, true, 'string', () => null, {}];
+
+    for (const input of badImputs) {
+        // @ts-expect-error -- types do not match the constructor
+        const sampler = new SessionSampler(input);
+        assert.strictEqual(sampler.toString(), 'SessionSampler(ratio=1)');
+    }
+});
+
+test('SessionSampler - clamps the ratio value if out of bounds', () => {
+    const samplerLower = new SessionSampler(-1);
+    assert.strictEqual(samplerLower.toString(), 'SessionSampler(ratio=0)');
+
+    const samplerHigher = new SessionSampler(1.5);
+    assert.strictEqual(samplerHigher.toString(), 'SessionSampler(ratio=1)');
+});
+
+test('SessionSampler - trucated the ratio value up to 4 decimals', () => {
+    const sampler = new SessionSampler(0.12354325);
+    assert.strictEqual(sampler.toString(), 'SessionSampler(ratio=0.1235)');
+});
+
+test('SessionSampler - samples all sessions if ratio is 1', () => {
+    const sampler = new SessionSampler(1);
+
+    for (let i = 0; i < 100; i++) {
+        const result = sampler.shouldSample(generateUUID());
+        assert.strictEqual(
+            result.decision,
+            SamplingDecision.RECORD,
+            'session sampled'
+        );
+    }
+});
+
+test('SessionSampler - samples no sessions if ratio is 0', () => {
+    const sampler = new SessionSampler(0);
+
+    for (let i = 0; i < 100; i++) {
+        const result = sampler.shouldSample(generateUUID());
+        assert.strictEqual(
+            result.decision,
+            SamplingDecision.NOT_RECORD,
+            'session not sampled'
+        );
+    }
+});
+
+test('SessionSampler - samples according to the ratio', () => {
+    const ratio = 0.7;
+    const sampler = new SessionSampler(ratio);
+    let sampledSessions = 0;
+
+    for (let i = 0; i < 100; i++) {
+        const result = sampler.shouldSample(generateUUID());
+        if (result.decision === SamplingDecision.RECORD) {
+            sampledSessions += 1;
+        }
+    }
+
+    const rate = sampledSessions / 100;
+    assert.notStrictEqual(rate, 0, 'does sample sessions');
+    assert.notStrictEqual(rate, 1, 'does sample out sessions');
 });

@@ -9,6 +9,7 @@ import {
     ATTR_BROWSER_TAB_ID,
     ATTR_SESSION_ID,
     ATTR_SESSION_PREVIOUS_ID,
+    ATTR_SESSION_SAMPLING_RATE,
 } from './semconv.js';
 
 /**
@@ -16,6 +17,7 @@ import {
  * @property {boolean} [enabled] // defaults to true
  * @property {number} [inactivityTimeout] // seconds, defaults to 30 minutes
  * @property {number} [maxDuration] // seconds, defaults to 4 hours
+ * @property {number} [sampleRate] // within [0..1] range, default 1
  */
 
 /**
@@ -24,12 +26,15 @@ import {
  * @property {string} [previousId]
  * @property {number} startTimestamp
  * @property {number} lastActivityTimestamp
+ * @property {boolean} sampled
+ * @property {number} samplingRate
  */
 
 /**
  * @typedef {Object} SessionManagerOptions
  * @property {Storage} sessionStorage storage shared by all tabs of the same origin
  * @property {Storage} tabStorage storage scoped to the current tab
+ * @property {SessionSampler} sampler
  * @property {number} [inactivityTimeout] seconds
  * @property {number} [maxDuration] seconds
  * @property {(session: SessionState) => void} [onSessionStart]
@@ -63,6 +68,7 @@ export class SessionManager {
         this._cached = undefined;
         this._persistent = true;
         this._tabId = getOrCreateTabId(opts.tabStorage);
+        this._sampler = opts.sampler;
     }
 
     /**
@@ -84,9 +90,11 @@ export class SessionManager {
         const stored = this._read();
 
         if (!stored || this._isExpired(stored, now)) {
+            const id = generateUUID();
+            const samplingResult = this._sampler.shouldSample(id);
             /** @type {SessionState} */
             const session = {
-                id: generateUUID(),
+                id,
                 previousId:
                     stored &&
                     now - stored.startTimestamp < PREVIOUS_ID_MAX_AGE_MS
@@ -94,6 +102,8 @@ export class SessionManager {
                         : undefined,
                 startTimestamp: now,
                 lastActivityTimestamp: now,
+                sampled: samplingResult.decision === SamplingDecision.RECORD,
+                samplingRate: this._sampler.ratio,
             };
             this._write(session);
             diag.debug('Session started', session);
@@ -115,6 +125,7 @@ export class SessionManager {
         const attributes = {
             [ATTR_SESSION_ID]: session.id,
             [ATTR_BROWSER_TAB_ID]: this._tabId,
+            [ATTR_SESSION_SAMPLING_RATE]: session.samplingRate,
         };
         if (session.previousId) {
             attributes[ATTR_SESSION_PREVIOUS_ID] = session.previousId;
@@ -191,6 +202,7 @@ export function createSessionManager(config = {}, onSessionStart) {
     return new SessionManager({
         sessionStorage,
         tabStorage,
+        sampler: new SessionSampler(config.sampleRate ?? 1),
         ...resolveSessionTimeouts(config),
         onSessionStart,
     });
@@ -218,6 +230,64 @@ export function resolveSessionTimeouts(config) {
         maxDuration
     );
     return {inactivityTimeout, maxDuration};
+}
+
+/** @enum {number} */
+export const SamplingDecision = {
+    NOT_RECORD: 0,
+    RECORD: 1,
+};
+/**
+ * @typedef {Object} SamplingResult
+ * @property {SamplingDecision} decision
+ */
+
+/**
+ *
+ */
+export class SessionSampler {
+    /** @param {number} ratio */
+    constructor(ratio) {
+        if (typeof ratio !== 'number' || isNaN(ratio)) {
+            diag.warn(
+                `session sampling rate must be a valid number. Using default.`
+            );
+            this._ratio = 1;
+        } else if (ratio < 0 || ratio > 1) {
+            const clamped = Math.min(Math.max(ratio, 0), 1);
+            diag.warn(
+                `session sampling rate must be between 0 and 1. Using ${clamped}.`
+            );
+            this._ratio = clamped;
+        } else {
+            this._ratio = ratio;
+        }
+        // Precision will be te to 4 decimal digits (smallest is 0.01%)
+        this._ratio = Math.trunc(this._ratio * 10000) / 10000;
+    }
+
+    get ratio() {
+        return this._ratio;
+    }
+
+    /**
+     * @param {string} sessionId
+     * @returns {SamplingResult}
+     */
+    shouldSample(sessionId) {
+        const clean = sessionId.replace(/-/g, '').toLowerCase();
+        const value = parseInt(clean.slice(0, 8), 16);
+        const probability = value / 0xffffffff;
+
+        if (probability < this._ratio) {
+            return {decision: SamplingDecision.RECORD};
+        }
+        return {decision: SamplingDecision.NOT_RECORD};
+    }
+
+    toString() {
+        return `SessionSampler(ratio=${this._ratio})`;
+    }
 }
 
 /** @typedef {import('@opentelemetry/sdk-trace').SpanProcessor} SpanProcessor */
@@ -371,7 +441,9 @@ function parseSession(raw) {
         if (
             typeof s?.id === 'string' &&
             typeof s.startTimestamp === 'number' &&
-            typeof s.lastActivityTimestamp === 'number'
+            typeof s.lastActivityTimestamp === 'number' &&
+            typeof s.sampled === 'boolean' &&
+            typeof s.samplingRate === 'number'
         ) {
             return {
                 id: s.id,
@@ -379,6 +451,8 @@ function parseSession(raw) {
                     typeof s.previousId === 'string' ? s.previousId : undefined,
                 startTimestamp: s.startTimestamp,
                 lastActivityTimestamp: s.lastActivityTimestamp,
+                sampled: s.sampled,
+                samplingRate: s.samplingRate,
             };
         }
     } catch {
