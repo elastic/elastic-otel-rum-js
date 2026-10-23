@@ -113,7 +113,7 @@ EDOT Browser groups telemetry from the same user into sessions. Spans and log re
 
 A `session.start` log record is emitted every time a new session starts.
 
-A session ends after a period without telemetry (30 minutes by default) or when it reaches its maximum duration (4 hours by default). Refer to [session details](configuration.md#otel_browser_session-details) to change these values.
+A session ends after a period without user activity (30 minutes by default) or when it reaches its maximum duration (4 hours by default). Refer to [session details](configuration.md#otel_browser_session-details) to change these values.
 
 Session attributes are not added to metrics to avoid high-cardinality attributes.
 
@@ -121,7 +121,10 @@ Session attributes are not added to metrics to avoid high-cardinality attributes
 
 - Sessions are stored in `localStorage` and tab identifiers in `sessionStorage`. If web storage is not available (for example storage is blocked for the site), EDOT Browser does not add session attributes, since they would not persist across page reloads.
 - Duplicating a tab copies its `sessionStorage`, so the duplicated tab reports the same `browser.tab.id` as the original one.
-- Any telemetry, including background requests, counts as activity and extends the session.
+- Only user activity (clicks, key presses and scrolling by default) extends the session. Telemetry produced while the user is idle, such as background requests, does not.
+- After a session expires, telemetry carries `browser.tab.id` but no `session.id` until the next user interaction starts a new session. The same happens when `localStorage` is cleared, for example on logout, and the new session has no `session.previous_id`.
+- Loading a page counts as activity. A page that reloads itself with no user present, such as a wall dashboard, keeps its session until the maximum duration.
+- If the device clock moves back by more than 5 minutes, the stored session is treated as expired.
 
 ## Next steps [next-steps]
 
