@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import {existsSync, readdirSync, readFileSync, statSync} from 'node:fs';
+import {existsSync, readdirSync, readFileSync, statSync, writeFileSync} from 'node:fs';
 import {join} from 'node:path';
 
 // -- Main line
@@ -42,6 +42,8 @@ for(const name of packageNames) {
         const date = new Date().toISOString().replace(/-|T.+$/g, '');
         const canaryVersion = `${getNextVersion(pkgVersion)}-canary-${date}-${sha.slice(0, 7)}`;
         
+        pkgInfo.verison = canaryVersion;
+        writeFileSync(pkgJson, JSON.stringify(pkgInfo, null, 2), {encoding: 'utf-8'});
         console.log(`Vesion set to ${canaryVersion}`);
     }
 }
