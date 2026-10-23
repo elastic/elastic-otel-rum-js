@@ -72,7 +72,7 @@ jobs:
           message: '[${{ github.repository }}] Release `@elastic/opentelemetry-browser` *${{ github.ref_name }}*'
 
   # Canary release publishes latest HEAD of the canary branch
-  # It does not generate notice or a GH release
+  # - it does not generate notice or a GH release
   release-canary:
     if: github.event_name == 'push' && github.ref == 'refs/heads/canary'
     runs-on: ubuntu-24.04
@@ -113,7 +113,9 @@ jobs:
           channel-id: "#apm-agent-js"
           message: '[${{ github.repository }}] Canary release `@elastic/opentelemetry-browser` *${{ github.ref_name }}*'
 
-  # Manual release is for devs that need a specific revision from any branch
+  # Manual release is for devs that need a specific revision
+  # - it does not generate notice or a GH release
+  # - should be run from the main branch to get the right permissions
   release-manual:
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
