@@ -105,7 +105,6 @@ export class SessionManager {
                 sampled: samplingResult.decision === SamplingDecision.RECORD,
                 samplingRate: this._sampler.ratio,
             };
-            console.log('new session', session);
             this._write(session);
             diag.debug('Session started', session);
             this._onSessionStart?.(session);
@@ -168,7 +167,6 @@ export class SessionManager {
             return;
         }
         try {
-            console.log('write', session);
             this._store.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
         } catch (err) {
             // e.g. quota exceeded. Without this the stale stored value would

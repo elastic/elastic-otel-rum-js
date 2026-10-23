@@ -160,13 +160,10 @@ test('SessionManager - creates and persists a session', () => {
 });
 
 test('SessionManager - reuses the session across reloads and tabs', () => {
-    console.log('reloads');
     const {create, started} = setup();
     const first = create().getAttributes();
-    console.log('1st', first);
 
     const reloaded = create().getAttributes();
-    console.log('2nd', reloaded);
     assert.strictEqual(reloaded['session.id'], first['session.id']);
     assert.strictEqual(reloaded['browser.tab.id'], first['browser.tab.id']);
     assert.strictEqual(
