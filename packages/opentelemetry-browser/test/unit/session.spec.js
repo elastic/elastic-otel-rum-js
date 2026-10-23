@@ -11,6 +11,7 @@ import {
     resolveSessionTimeouts,
     SESSION_STORAGE_KEY,
     SessionManager,
+    SessionSampler,
     TAB_STORAGE_KEY,
 } from '../../lib/session.js';
 
@@ -260,3 +261,22 @@ test('SessionManager - reuses the tab id stored in tab storage', () => {
         'existing-tab'
     );
 });
+
+test('SessionSampler - uses default ratio if gets incorrect param', () => {
+    const badImputs = [NaN, true, 'string', () => null, {}];
+
+    for (const input of badImputs) {
+        // @ts-expect-error -- types do not match the constructor
+        const sampler = new SessionSampler(input);
+        assert.strictEqual(sampler.toString(), 'SessionSampler(ratio=1)')
+    }
+});
+
+test('SessionSampler - clamps the ratio value if out of bounds', () => {
+    const samplerUndeflow = new SessionSampler(-1);
+    assert.strictEqual(samplerUndeflow.toString(), 'SessionSampler(ratio=0)')
+
+    const samplerOverflow = new SessionSampler(1.5);
+    assert.strictEqual(samplerOverflow.toString(), 'SessionSampler(ratio=1)')
+});
+
