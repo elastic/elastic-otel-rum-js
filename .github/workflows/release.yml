@@ -35,7 +35,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version-file: '.nvmrc'
           registry-url: 'https://registry.npmjs.org'
@@ -84,7 +84,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version-file: '.nvmrc'
           registry-url: 'https://registry.npmjs.org'
@@ -135,9 +135,11 @@ jobs:
         run: npm run ci-all
 
       - name: Set canary version
-        run: node ./scripts/set-canary-version.js ${{ inputs.sha }}
+        env:
+            COMMIT_SHA: ${{ inputs.sha }}
+        run: node ./scripts/set-canary-version.js "$(git rev-parse HEAD)"
 
       - name: npm publish
         working-directory: ./packages/opentelemetry-browser
-        run: npm publish
+        run: npm publish --tag dev
       
