@@ -33,7 +33,7 @@ if (sha.length < 40) {
     process.exit(1);
 }
 
-const ROOT_PATH = join(new URL(import.meta.url).pathname, '../..');
+const ROOT_PATH = process.cwd();
 const PKGS_PATH = join(ROOT_PATH, 'packages');
 const packageNames = readdirSync(PKGS_PATH);
 
