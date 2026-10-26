@@ -327,10 +327,15 @@ export class SessionSampler {
      * @returns {SamplingResult}
      */
     shouldSample(sessionId) {
+        if (this._ratio === 0) {
+            return {decision: SamplingDecision.NOT_RECORD};
+        } else if (this._ratio === 1) {
+            return {decision: SamplingDecision.RECORD};
+        }
+
         const clean = sessionId.replace(/-/g, '').toLowerCase();
         const value = parseInt(clean.slice(0, 8), 16);
         const probability = value / 0xffffffff;
-
         if (probability < this._ratio) {
             return {decision: SamplingDecision.RECORD};
         }

@@ -259,7 +259,7 @@ export function startBrowserSdk(cfg = {}) {
             // NOTE: double enabling does nothing
             instrumentationInstances.forEach((i) => {
                 const config = i.getConfig();
-                if (config.enabled) {
+                if (config.enabled !== false) {
                     i.enable();
                 }
             });
