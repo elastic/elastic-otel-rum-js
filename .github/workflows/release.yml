@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       sha:
-        description: Short SHA of the commit to release
+        description: Full SHA of the commit to release
         required: true
         type: string
   push:
