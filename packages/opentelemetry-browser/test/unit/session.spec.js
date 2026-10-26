@@ -61,17 +61,19 @@ function setup(opts = {}) {
     const started = [];
     const sessionStorage = new MemoryStorage();
     const tabStorage = new MemoryStorage();
-    const create = (/** @type {MemoryStorage} */ tab = tabStorage) =>
-        new SessionManager({
+    const create = (/** @type {MemoryStorage} */ tab = tabStorage) => {
+        const manager = new SessionManager({
             sessionStorage,
             tabStorage: tab,
             inactivityTimeout: 60,
             maxDuration: 600,
-            onSessionStart: (s) => started.push(s),
             now: () => clock.now,
             sampler: new SessionSampler(1),
             ...opts,
         });
+        manager.observe('session:start', (s) => started.push(s));
+        return manager;
+    };
     return {clock, started, sessionStorage, tabStorage, create};
 }
 

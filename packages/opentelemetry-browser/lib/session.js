@@ -14,7 +14,6 @@ import {
 
 /**
  * @typedef {Object} SessionConfig
- * @property {boolean} [enabled] // defaults to true
  * @property {number} [inactivityTimeout] // seconds, defaults to 30 minutes
  * @property {number} [maxDuration] // seconds, defaults to 4 hours
  * @property {number} [sampleRate] // within [0..1] range, default 1
@@ -37,8 +36,11 @@ import {
  * @property {SessionSampler} sampler
  * @property {number} [inactivityTimeout] seconds
  * @property {number} [maxDuration] seconds
- * @property {(session: SessionState) => void} [onSessionStart]
  * @property {() => number} [now]
+ */
+
+/**
+ * @typedef {'session:start' | 'session:end'} SessionEvent
  */
 
 export const SESSION_STORAGE_KEY = 'elastic_otel_browser.session';
@@ -62,13 +64,14 @@ export class SessionManager {
             (opts.inactivityTimeout ?? DEFAULT_INACTIVITY_TIMEOUT_S) * 1000;
         this._maxDurationMs =
             (opts.maxDuration ?? DEFAULT_MAX_DURATION_S) * 1000;
-        this._onSessionStart = opts.onSessionStart;
         this._now = opts.now ?? Date.now;
         /** @type {SessionState | undefined} */
         this._cached = undefined;
         this._persistent = true;
         this._tabId = getOrCreateTabId(opts.tabStorage);
         this._sampler = opts.sampler;
+        /** @type {Map<SessionEvent, Array<(session: SessionState) => void>>} */
+        this._observers = new Map();
     }
 
     /**
@@ -88,8 +91,9 @@ export class SessionManager {
     getSession() {
         const now = this._now();
         const stored = this._read();
+        const expired = stored && this._isExpired(stored, now);
 
-        if (!stored || this._isExpired(stored, now)) {
+        if (!stored || expired) {
             const id = generateUUID();
             const samplingResult = this._sampler.shouldSample(id);
             /** @type {SessionState} */
@@ -106,8 +110,12 @@ export class SessionManager {
                 samplingRate: this._sampler.ratio,
             };
             this._write(session);
+            if (expired) {
+                diag.debug('Session ended', stored);
+                this._notify('session:end', stored);
+            }
             diag.debug('Session started', session);
-            this._onSessionStart?.(session);
+            this._notify('session:start', session);
             return session;
         }
 
@@ -131,6 +139,34 @@ export class SessionManager {
             attributes[ATTR_SESSION_PREVIOUS_ID] = session.previousId;
         }
         return attributes;
+    }
+
+    /**
+     * @param {SessionEvent} event
+     * @param {(session: SessionState) => void} handler
+     * @returns {(() => void) | undefined}
+     */
+    observe(event, handler) {
+        if (!/^session:(start|end)$/.test(event)) {
+            diag.debug(`Session event "${event}" not recognized`);
+            return;
+        }
+        if (typeof handler !== 'function') {
+            diag.debug(
+                `Handler for session event "${event}" must be a function`
+            );
+            return;
+        }
+        const handlers = this._observers.get(event) ?? [];
+        handlers.push(handler);
+        this._observers.set(event, handlers);
+        // Allow users to remove observers
+        return () => {
+            this._observers.set(
+                event,
+                handlers.filter((h) => h !== handler)
+            );
+        };
     }
 
     /**
@@ -178,19 +214,36 @@ export class SessionManager {
             );
         }
     }
+
+    /**
+     * Runs all observers for a given event is a safe way
+     * @param {SessionEvent} event
+     * @param {any} payload
+     */
+    _notify(event, payload) {
+        const handlers = this._observers.get(event);
+        if (Array.isArray(handlers)) {
+            for (const handlerFn of handlers) {
+                try {
+                    handlerFn(payload);
+                } catch (err) {
+                    diag.warn(
+                        `Handler for session event "${event}" failed`,
+                        err
+                    );
+                }
+            }
+        }
+    }
 }
 
 /**
  * Returns `undefined` when sessions cannot outlive a page reload so EDOT
  * doesn't report IDs that would split a single user session.
  * @param {SessionConfig} [config]
- * @param {(session: SessionState) => void} [onSessionStart]
  * @returns {SessionManager | undefined}
  */
-export function createSessionManager(config = {}, onSessionStart) {
-    if (config.enabled === false) {
-        return undefined;
-    }
+export function createSessionManager(config = {}) {
     const sessionStorage = getStorage('localStorage');
     const tabStorage = getStorage('sessionStorage');
     if (!sessionStorage || !tabStorage) {
@@ -204,7 +257,6 @@ export function createSessionManager(config = {}, onSessionStart) {
         tabStorage,
         sampler: new SessionSampler(config.sampleRate ?? 1),
         ...resolveSessionTimeouts(config),
-        onSessionStart,
     });
 }
 

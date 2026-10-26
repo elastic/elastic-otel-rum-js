@@ -136,17 +136,22 @@ test('should rotate an active session after 4 hours', async ({page}) => {
     expect(clicks[10].attributes['session.previous_id']).toStrictEqual(firstId);
 });
 
-test('should not add session attributes when disabled', async ({page}) => {
+test('should not export logs/traces for non sampled sessions', async ({
+    page,
+}) => {
     const collector = createCollector(page);
     const config = encodeURIComponent(
-        JSON.stringify({session: {enabled: false}})
+        JSON.stringify({session: {sampleRate: 0}})
     );
     await page.goto(`${FIXTURE}?config=${config}`);
 
-    const logs = await collector.getLogs();
-    expect(logs.length).toBeGreaterThan(0);
-    for (const log of logs) {
-        expect(log.attributes['session.id']).toBeUndefined();
-        expect(log.attributes['browser.tab.id']).toBeUndefined();
+    let logs;
+    try {
+        logs = await collector.getLogs();
+        // force failure in case we get some logs
+        expect(logs.length).toEqual(0);
+    } catch (err) {
+        // check no logs collected
+        expect(logs).toBeUndefined();
     }
 });
