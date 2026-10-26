@@ -32,7 +32,6 @@ if (sha.length < 7) {
 }
 
 const ROOT_PATH = join(new URL(import.meta.url).pathname, '../..');
-console.log(new URL(import.meta.url).pathname, ROOT_PATH);
 const PKGS_PATH = join(ROOT_PATH, 'packages');
 const packageNames = readdirSync(PKGS_PATH);
 
