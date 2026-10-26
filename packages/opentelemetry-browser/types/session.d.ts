@@ -2,10 +2,9 @@
  * Returns `undefined` when sessions cannot outlive a page reload so EDOT
  * doesn't report IDs that would split a single user session.
  * @param {SessionConfig} [config]
- * @param {(session: SessionState) => void} [onSessionStart]
  * @returns {SessionManager | undefined}
  */
-export function createSessionManager(config?: SessionConfig, onSessionStart?: (session: SessionState) => void): SessionManager | undefined;
+export function createSessionManager(config?: SessionConfig): SessionManager | undefined;
 /**
  * Invalid values fall back to defaults and out-of-range values are clamped,
  * so a bad config never disables sessions nor rotates them on every event.
@@ -25,9 +24,9 @@ export function resolveSessionTimeouts(config: SessionConfig): {
 export function generateUUID(): string;
 /**
  * @typedef {Object} SessionConfig
- * @property {boolean} [enabled] // defaults to true
  * @property {number} [inactivityTimeout] // seconds, defaults to 30 minutes
  * @property {number} [maxDuration] // seconds, defaults to 4 hours
+ * @property {number} [sampleRate] // within [0..1] range, default 1
  */
 /**
  * @typedef {Object} SessionState
@@ -35,15 +34,20 @@ export function generateUUID(): string;
  * @property {string} [previousId]
  * @property {number} startTimestamp
  * @property {number} lastActivityTimestamp
+ * @property {boolean} sampled
+ * @property {number} samplingRate
  */
 /**
  * @typedef {Object} SessionManagerOptions
  * @property {Storage} sessionStorage storage shared by all tabs of the same origin
  * @property {Storage} tabStorage storage scoped to the current tab
+ * @property {SessionSampler} sampler
  * @property {number} [inactivityTimeout] seconds
  * @property {number} [maxDuration] seconds
- * @property {(session: SessionState) => void} [onSessionStart]
  * @property {() => number} [now]
+ */
+/**
+ * @typedef {'session:start' | 'session:end'} SessionEvent
  */
 export const SESSION_STORAGE_KEY: "elastic_otel_browser.session";
 export const TAB_STORAGE_KEY: "elastic_otel_browser.tab";
@@ -53,12 +57,14 @@ export class SessionManager {
     _store: Storage;
     _inactivityMs: number;
     _maxDurationMs: number;
-    _onSessionStart: ((session: SessionState) => void) | undefined;
     _now: () => number;
     /** @type {SessionState | undefined} */
     _cached: SessionState | undefined;
     _persistent: boolean;
     _tabId: string;
+    _sampler: SessionSampler;
+    /** @type {Map<SessionEvent, Array<(session: SessionState) => void>>} */
+    _observers: Map<SessionEvent, Array<(session: SessionState) => void>>;
     /**
      * Implements upstream `SessionProvider` so it can be plugged into
      * `@opentelemetry/browser-sdk/session` processors.
@@ -74,6 +80,12 @@ export class SessionManager {
     /** @returns {import('@opentelemetry/api').Attributes} */
     getAttributes(): import("@opentelemetry/api").Attributes;
     /**
+     * @param {SessionEvent} event
+     * @param {(session: SessionState) => void} handler
+     * @returns {(() => void) | undefined}
+     */
+    observe(event: SessionEvent, handler: (session: SessionState) => void): (() => void) | undefined;
+    /**
      * @param {SessionState} session
      * @param {number} now
      */
@@ -82,6 +94,36 @@ export class SessionManager {
     _read(): SessionState | undefined;
     /** @param {SessionState} session */
     _write(session: SessionState): void;
+    /**
+     * Runs all observers for a given event is a safe way
+     * @param {SessionEvent} event
+     * @param {any} payload
+     */
+    _notify(event: SessionEvent, payload: any): void;
+}
+export type SamplingDecision = number;
+export namespace SamplingDecision {
+    let NOT_RECORD: number;
+    let RECORD: number;
+}
+/**
+ * @typedef {Object} SamplingResult
+ * @property {SamplingDecision} decision
+ */
+/**
+ *
+ */
+export class SessionSampler {
+    /** @param {number} ratio */
+    constructor(ratio: number);
+    _ratio: number;
+    get ratio(): number;
+    /**
+     * @param {string} sessionId
+     * @returns {SamplingResult}
+     */
+    shouldSample(sessionId: string): SamplingResult;
+    toString(): string;
 }
 /** @typedef {import('@opentelemetry/sdk-trace').SpanProcessor} SpanProcessor */
 /**
@@ -114,15 +156,17 @@ export class SessionLogRecordProcessor {
     shutdown(): Promise<void>;
 }
 export type SessionConfig = {
-    enabled?: boolean | undefined;
     inactivityTimeout?: number | undefined;
     maxDuration?: number | undefined;
+    sampleRate?: number | undefined;
 };
 export type SessionState = {
     id: string;
     previousId?: string | undefined;
     startTimestamp: number;
     lastActivityTimestamp: number;
+    sampled: boolean;
+    samplingRate: number;
 };
 export type SessionManagerOptions = {
     /**
@@ -133,6 +177,7 @@ export type SessionManagerOptions = {
      * storage scoped to the current tab
      */
     tabStorage: Storage;
+    sampler: SessionSampler;
     /**
      * seconds
      */
@@ -141,7 +186,10 @@ export type SessionManagerOptions = {
      * seconds
      */
     maxDuration?: number | undefined;
-    onSessionStart?: ((session: SessionState) => void) | undefined;
     now?: (() => number) | undefined;
+};
+export type SessionEvent = "session:start" | "session:end";
+export type SamplingResult = {
+    decision: SamplingDecision;
 };
 export type SpanProcessor = import("@opentelemetry/sdk-trace").SpanProcessor;
