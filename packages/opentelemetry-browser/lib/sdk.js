@@ -32,6 +32,7 @@ import {
     PageRouteLogRecordProcessor,
     PageRouteManager,
     PageRouteSpanProcessor,
+    resolvePageRouteConfig,
 } from './page-route.js';
 import {
     ATTR_SESSION_ID,
@@ -75,7 +76,7 @@ import {EDOT_VERSION} from './version.js';
  * @property {number} [sampleRate] // defaults to 1
  * @property {Partial<InstrumentationsConfigMap>} [instrumentations]
  * @property {import('./session.js').SessionConfig} [session]
- * @property {import('./page-route.js').PageRouteResolver} [pageRoute]
+ * @property {import('./page-route.js').PageRouteResolver | false} [pageRoute] // defaults to `inferPageRoute`
  */
 /**
  * @typedef {SdkConfig & EdotConfig} BrowserSdkConfiguration
@@ -152,7 +153,7 @@ export function startBrowserSdk(cfg = {}) {
     // we could get rid of this
     diag.disable();
 
-    pageRouteManager.setResolver(config.pageRoute);
+    pageRouteManager.setResolver(resolvePageRouteConfig(config.pageRoute));
 
     const sessionManager = createSessionManager(config.session, (session) => {
         /** @type {import('@opentelemetry/api').Attributes} */

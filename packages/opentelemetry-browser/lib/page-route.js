@@ -52,12 +52,6 @@ export class PageRouteManager {
 
     /** @param {PageRouteResolver | undefined} resolver */
     setResolver(resolver) {
-        if (resolver !== undefined && typeof resolver !== 'function') {
-            diag.warn(
-                `Invalid "pageRoute" value: ${resolver}. It must be a function.`
-            );
-            resolver = undefined;
-        }
         this._resolver = resolver;
         this._resolved = undefined;
     }
@@ -122,6 +116,25 @@ export class PageRouteManager {
         }
         return this._lastPage.pageKey;
     }
+}
+
+/**
+ * Routes are inferred from URLs unless the configuration provides a resolver
+ * or turns them off with `false`. Invalid values fall back to the default.
+ * @param {PageRouteResolver | false | undefined} pageRoute
+ * @returns {PageRouteResolver | undefined}
+ */
+export function resolvePageRouteConfig(pageRoute) {
+    if (pageRoute === false) {
+        return undefined;
+    }
+    if (pageRoute !== undefined && typeof pageRoute !== 'function') {
+        diag.warn(
+            `Invalid "pageRoute" value: ${pageRoute}. It must be a function or false.`
+        );
+        return inferPageRoute;
+    }
+    return pageRoute ?? inferPageRoute;
 }
 
 /**

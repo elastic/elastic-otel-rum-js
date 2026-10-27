@@ -1,4 +1,11 @@
 /**
+ * Routes are inferred from URLs unless the configuration provides a resolver
+ * or turns them off with `false`. Invalid values fall back to the default.
+ * @param {PageRouteResolver | false | undefined} pageRoute
+ * @returns {PageRouteResolver | undefined}
+ */
+export function resolvePageRouteConfig(pageRoute: PageRouteResolver | false | undefined): PageRouteResolver | undefined;
+/**
  * Infers a route from the URL by replacing ID-like path segments (numbers,
  * UUIDs, hashes and ULIDs) with `{id}`. The query string is dropped. The
  * route of hash-based routers (`#/cart/123`) is kept.

@@ -11,6 +11,7 @@ import {
     PageRouteLogRecordProcessor,
     PageRouteManager,
     PageRouteSpanProcessor,
+    resolvePageRouteConfig,
 } from '../../lib/page-route.js';
 
 /** @param {string} href */
@@ -66,6 +67,19 @@ test('inferPageRoute', async (t) => {
     }
 });
 
+test('resolvePageRouteConfig', () => {
+    /** @param {URL} url */
+    const resolver = (url) => url.pathname;
+
+    assert.strictEqual(resolvePageRouteConfig(undefined), inferPageRoute);
+    assert.strictEqual(resolvePageRouteConfig(resolver), resolver);
+    assert.strictEqual(resolvePageRouteConfig(false), undefined);
+    // @ts-expect-error - testing invalid input
+    assert.strictEqual(resolvePageRouteConfig('/cart'), inferPageRoute);
+    // @ts-expect-error - testing invalid input
+    assert.strictEqual(resolvePageRouteConfig(true), inferPageRoute);
+});
+
 test('PageRouteManager', async (t) => {
     await t.test('returns undefined without resolver or route', () => {
         const {manager} = setup('https://shop.test/product/1');
@@ -95,10 +109,6 @@ test('PageRouteManager', async (t) => {
 
     await t.test('ignores invalid resolvers and results', () => {
         const {manager} = setup('https://shop.test/product/1');
-
-        // @ts-expect-error - testing invalid input
-        manager.setResolver('/product/{id}');
-        assert.strictEqual(manager.getRoute(), undefined);
 
         // @ts-expect-error - testing invalid output
         manager.setResolver(() => 42);

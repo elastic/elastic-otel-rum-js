@@ -46,7 +46,7 @@ export type EdotConfig = {
     sampleRate?: number | undefined;
     instrumentations?: Partial<InstrumentationsConfigMap> | undefined;
     session?: import("./session.js").SessionConfig | undefined;
-    pageRoute?: import("./page-route.js").PageRouteResolver | undefined;
+    pageRoute?: false | import("./page-route.js").PageRouteResolver | undefined;
 };
 export type BrowserSdkConfiguration = SdkConfig & EdotConfig;
 export type DefaultConfigProps = "logLevel" | "serviceName" | "resourceAttributes" | "sampleRate" | "exportConfig";

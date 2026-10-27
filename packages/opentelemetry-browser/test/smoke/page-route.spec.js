@@ -6,13 +6,15 @@
 import {test, expect} from '@playwright/test';
 import {createCollector} from './test-utils';
 
+const FIXTURE = '/fixtures/use-navigation-timing.html';
+
 test('should add url.template to spans and logs', async ({page}) => {
     const collector = createCollector(page);
     page.route('**/api/items/*', (route) =>
         route.fulfill({status: 200, contentType: 'text/plain', body: 'ok'})
     );
 
-    await page.goto('/fixtures/use-page-route.html?ref=ad');
+    await page.goto(`${FIXTURE}?sync=true`);
     // Soft navigation with the route inferred from the URL
     await page.evaluate(() => history.pushState({}, '', '/product/123'));
     // Route set by the application wins until the path changes
@@ -34,8 +36,8 @@ test('should add url.template to spans and logs', async ({page}) => {
         ])
     ).toStrictEqual([
         [
-            'http://localhost:3000/fixtures/use-page-route.html?ref=ad',
-            '/fixtures/use-page-route.html',
+            'http://localhost:3000/fixtures/use-navigation-timing.html?sync=true',
+            '/fixtures/use-navigation-timing.html',
         ],
         ['http://localhost:3000/product/123', '/product/{id}'],
         [
@@ -55,4 +57,22 @@ test('should add url.template to spans and logs', async ({page}) => {
     expect(fetchSpan?.attributes['url.template']).toStrictEqual(
         '/product/:productId'
     );
+});
+
+test('should not infer url.template when "pageRoute" is false', async ({
+    page,
+}) => {
+    const collector = createCollector(page);
+    const config = encodeURIComponent(JSON.stringify({pageRoute: false}));
+
+    await page.goto(`${FIXTURE}?sync=true&config=${config}`);
+    await page.evaluate(() => history.pushState({}, '', '/product/123'));
+
+    const navigations = (await collector.getLogs()).filter(
+        (l) => l.eventName === 'browser.navigation'
+    );
+    expect(navigations.length).toStrictEqual(2);
+    for (const log of navigations) {
+        expect(log.attributes['url.template']).toBeUndefined();
+    }
 });
