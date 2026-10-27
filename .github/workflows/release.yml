@@ -175,6 +175,10 @@ jobs:
           git checkout "$SHA"
           echo "Checked out commit $(git rev-parse HEAD)"
 
+          # The slugified branch name will be used for version and npm tag
+          SLUG=$(echo "$BRANCH" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g; s/^-+|-+$//g')
+          echo "SLUG=$SLUG" >> "$GITHUB_ENV"
+
       - uses: actions/setup-node@v7
         with:
           node-version-file: '.nvmrc'
@@ -187,9 +191,9 @@ jobs:
       - name: Set canary version
         env:
           BRANCH: ${{ github.event.inputs.branch }}
-        run: node ./scripts/set-canary-version.js "$(git rev-parse HEAD)" "$BRANCH"
+        run: node ./scripts/set-canary-version.js "$(git rev-parse HEAD)" "$SLUG"
 
       - name: npm publish
         working-directory: ./packages/opentelemetry-browser
-        run: npm publish --tag dev
+        run: npm publish --tag "canary-$SLUG"
       
