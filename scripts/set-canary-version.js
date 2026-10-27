@@ -18,27 +18,34 @@ import semver from 'semver';
 
 const params = process.argv.slice(2);
 if (params.length === 0) {
-    console.error('Usage: node scripts/set-canary-version.js SHA');
+    console.error('Usage: node scripts/set-canary-version.js SHA NAME');
     process.exit(1);
 }
 const sha = params[0];
 if (typeof sha !== 'string' || !/^[0-9a-fA-F]+$/.test(sha)) {
-    console.error('Error: input should be a hex string');
+    console.error('Error: sha should be a hex string');
     process.exit(1);
 }
 if (sha.length < 40) {
     console.error(
-        'Error: input should be a full commit SHA (min 40 chars long)'
+        `Error: sha "${sha}" should be a full commit SHA (min 40 chars long)`
     );
     process.exit(1);
 }
+const name = params[1];
+if (typeof name !== 'string' || name.length === 0) {
+    console.error('Error: name should be a non empty string');
+    process.exit(1);
+}
+// Slugify the name given `feature/my_changes` => `feature-my-changes`
+const slug = name.replaceAll(/[^a-zA-Z0-9]/g, '-');
 
 const ROOT_PATH = process.cwd();
 const PKGS_PATH = join(ROOT_PATH, 'packages');
 const packageNames = readdirSync(PKGS_PATH);
 
-for (const name of packageNames) {
-    const pkgPath = join(PKGS_PATH, name);
+for (const pkgName of packageNames) {
+    const pkgPath = join(PKGS_PATH, pkgName);
     const pkgStat = statSync(pkgPath);
     const pkgJson = join(pkgPath, 'package.json');
 
@@ -50,7 +57,7 @@ for (const name of packageNames) {
         );
 
         const date = new Date().toISOString().replace(/-|T.+$/g, '');
-        const canaryVersion = `${semver.inc(pkgVersion, 'minor')}-canary-${date}-${sha.slice(0, 7)}`;
+        const canaryVersion = `${semver.inc(pkgVersion, 'minor')}-canary-${slug}-${date}-${sha.slice(0, 7)}`;
 
         pkgInfo.version = canaryVersion;
         writeFileSync(pkgJson, JSON.stringify(pkgInfo, null, 2), {

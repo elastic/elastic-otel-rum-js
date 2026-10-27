@@ -18,12 +18,13 @@ const script = fileURLToPath(
 
 /**
  * @param {string} hash
+ * @param {string} name
  * @param {string} cwd
  */
-function runScript(hash, cwd) {
+function runScript(hash, name, cwd) {
     const env = {...process.env};
-    console.log('run', script, hash);
-    return spawnSync(process.execPath, [script, hash], {
+    console.log('run', script, hash, name);
+    return spawnSync(process.execPath, [script, hash, name], {
         cwd,
         env,
         encoding: 'utf8',
@@ -41,13 +42,12 @@ function makeTempDir(t, pkgs) {
         const file = join(dir, 'package.json');
         mkdirSync(dir, {recursive: true});
         writeFileSync(file, JSON.stringify(p), {encoding: 'utf-8'});
-        console.log(file, 'written');
     }
     t.after(() => rmSync(root, {recursive: true, force: true}));
     return root;
 }
 
-test('updates the versions of all packages inside the repo', (t) => {
+test('should update the versions of all packages inside the repo', (t) => {
     const packages = [
         {name: 'package-a', version: '0.1.2', next: '0.2.0'},
         {name: 'package-b', version: '3.4.5', next: '3.5.0'},
@@ -55,7 +55,7 @@ test('updates the versions of all packages inside the repo', (t) => {
     const dir = makeTempDir(t, packages);
     const sha = randomBytes(20).toString('hex');
     const date = new Date().toISOString().replace(/-|T.+$/g, '');
-    const result = runScript(sha, dir);
+    const result = runScript(sha, 'feat-test', dir);
 
     assert.equal(result.status, 0, result.stderr);
 
@@ -65,7 +65,30 @@ test('updates the versions of all packages inside the repo', (t) => {
 
         assert.equal(
             pkgInfo.version,
-            `${pkgInfo.next}-canary-${date}-${sha.slice(0, 7)}`
+            `${pkgInfo.next}-canary-feat-test-${date}-${sha.slice(0, 7)}`
+        );
+    }
+});
+
+test('should slugify the feature name given to the script', (t) => {
+    const packages = [
+        {name: 'package-a', version: '0.1.2', next: '0.2.0'},
+        {name: 'package-b', version: '3.4.5', next: '3.5.0'},
+    ];
+    const dir = makeTempDir(t, packages);
+    const sha = randomBytes(20).toString('hex');
+    const date = new Date().toISOString().replace(/-|T.+$/g, '');
+    const result = runScript(sha, 'feature/log_buffering', dir);
+
+    assert.equal(result.status, 0, result.stderr);
+
+    for (const pkg of packages) {
+        const path = join(dir, `packages/${pkg.name}/package.json`);
+        const pkgInfo = JSON.parse(readFileSync(path, {encoding: 'utf-8'}));
+
+        assert.equal(
+            pkgInfo.version,
+            `${pkgInfo.next}-canary-feature-log-buffering-${date}-${sha.slice(0, 7)}`
         );
     }
 });
