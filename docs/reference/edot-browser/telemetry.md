@@ -123,6 +123,20 @@ Session attributes are not added to metrics to avoid high-cardinality attributes
 - Duplicating a tab copies its `sessionStorage`, so the duplicated tab reports the same `browser.tab.id` as the original one.
 - Any telemetry, including background requests, counts as activity and extends the session.
 
+## Page routes [page-routes]
+
+Full URLs are a poor way to group pages: `/product/123` and `/product/456?ref=ad` are the same page for your users. When a page route is available, EDOT Browser adds it to spans and log records as the `url.template` attribute (for example `/product/{id}`), so you can aggregate telemetry such as Core Web Vitals, errors, or navigations per page.
+
+No route is added by default. Use the `pageRoute` configuration or the `setPageRoute` function to provide it. Refer to [page route details](configuration.md#otel_browser_page-route-details).
+
+Page routes are not added to metrics to avoid high-cardinality attributes.
+
+### Known limitations of page routes [page-routes-limitations]
+
+- The route is the one of the page displayed when the span starts or the log record is emitted. Telemetry reported after an in-page navigation, such as Core Web Vitals or resource timings, gets the route of the new page.
+- Spans that already have a `url.template` attribute keep their value.
+- A route passed to `setPageRoute` before the router updates the URL is discarded when the path changes.
+
 ## Next steps [next-steps]
 
 - Refer to [Set up EDOT Browser](setup.md), [Install the agent](install-agent.md), and [Proxy and CORS](proxy-cors.md) for installation and export configuration.

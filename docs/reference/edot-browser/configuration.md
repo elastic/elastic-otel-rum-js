@@ -75,6 +75,7 @@ Configuration is passed as an object to `startBrowserSdk`. The following options
 | `disabled`            | `boolean`                | If `true`, the SDK does not start. |
 | `instrumentations`    | `Record<string, Object>` | Per-instrumentation config. Set `{ enabled: false }` for a key to turn off that instrumentation. Refer to [instrumentations details](#otel_browser_instrumentations-details) for more information. |
 | `session`             | `{ enabled?: boolean; inactivityTimeout?: number; maxDuration?: number }` | Session tracking. Refer to [session details](#otel_browser_session-details) for more information. |
+| `pageRoute`           | `(url: URL) => string \| undefined` | Function that returns the low-cardinality route of a page, added as `url.template` to spans and log records. Refer to [page route details](#otel_browser_page-route-details) for more information. |
 | `exportConfig`    | `{ url?: string; headers?: Record<string, string>}` | Configuration for exporters of the different signals. |
 | `exportConfig.url`    | `string` | Base URL of the OTLP export endpoint (reverse proxy). Do not include signal paths such as `/v1/traces`. Defaults to `http://localhost:4318`. |
 | `exportConfig.headers`    | `Record<string, string>` | Headers to send with export requests. Defaults to `{}`. The reverse proxy typically injects `Authorization`; do not put API keys here in browser code. |
@@ -142,6 +143,43 @@ EDOT Browser adds `session.id`, `session.previous_id` (after a session rotates),
 | `maxDuration`       | `number`  | Maximum session length in seconds, regardless of activity. Defaults to `14400` (4 hours). Must be between `1800` (30 minutes) and `86400` (24 hours). |
 
 Incorrect values fall back to the default and out-of-range values are clamped to the closest limit. In both cases EDOT Browser logs a warning.
+
+### `pageRoute` details [otel_browser_page-route-details]
+
+EDOT Browser adds a `url.template` attribute with the route of the current page (for example `/product/{id}`) to spans and log records. Refer to [Page routes](telemetry.md#page-routes) for details.
+
+`pageRoute` receives the URL of the current page and returns its route, or `undefined` to omit the attribute. EDOT Browser calls it once per URL, including after in-page (SPA) navigations:
+
+```js
+import { startBrowserSdk } from '@elastic/opentelemetry-browser';
+
+startBrowserSdk({
+  serviceName: 'my-web-app',
+  pageRoute: (url) =>
+    url.pathname.startsWith('/product/') ? '/product/{id}' : url.pathname,
+});
+```
+
+If your application doesn't have a list of routes, use `inferPageRoute`. It replaces ID-like path segments (numbers, UUIDs, hashes, and ULIDs) with `{id}`, drops the query string, and keeps the route of hash-based routers (`/#/cart/{id}`):
+
+```js
+import { inferPageRoute, startBrowserSdk } from '@elastic/opentelemetry-browser';
+
+startBrowserSdk({
+  serviceName: 'my-web-app',
+  pageRoute: inferPageRoute,
+});
+```
+
+Routers already know the route of the current page. Pass it with `setPageRoute` after the router updates the URL, for example in an after-navigation hook. The route applies until the page path or hash route changes, and takes precedence over `pageRoute`. Passing `undefined` falls back to `pageRoute`:
+
+```js
+import { setPageRoute } from '@elastic/opentelemetry-browser';
+
+router.afterEach((to) => setPageRoute(to.matched.at(-1)?.path));
+```
+
+When you load EDOT Browser from a `<script>` tag, `setPageRoute` and `inferPageRoute` are available as globals.
 
 ## Next steps [next-steps]
 

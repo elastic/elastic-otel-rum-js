@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>Page Route Test</title>
+        <!-- Not using the placeholder since `pageRoute` must be a function -->
+        <script src="/assets/elastic-otel-browser.min.js"></script>
+        <script>
+            globalThis.edotBrowser = startBrowserSdk({pageRoute: inferPageRoute});
+        </script>
+    </head>
+    <body>
+        <h1>Page Route Test</h1>
+    </body>
+</html>

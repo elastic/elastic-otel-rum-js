@@ -29,6 +29,11 @@ import {AsyncApisContextManager} from './context.js';
 import {createLogger} from './logging.js';
 import {detectResource} from './detector.js';
 import {
+    PageRouteLogRecordProcessor,
+    PageRouteManager,
+    PageRouteSpanProcessor,
+} from './page-route.js';
+import {
     ATTR_SESSION_ID,
     ATTR_SESSION_PREVIOUS_ID,
     EVENT_SESSION_START,
@@ -70,6 +75,7 @@ import {EDOT_VERSION} from './version.js';
  * @property {number} [sampleRate] // defaults to 1
  * @property {Partial<InstrumentationsConfigMap>} [instrumentations]
  * @property {import('./session.js').SessionConfig} [session]
+ * @property {import('./page-route.js').PageRouteResolver} [pageRoute]
  */
 /**
  * @typedef {SdkConfig & EdotConfig} BrowserSdkConfiguration
@@ -82,6 +88,9 @@ const NOOP_SDK = {shutdown: () => Promise.resolve()};
 
 // To control multiple calls to `startBrowserSdk`
 let sdkStarted = false;
+
+// Module scoped so routers can set the route before the SDK starts
+const pageRouteManager = new PageRouteManager();
 
 /** @typedef { 'logLevel' | 'serviceName' | 'resourceAttributes' | 'sampleRate' | 'exportConfig'} DefaultConfigProps*/
 /** @type {Required<Pick<BrowserSdkConfiguration, DefaultConfigProps>>} */
@@ -143,6 +152,8 @@ export function startBrowserSdk(cfg = {}) {
     // we could get rid of this
     diag.disable();
 
+    pageRouteManager.setResolver(config.pageRoute);
+
     const sessionManager = createSessionManager(config.session, (session) => {
         /** @type {import('@opentelemetry/api').Attributes} */
         const attributes = {[ATTR_SESSION_ID]: session.id};
@@ -163,8 +174,11 @@ export function startBrowserSdk(cfg = {}) {
         resourceAttributes,
         contextManager: AsyncApisContextManager.enable(),
         sampler: new TraceIdRatioBasedSampler(config.sampleRate),
-        processors: sessionManager && [
-            new SessionSpanProcessor(sessionManager),
+        processors: [
+            new PageRouteSpanProcessor(pageRouteManager),
+            ...(sessionManager
+                ? [new SessionSpanProcessor(sessionManager)]
+                : []),
         ],
         exportConfig: {
             url: tracesUrl,
@@ -176,8 +190,11 @@ export function startBrowserSdk(cfg = {}) {
     const logsSdk = startLogsSdk({
         logLevel,
         resourceAttributes,
-        processors: sessionManager && [
-            new SessionLogRecordProcessor(sessionManager),
+        processors: [
+            new PageRouteLogRecordProcessor(pageRouteManager),
+            ...(sessionManager
+                ? [new SessionLogRecordProcessor(sessionManager)]
+                : []),
         ],
         exportConfig: {
             url: logsUrl,
@@ -259,6 +276,7 @@ export function startBrowserSdk(cfg = {}) {
 
     return {
         shutdown() {
+            pageRouteManager.setResolver(undefined);
             disableInstrumentations();
             return Promise.allSettled([
                 tracesSdk.shutdown(),
@@ -275,6 +293,17 @@ export function startBrowserSdk(cfg = {}) {
             });
         },
     };
+}
+
+/**
+ * Sets the low-cardinality route of the current page (e.g. `/product/{id}`),
+ * added as `url.template` to spans and log records. The route applies until
+ * the page path changes, so call it after your router updates the URL.
+ * Passing `undefined` falls back to the `pageRoute` configuration.
+ * @param {string | undefined} route
+ */
+export function setPageRoute(route) {
+    pageRouteManager.setRoute(route);
 }
 
 // -- helper functions
