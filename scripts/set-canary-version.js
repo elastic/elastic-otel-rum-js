@@ -22,13 +22,9 @@ if (params.length === 0) {
     process.exit(1);
 }
 const sha = params[0];
-if (typeof sha !== 'string' || !/^[0-9a-fA-F]+$/.test(sha)) {
-    console.error('Error: sha should be a hex string');
-    process.exit(1);
-}
-if (sha.length < 40) {
+if (typeof sha !== 'string' || !/^[0-9a-fA-F]{40}$/.test(sha)) {
     console.error(
-        `Error: sha "${sha}" should be a full commit SHA (min 40 chars long)`
+        `Error: sha "${sha}" should be a full commit SHA (40 hex chars)`
     );
     process.exit(1);
 }

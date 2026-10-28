@@ -17,14 +17,21 @@ const script = fileURLToPath(
 );
 
 /**
- * @param {string} hash
- * @param {string} name
+ * @param {string | undefined} hash
+ * @param {string | undefined} name
  * @param {string} cwd
  */
 function runScript(hash, name, cwd) {
     const env = {...process.env};
     console.log('run', script, hash, name);
-    return spawnSync(process.execPath, [script, hash, name], {
+    const params = [];
+    if (typeof hash === 'string') {
+        params.push(hash);
+    }
+    if (typeof name === 'string') {
+        params.push(name);
+    }
+    return spawnSync(process.execPath, [script, ...params], {
         cwd,
         env,
         encoding: 'utf8',
@@ -91,4 +98,30 @@ test('should slugify the feature name given to the script', (t) => {
             `${pkgInfo.next}-canary-feature-log-buffering-${date}-${sha.slice(0, 7)}`
         );
     }
+});
+
+test('should fail if params are wrong', (t) => {
+    const packages = [
+        {name: 'package-a', version: '0.1.2', next: '0.2.0'},
+        {name: 'package-b', version: '3.4.5', next: '3.5.0'},
+    ];
+    const dir = makeTempDir(t, packages);
+
+    // No params
+    let result = runScript(undefined, undefined, dir);
+    assert.equal(result.status, 1, result.stderr);
+    assert.match(result.stderr, /Usage:/);
+
+    // Bad SHA (incomplete)
+    result = runScript('da95591d9830e', undefined, dir);
+    console.log('stdout', result.stdout)
+    assert.equal(result.status, 1, result.stderr);
+    assert.match(result.stderr, /should be a full commit SHA/);
+
+    // No name
+    const sha = 'da95591d9830e13bc0d5efe2ffa0bdd54aa0607b';
+    result = runScript(sha, undefined, dir);
+    console.log('stdout', result.stdout)
+    assert.equal(result.status, 1, result.stderr);
+    assert.match(result.stderr, /should be a non empty string/);
 });
