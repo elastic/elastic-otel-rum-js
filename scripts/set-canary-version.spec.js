@@ -114,14 +114,14 @@ test('should fail if params are wrong', (t) => {
 
     // Bad SHA (incomplete)
     result = runScript('da95591d9830e', undefined, dir);
-    console.log('stdout', result.stdout)
+    console.log('stdout', result.stdout);
     assert.equal(result.status, 1, result.stderr);
     assert.match(result.stderr, /should be a full commit SHA/);
 
     // No name
     const sha = 'da95591d9830e13bc0d5efe2ffa0bdd54aa0607b';
     result = runScript(sha, undefined, dir);
-    console.log('stdout', result.stdout)
+    console.log('stdout', result.stdout);
     assert.equal(result.status, 1, result.stderr);
     assert.match(result.stderr, /should be a non empty string/);
 });
