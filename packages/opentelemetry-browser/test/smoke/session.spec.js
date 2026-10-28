@@ -139,19 +139,39 @@ test('should rotate an active session after 4 hours', async ({page}) => {
 test('should not export logs/traces for non sampled sessions', async ({
     page,
 }) => {
+    const fixture = '/fixtures/use-manual-instrumentation.html';
     const collector = createCollector(page);
     const config = encodeURIComponent(
         JSON.stringify({session: {sampleRate: 0}})
     );
-    await page.goto(`${FIXTURE}?config=${config}`);
+    await page.goto(`${fixture}?config=${config}`);
 
-    let logs;
-    try {
-        logs = await collector.getLogs();
-        // force failure in case we get some logs
-        expect(logs.length).toEqual(0);
-    } catch (err) {
-        // check no logs collected
-        expect(logs).toBeUndefined();
+    // Perform some actions that trigger the manual instrumentations
+    // - span
+    await page.click('#span');
+    await page.waitForFunction(
+        () => document.getElementById('status')?.innerText === 'finished'
+    );
+    // - log
+    await page.click('#log');
+
+    let span, logs;
+    const results = await Promise.allSettled([
+        collector.getSpans(),
+        collector.getLogs(),
+    ]);
+
+    // No spans or logs, collector throws for both
+    for (const res of results) {
+        expect(res.status).toEqual('rejected');
     }
+
+    // try {
+    //     logs = await collector.getLogs();
+    //     // force failure in case we get some logs
+    //     expect(logs.length).toEqual(0);
+    // } catch (err) {
+    //     // check no logs collected
+    //     expect(logs).toBeUndefined();
+    // }
 });

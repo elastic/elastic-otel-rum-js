@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>Manual Instrumentation Test</title>
+        <!-- EDOT_PLACEHOLDER (DO NOT REMOVE)-->
+    </head>
+    <body>
+        <h1>Manual Instrumentation Test</h1>
+        
+            <button id="span">Send Span</button>
+            <button id="log">Send Log</button>
+            <!-- The test file will look here to wait for the completion of the handlers -->
+            <p id="status"></p>
+            <script>
+                const statusElem = document.querySelector('#status');
+                const API_MAJOR = 1; // TODO: check when update the major version
+                function getTracer(name) {
+                    // TODO: check when update the major version
+                    const otelApiSymbol = Symbol.for(`opentelemetry.js.api.${API_MAJOR}`);
+                    // It's odd that the `trace` API is actually the tracer provider
+                    const tracerProvider = globalThis[otelApiSymbol].trace;
+                    return tracerProvider.getTracer(name);
+                }
+                function getLogger(name) {
+                    const otelApiSymbol = Symbol.for('io.opentelemetry.js.api.logs');
+                    const loggerProvider = globalThis[otelApiSymbol]?.(API_MAJOR);
+                    return loggerProvider?.getLogger(name);
+                }
+                window.addEventListener('load', () => {
+                    document.querySelector('#span').addEventListener('click', () => {
+                        getTracer('custom').startActiveSpan('manual Span', (parentSpan) => {
+                            statusElem.innerText = 'started';
+                            setTimeout(() => {
+                                statusElem.innerText = 'finished';
+                                parentSpan.end();
+                            }, 10);
+                        });
+                    });
+                    document.querySelector('#log').addEventListener('click', () => {
+                        getLogger('custom').emit({ eventName: 'manual Log'});
+                    });
+                });
+            </script>
+    </body>
+</html>

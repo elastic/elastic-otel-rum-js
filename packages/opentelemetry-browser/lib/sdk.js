@@ -15,6 +15,8 @@ import {
 } from '@opentelemetry/sdk-metrics';
 import {BatchSpanProcessor} from '@opentelemetry/sdk-trace';
 import {OTLPTraceExporter} from '@opentelemetry/exporter-trace-otlp-http';
+import {BatchLogRecordProcessor} from '@opentelemetry/sdk-logs';
+import {OTLPLogExporter} from '@opentelemetry/exporter-logs-otlp-http';
 
 import {registerInstrumentations} from '@opentelemetry/instrumentation';
 import {NavigationInstrumentation} from '@opentelemetry/browser-instrumentation/experimental/navigation';
@@ -169,8 +171,17 @@ export function startBrowserSdk(cfg = {}) {
         }),
     });
 
+    // If session available it we use a processor that controls others based
+    // on session state.
     if (sessionManager) {
-        spanProcessors.push(new SessionSpanProcessor(sessionManager));
+        spanProcessors.push(
+            new SessionSpanProcessor({
+                manager: sessionManager,
+                processors: [edotSpanProcessor],
+            })
+        );
+    } else {
+        spanProcessors.push(edotSpanProcessor);
     }
 
     // NOTE: export payloads can be seen in DevTools network tab in JSON format
@@ -183,16 +194,29 @@ export function startBrowserSdk(cfg = {}) {
     });
 
     const logsUrl = appendPath(endpointUrl, 'v1/logs').href;
+    const logProcessors = [];
+    const edotLogProcessor = new BatchLogRecordProcessor({
+        exporter: new OTLPLogExporter({
+            url: logsUrl,
+            headers: config.exportConfig.headers,
+        }),
+    });
+    // If session available it we use a processor that controls others based
+    // on session state.
+    if (sessionManager) {
+        logProcessors.push(
+            new SessionLogRecordProcessor({
+                manager: sessionManager,
+                processors: [edotLogProcessor],
+            })
+        );
+    } else {
+        logProcessors.push(edotLogProcessor);
+    }
     const logsSdk = startLogsSdk({
         logLevel,
         resourceAttributes,
-        processors: sessionManager && [
-            new SessionLogRecordProcessor(sessionManager),
-        ],
-        exportConfig: {
-            url: logsUrl,
-            headers: config.exportConfig.headers,
-        },
+        processors: logProcessors,
     });
 
     // metrics signal configuration
