@@ -15,6 +15,7 @@ import {
     SamplingDecision,
     TAB_STORAGE_KEY,
     SessionSpanProcessor,
+    SessionLogRecordProcessor,
 } from '../../lib/session.js';
 
 const UUID_V4 =
@@ -398,7 +399,7 @@ test('SessionSpanProcessor - forwards spans to inner processors is session is sa
     mock.reset();
 });
 
-test('SessionSpanProcessor - doe no forward spans to inner processors is session is not sampled', () => {
+test('SessionSpanProcessor - does not forward spans to inner processors is session is not sampled', () => {
     const id = generateUUID();
     const sampled = false;
     const session = {id, sampled};
@@ -434,6 +435,91 @@ test('SessionSpanProcessor - doe no forward spans to inner processors is session
     processor.onEnd(spanMock);
     assert.strictEqual(managerMock.getSession.mock.callCount(), 2);
     assert.strictEqual(processorMock.onEnd.mock.callCount(), 0);
+
+    processor.forceFlush();
+    assert.strictEqual(processorMock.forceFlush.mock.callCount(), 1);
+
+    processor.shutdown();
+    assert.strictEqual(processorMock.shutdown.mock.callCount(), 1);
+
+    mock.reset();
+});
+
+test('SessionLogRecorsProcessor - forwards log records to inner processors is session is sampled', () => {
+    const id = generateUUID();
+    const sampled = true;
+    const session = {id, sampled};
+    const attrs = {'session.id': id, 'browser-tab-id': generateUUID()};
+    const managerMock = {
+        getSession: mock.fn(() => session),
+        getAttributes: mock.fn(() => attrs),
+    };
+    const processorMock = {
+        onEmit: mock.fn(() => undefined),
+        forceFlush: mock.fn(() => Promise.resolve()),
+        shutdown: mock.fn(() => Promise.resolve()),
+    };
+    const processor = new SessionLogRecordProcessor({
+        // @ts-expect-error -- using a mock
+        manager: managerMock,
+        processors: [processorMock],
+    });
+    const logRecordMock = {
+        setAttributes: mock.fn(() => undefined),
+    };
+    const ctx = {};
+
+    // @ts-expect-error -- we do not need a full span here
+    processor.onEmit(logRecordMock, ctx);
+    assert.strictEqual(managerMock.getSession.mock.callCount(), 1);
+    assert.strictEqual(managerMock.getAttributes.mock.callCount(), 1);
+    assert.deepEqual(logRecordMock.setAttributes.mock.calls[0].arguments, [
+        attrs,
+    ]);
+    assert.strictEqual(processorMock.onEmit.mock.callCount(), 1);
+    assert.deepEqual(processorMock.onEmit.mock.calls[0].arguments, [
+        logRecordMock,
+        ctx,
+    ]);
+
+    processor.forceFlush();
+    assert.strictEqual(processorMock.forceFlush.mock.callCount(), 1);
+
+    processor.shutdown();
+    assert.strictEqual(processorMock.shutdown.mock.callCount(), 1);
+
+    mock.reset();
+});
+
+test('SessionLogRecorsProcessor - does not forward log records to inner processors is session is not sampled', () => {
+    const id = generateUUID();
+    const sampled = false;
+    const session = {id, sampled};
+    const attrs = {'session.id': id, 'browser-tab-id': generateUUID()};
+    const managerMock = {
+        getSession: mock.fn(() => session),
+        getAttributes: mock.fn(() => attrs),
+    };
+    const processorMock = {
+        onEmit: mock.fn(() => undefined),
+        forceFlush: mock.fn(() => Promise.resolve()),
+        shutdown: mock.fn(() => Promise.resolve()),
+    };
+    const processor = new SessionLogRecordProcessor({
+        // @ts-expect-error -- using a mock
+        manager: managerMock,
+        processors: [processorMock],
+    });
+    const logRecordMock = {
+        setAttributes: mock.fn(() => undefined),
+    };
+    const ctx = {};
+
+    // @ts-expect-error -- we do not need a full span here
+    processor.onEmit(logRecordMock, ctx);
+    assert.strictEqual(managerMock.getSession.mock.callCount(), 1);
+    assert.strictEqual(managerMock.getAttributes.mock.callCount(), 0);
+    assert.strictEqual(processorMock.onEmit.mock.callCount(), 0);
 
     processor.forceFlush();
     assert.strictEqual(processorMock.forceFlush.mock.callCount(), 1);
