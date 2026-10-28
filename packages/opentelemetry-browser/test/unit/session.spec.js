@@ -4,7 +4,7 @@
  */
 
 import assert from 'node:assert';
-import {test} from 'node:test';
+import {mock, test} from 'node:test';
 
 import {
     generateUUID,
@@ -14,6 +14,7 @@ import {
     SessionSampler,
     SamplingDecision,
     TAB_STORAGE_KEY,
+    SessionSpanProcessor,
 } from '../../lib/session.js';
 
 const UUID_V4 =
@@ -343,4 +344,102 @@ test('SessionSampler - samples according to the ratio', () => {
     const rate = sampledSessions / 100;
     assert.notStrictEqual(rate, 0, 'does sample sessions');
     assert.notStrictEqual(rate, 1, 'does sample out sessions');
+});
+
+test('SessionSpanProcessor - forwards spans to inner processors is session is sampled', () => {
+    const id = generateUUID();
+    const sampled = true;
+    const session = {id, sampled};
+    const attrs = {'session.id': id, 'browser-tab-id': generateUUID()};
+    const managerMock = {
+        getSession: mock.fn(() => session),
+        getAttributes: mock.fn(() => attrs),
+    };
+    const processorMock = {
+        onStart: mock.fn(() => undefined),
+        onEnd: mock.fn(() => undefined),
+        forceFlush: mock.fn(() => Promise.resolve()),
+        shutdown: mock.fn(() => Promise.resolve()),
+    };
+    const processor = new SessionSpanProcessor({
+        // @ts-expect-error -- using a mock
+        manager: managerMock,
+        processors: [processorMock],
+    });
+    const spanMock = {
+        setAttributes: mock.fn(() => undefined),
+    };
+    const ctx = {};
+
+    // @ts-expect-error -- we do not need a full span here
+    processor.onStart(spanMock, ctx);
+    assert.strictEqual(managerMock.getSession.mock.callCount(), 1);
+    assert.strictEqual(managerMock.getAttributes.mock.callCount(), 1);
+    assert.strictEqual(spanMock.setAttributes.mock.callCount(), 1);
+    assert.deepEqual(spanMock.setAttributes.mock.calls[0].arguments, [attrs]);
+    assert.strictEqual(processorMock.onStart.mock.callCount(), 1);
+    assert.deepEqual(processorMock.onStart.mock.calls[0].arguments, [
+        spanMock,
+        ctx,
+    ]);
+
+    // @ts-expect-error -- we do not need a full span here
+    processor.onEnd(spanMock);
+    assert.strictEqual(managerMock.getSession.mock.callCount(), 2);
+    assert.strictEqual(processorMock.onEnd.mock.callCount(), 1);
+    assert.deepEqual(processorMock.onEnd.mock.calls[0].arguments, [spanMock]);
+
+    processor.forceFlush();
+    assert.strictEqual(processorMock.forceFlush.mock.callCount(), 1);
+
+    processor.shutdown();
+    assert.strictEqual(processorMock.shutdown.mock.callCount(), 1);
+
+    mock.reset();
+});
+
+test('SessionSpanProcessor - doe no forward spans to inner processors is session is not sampled', () => {
+    const id = generateUUID();
+    const sampled = false;
+    const session = {id, sampled};
+    const attrs = {'session.id': id, 'browser-tab-id': generateUUID()};
+    const managerMock = {
+        getSession: mock.fn(() => session),
+        getAttributes: mock.fn(() => attrs),
+    };
+    const processorMock = {
+        onStart: mock.fn(() => undefined),
+        onEnd: mock.fn(() => undefined),
+        forceFlush: mock.fn(() => Promise.resolve()),
+        shutdown: mock.fn(() => Promise.resolve()),
+    };
+    const processor = new SessionSpanProcessor({
+        // @ts-expect-error -- using a mock
+        manager: managerMock,
+        processors: [processorMock],
+    });
+    const spanMock = {
+        setAttributes: mock.fn(() => undefined),
+    };
+    const ctx = {};
+
+    // @ts-expect-error -- we do not need a full span here
+    processor.onStart(spanMock, ctx);
+    assert.strictEqual(managerMock.getSession.mock.callCount(), 1);
+    assert.strictEqual(managerMock.getAttributes.mock.callCount(), 0);
+    assert.strictEqual(spanMock.setAttributes.mock.callCount(), 0);
+    assert.strictEqual(processorMock.onStart.mock.callCount(), 0);
+
+    // @ts-expect-error -- we do not need a full span here
+    processor.onEnd(spanMock);
+    assert.strictEqual(managerMock.getSession.mock.callCount(), 2);
+    assert.strictEqual(processorMock.onEnd.mock.callCount(), 0);
+
+    processor.forceFlush();
+    assert.strictEqual(processorMock.forceFlush.mock.callCount(), 1);
+
+    processor.shutdown();
+    assert.strictEqual(processorMock.shutdown.mock.callCount(), 1);
+
+    mock.reset();
 });

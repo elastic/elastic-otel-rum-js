@@ -13,6 +13,8 @@ import {
     MeterProvider,
     PeriodicExportingMetricReader,
 } from '@opentelemetry/sdk-metrics';
+import {BatchSpanProcessor} from '@opentelemetry/sdk-trace';
+import {OTLPTraceExporter} from '@opentelemetry/exporter-trace-otlp-http';
 
 import {registerInstrumentations} from '@opentelemetry/instrumentation';
 import {NavigationInstrumentation} from '@opentelemetry/browser-instrumentation/experimental/navigation';
@@ -156,20 +158,28 @@ export function startBrowserSdk(cfg = {}) {
         }
     });
 
+    // To have full control of what's exported we need to build the processor
+    // ourselves with a custom exporter
+    const tracesUrl = appendPath(endpointUrl, 'v1/traces').href;
+    const spanProcessors = [];
+    const edotSpanProcessor = new BatchSpanProcessor({
+        exporter: new OTLPTraceExporter({
+            url: tracesUrl,
+            headers: config.exportConfig.headers,
+        }),
+    });
+
+    if (sessionManager) {
+        spanProcessors.push(new SessionSpanProcessor(sessionManager));
+    }
+
     // NOTE: export payloads can be seen in DevTools network tab in JSON format
     // so IMHO it would be redundant to use console exporters in traces signal
-    const tracesUrl = appendPath(endpointUrl, 'v1/traces').href;
     const tracesSdk = startTracesSdk({
         logLevel,
         resourceAttributes,
         contextManager: AsyncApisContextManager.enable(),
-        processors: sessionManager && [
-            new SessionSpanProcessor(sessionManager),
-        ],
-        exportConfig: {
-            url: tracesUrl,
-            headers: config.exportConfig.headers,
-        },
+        processors: spanProcessors,
     });
 
     const logsUrl = appendPath(endpointUrl, 'v1/logs').href;
@@ -237,7 +247,7 @@ export function startBrowserSdk(cfg = {}) {
         const config = instrumentations[key];
         return instrFactories[key](config);
     });
-    // register them (which enables all)
+    // register them (which enables all performing any required patching)
     const disableInstrumentations = registerInstrumentations({
         instrumentations: instrumentationInstances,
     });

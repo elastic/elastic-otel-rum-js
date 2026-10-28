@@ -348,47 +348,97 @@ export class SessionSampler {
 }
 
 /** @typedef {import('@opentelemetry/sdk-trace').SpanProcessor} SpanProcessor */
+/**
+ * @typedef {Object} SessionSpanProcessorOptions
+ * @property {SessionManager} manager
+ * @property {SpanProcessor[]} processors
+ */
 
 /**
  * Adds session attributes on span start.
  * @implements {SpanProcessor}
  */
 export class SessionSpanProcessor {
-    /** @param {SessionManager} manager */
-    constructor(manager) {
-        this._manager = manager;
+    /** @param {SessionSpanProcessorOptions} options */
+    constructor(options) {
+        this._manager = options.manager;
+        this._processors = options.processors;
     }
-    /** @param {import('@opentelemetry/sdk-trace').Span} span */
-    onStart(span) {
-        span.setAttributes(this._manager.getAttributes());
+    /**
+     * @param {import('@opentelemetry/sdk-trace').Span} span
+     * @param {import('@opentelemetry/api').Context} ctx
+     */
+    onStart(span, ctx) {
+        const session = this._manager.getSession();
+        if (session.sampled) {
+            span.setAttributes(this._manager.getAttributes());
+            for (const p of this._processors) {
+                p.onStart(span, ctx);
+            }
+        }
     }
-    onEnd() {}
+    /**
+     * @param {import('@opentelemetry/sdk-trace').Span} span
+     */
+    onEnd(span) {
+        const session = this._manager.getSession();
+        if (session.sampled) {
+            for (const p of this._processors) {
+                p.onEnd(span);
+            }
+        }
+    }
     forceFlush() {
-        return Promise.resolve();
+        return Promise.all(this._processors.map((p) => p.forceFlush())).then(
+            () => undefined
+        );
     }
     shutdown() {
-        return Promise.resolve();
+        return Promise.all(this._processors.map((p) => p.shutdown())).then(
+            () => undefined
+        );
     }
 }
 
+/** @typedef {import('@opentelemetry/sdk-logs').LogRecordProcessor} LogRecordProcessor */
+/**
+ * @typedef {Object} SessionLogRecordProcessorOptions
+ * @property {SessionManager} manager
+ * @property {LogRecordProcessor[]} processors
+ */
 /**
  * Adds session attributes on log emit. Must be registered before exporting
  * processors since records become read-only after all `onEmit` calls.
  */
 export class SessionLogRecordProcessor {
-    /** @param {SessionManager} manager */
-    constructor(manager) {
-        this._manager = manager;
+    /** @param {SessionLogRecordProcessorOptions} options */
+    constructor(options) {
+        this._manager = options.manager;
+        this._processors = options.processors;
     }
     /** @param {{setAttributes: (attrs: import('@opentelemetry/api').Attributes) => unknown}} logRecord */
-    onEmit(logRecord) {
-        logRecord.setAttributes(this._manager.getAttributes());
+    /**
+     * @param {import('@opentelemetry/sdk-logs').SdkLogRecord} logRecord
+     * @param {import('@opentelemetry/api').Context} [ctx]
+     */
+    onEmit(logRecord, ctx) {
+        const session = this._manager.getSession();
+        if (session.sampled) {
+            logRecord.setAttributes(this._manager.getAttributes());
+            for (const p of this._processors) {
+                p.onEmit(logRecord, ctx);
+            }
+        }
     }
     forceFlush() {
-        return Promise.resolve();
+        return Promise.all(this._processors.map((p) => p.forceFlush())).then(
+            () => undefined
+        );
     }
     shutdown() {
-        return Promise.resolve();
+        return Promise.all(this._processors.map((p) => p.shutdown())).then(
+            () => undefined
+        );
     }
 }
 
