@@ -71,14 +71,13 @@ export class SessionManager {
      * @returns {string}
      */
     getSessionId(): string;
+    getTabId(): string;
     /**
      * Returns the active session, rotating it if expired. Every call counts
      * as activity since it happens when telemetry is produced.
      * @returns {SessionState}
      */
     getSession(): SessionState;
-    /** @returns {import('@opentelemetry/api').Attributes} */
-    getAttributes(): import("@opentelemetry/api").Attributes;
     /**
      * @param {SessionEvent} event
      * @param {(session: SessionState) => void} handler
@@ -125,12 +124,6 @@ export class SessionSampler {
     shouldSample(sessionId: string): SamplingResult;
     toString(): string;
 }
-/** @typedef {import('@opentelemetry/sdk-trace').SpanProcessor} SpanProcessor */
-/**
- * @typedef {Object} SessionSpanProcessorOptions
- * @property {SessionManager} manager
- * @property {SpanProcessor[]} processors
- */
 /**
  * Adds session attributes on span start.
  * @implements {SpanProcessor}
@@ -176,6 +169,11 @@ export class SessionLogRecordProcessor {
     forceFlush(): Promise<undefined>;
     shutdown(): Promise<undefined>;
 }
+export type SpanProcessor = import("@opentelemetry/sdk-trace").SpanProcessor;
+export type SessionSpanProcessorOptions = {
+    manager: SessionManager;
+    processors: SpanProcessor[];
+};
 export type SessionConfig = {
     inactivityTimeout?: number | undefined;
     maxDuration?: number | undefined;
@@ -212,11 +210,6 @@ export type SessionManagerOptions = {
 export type SessionEvent = "session:start" | "session:end";
 export type SamplingResult = {
     decision: SamplingDecision;
-};
-export type SpanProcessor = import("@opentelemetry/sdk-trace").SpanProcessor;
-export type SessionSpanProcessorOptions = {
-    manager: SessionManager;
-    processors: SpanProcessor[];
 };
 export type LogRecordProcessor = import("@opentelemetry/sdk-logs").LogRecordProcessor;
 export type SessionLogRecordProcessorOptions = {

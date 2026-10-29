@@ -35,7 +35,6 @@ EDOT Browser now applies sampling at **session** scope. Configure the rate with 
 **Impact**<br>
 - Top-level `sampleRate` is ignored at runtime. TypeScript types may still list it until updated.
 - Sampling is **per session**, not per trace ID. For a sampled session, automatic spans and log records are collected for the whole session; for an unsampled session, instrumentations are disabled.
-- Existing `localStorage` sessions without sampling metadata are rotated once after upgrade, producing new `session.id` values.
 **Action**<br>
 - Move `sampleRate` into `session: { sampleRate: … }`.
 - Revisit dashboards and volume estimates if you relied on trace-ID sampling for partial span volume within a single user session.

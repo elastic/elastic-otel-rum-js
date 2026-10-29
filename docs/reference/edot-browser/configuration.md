@@ -150,7 +150,7 @@ When a session is **sampled in**, all configured instrumentations run for that s
 
 To stop automatic RUM export while keeping session machinery active, set `session.sampleRate` to `0`. With `sampleRate: 0`, session state still exists client-side but automatic export is suppressed.
 
-Metrics export and telemetry your application emits through the OpenTelemetry API are not gated by session sampling today. Refer to [Sessions](telemetry.md#sessions) for signal-specific behavior.
+Metrics your application emits through the OpenTelemetry API are not gated by session sampling today. Refer to [Sessions](telemetry.md#sessions) for signal-specific behavior.
 
 ## Next steps [next-steps]
 

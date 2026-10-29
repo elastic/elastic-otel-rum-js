@@ -130,22 +130,6 @@ export class SessionManager {
         return stored;
     }
 
-    // NOTE: only used in unit tests. remove if possible
-    /** @returns {import('@opentelemetry/api').Attributes} */
-    // getAttributes() {
-    //     const session = this.getSession();
-    //     /** @type {import('@opentelemetry/api').Attributes} */
-    //     const attributes = {
-    //         [ATTR_SESSION_ID]: session.id,
-    //         [ATTR_BROWSER_TAB_ID]: this._tabId,
-    //         [ATTR_SESSION_SAMPLING_RATE]: session.samplingRate,
-    //     };
-    //     if (session.previousId) {
-    //         attributes[ATTR_SESSION_PREVIOUS_ID] = session.previousId;
-    //     }
-    //     return attributes;
-    // }
-
     /**
      * @param {SessionEvent} event
      * @param {(session: SessionState) => void} handler

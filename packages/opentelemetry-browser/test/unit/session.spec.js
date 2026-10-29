@@ -150,7 +150,6 @@ test('SessionManager - creates and persists a session', () => {
     const {create, started, sessionStorage} = setup();
     const manager = create();
 
-    // const attrs = manager.getAttributes();
     const session = manager.getSession();
     assert.match(String(session.id), UUID_V4);
     assert.match(String(manager.getTabId()), UUID_V4);

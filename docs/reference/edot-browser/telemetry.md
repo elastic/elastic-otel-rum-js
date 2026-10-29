@@ -126,8 +126,7 @@ Session attributes are not added to metrics to avoid high-cardinality attributes
 - Sessions are stored in `localStorage` and tab identifiers in `sessionStorage`. If web storage is not available (for example storage is blocked for the site), EDOT Browser does not add session attributes, since they would not persist across page reloads.
 - Duplicating a tab copies its `sessionStorage`, so the duplicated tab reports the same `browser.tab.id` as the original one.
 - Any telemetry, including background requests, counts as activity and extends the session.
-- Sampled-out sessions do not export automatic instrumentation data. Metrics export and telemetry emitted through the OpenTelemetry API in application code are not gated by session sampling.
-- Upgrading from a release that stored sessions without sampling fields causes stored sessions to be treated as invalid once, so users receive a new `session.id` on first load after upgrade.
+- Sampled-out sessions do not export automatic instrumentation data. Metrics emitted through the OpenTelemetry API in application code are not gated by session sampling.
 
 ## Next steps [next-steps]
 
