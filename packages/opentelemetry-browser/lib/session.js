@@ -83,6 +83,10 @@ export class SessionManager {
         return this.getSession().id;
     }
 
+    getTabId() {
+        return this._tabId;
+    }
+
     /**
      * Returns the active session, rotating it if expired. Every call counts
      * as activity since it happens when telemetry is produced.
@@ -126,20 +130,21 @@ export class SessionManager {
         return stored;
     }
 
+    // NOTE: only used in unit tests. remove if possible
     /** @returns {import('@opentelemetry/api').Attributes} */
-    getAttributes() {
-        const session = this.getSession();
-        /** @type {import('@opentelemetry/api').Attributes} */
-        const attributes = {
-            [ATTR_SESSION_ID]: session.id,
-            [ATTR_BROWSER_TAB_ID]: this._tabId,
-            [ATTR_SESSION_SAMPLING_RATE]: session.samplingRate,
-        };
-        if (session.previousId) {
-            attributes[ATTR_SESSION_PREVIOUS_ID] = session.previousId;
-        }
-        return attributes;
-    }
+    // getAttributes() {
+    //     const session = this.getSession();
+    //     /** @type {import('@opentelemetry/api').Attributes} */
+    //     const attributes = {
+    //         [ATTR_SESSION_ID]: session.id,
+    //         [ATTR_BROWSER_TAB_ID]: this._tabId,
+    //         [ATTR_SESSION_SAMPLING_RATE]: session.samplingRate,
+    //     };
+    //     if (session.previousId) {
+    //         attributes[ATTR_SESSION_PREVIOUS_ID] = session.previousId;
+    //     }
+    //     return attributes;
+    // }
 
     /**
      * @param {SessionEvent} event
@@ -355,6 +360,23 @@ export class SessionSampler {
  */
 
 /**
+ *
+ * @param {SessionState} session
+ * @returns {import('@opentelemetry/api').Attributes}
+ */
+function sessionToAttributes(session) {
+    /** @type {import('@opentelemetry/api').Attributes} */
+    const attributes = {
+        [ATTR_SESSION_ID]: session.id,
+        [ATTR_SESSION_SAMPLING_RATE]: session.samplingRate,
+    };
+    if (session.previousId) {
+        attributes[ATTR_SESSION_PREVIOUS_ID] = session.previousId;
+    }
+    return attributes;
+}
+
+/**
  * Adds session attributes on span start.
  * @implements {SpanProcessor}
  */
@@ -371,7 +393,10 @@ export class SessionSpanProcessor {
     onStart(span, ctx) {
         const session = this._manager.getSession();
         if (session.sampled) {
-            span.setAttributes(this._manager.getAttributes());
+            span.setAttributes({
+                ...sessionToAttributes(session),
+                [ATTR_BROWSER_TAB_ID]: this._manager.getTabId(),
+            });
             for (const p of this._processors) {
                 p.onStart(span, ctx);
             }
@@ -381,8 +406,9 @@ export class SessionSpanProcessor {
      * @param {import('@opentelemetry/sdk-trace').Span} span
      */
     onEnd(span) {
-        const session = this._manager.getSession();
-        if (session.sampled) {
+        // The presence of the attribute means at the span creation
+        // the session was sampled. It should be exported.
+        if (typeof span.attributes?.[ATTR_SESSION_ID] === 'string') {
             for (const p of this._processors) {
                 p.onEnd(span);
             }
@@ -424,7 +450,10 @@ export class SessionLogRecordProcessor {
     onEmit(logRecord, ctx) {
         const session = this._manager.getSession();
         if (session.sampled) {
-            logRecord.setAttributes(this._manager.getAttributes());
+            logRecord.setAttributes({
+                ...sessionToAttributes(session),
+                [ATTR_BROWSER_TAB_ID]: this._manager.getTabId(),
+            });
             for (const p of this._processors) {
                 p.onEmit(logRecord, ctx);
             }

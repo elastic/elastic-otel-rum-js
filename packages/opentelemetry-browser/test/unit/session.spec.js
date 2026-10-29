@@ -150,37 +150,41 @@ test('SessionManager - creates and persists a session', () => {
     const {create, started, sessionStorage} = setup();
     const manager = create();
 
-    const attrs = manager.getAttributes();
-    assert.match(String(attrs['session.id']), UUID_V4);
-    assert.match(String(attrs['browser.tab.id']), UUID_V4);
-    assert.strictEqual(attrs['session.previous_id'], undefined);
-    assert.strictEqual(attrs['session.sampling_rate'], 1);
+    // const attrs = manager.getAttributes();
+    const session = manager.getSession();
+    assert.match(String(session.id), UUID_V4);
+    assert.match(String(manager.getTabId()), UUID_V4);
+    assert.strictEqual(session.previousId, undefined);
+    assert.strictEqual(session.samplingRate, 1);
     assert.strictEqual(started.length, 1);
 
     const stored = JSON.parse(
         sessionStorage.getItem(SESSION_STORAGE_KEY) ?? ''
     );
-    assert.strictEqual(stored.id, attrs['session.id']);
+    assert.strictEqual(stored.id, session.id);
 });
 
 test('SessionManager - reuses the session across reloads and tabs', () => {
     const {create, started} = setup();
-    const first = create().getAttributes();
+    const firstManager = create();
+    const firstSession = firstManager.getSession();
 
-    const reloaded = create().getAttributes();
-    assert.strictEqual(reloaded['session.id'], first['session.id']);
-    assert.strictEqual(reloaded['browser.tab.id'], first['browser.tab.id']);
+    const reloadedManager = create();
+    const reloadedSession = reloadedManager.getSession();
+    assert.strictEqual(reloadedSession['id'], firstSession['id']);
+    assert.strictEqual(reloadedManager.getTabId(), firstManager.getTabId());
     assert.strictEqual(
-        reloaded['session.sampling_rate'],
-        first['session.sampling_rate']
+        reloadedSession['samplingRate'],
+        firstSession['samplingRate']
     );
 
-    const otherTab = create(new MemoryStorage()).getAttributes();
-    assert.strictEqual(otherTab['session.id'], first['session.id']);
-    assert.notStrictEqual(otherTab['browser.tab.id'], first['browser.tab.id']);
+    const otherTabManager = create(new MemoryStorage());
+    const otherTabSession = otherTabManager.getSession();
+    assert.strictEqual(otherTabSession['id'], firstSession['id']);
+    assert.notStrictEqual(otherTabManager.getTabId(), firstManager.getTabId());
     assert.strictEqual(
-        otherTab['session.sampling_rate'],
-        first['session.sampling_rate']
+        otherTabSession['samplingRate'],
+        firstSession['samplingRate']
     );
 
     assert.strictEqual(started.length, 1);
@@ -198,10 +202,6 @@ test('SessionManager - rotates after inactivity and keeps previous id', () => {
     const second = manager.getSession();
     assert.notStrictEqual(second.id, first.id);
     assert.strictEqual(second.previousId, first.id);
-    assert.strictEqual(
-        manager.getAttributes()['session.previous_id'],
-        first.id
-    );
     assert.strictEqual(started.length, 2);
 });
 
@@ -213,10 +213,6 @@ test('SessionManager - drops previous id older than 24 hours', () => {
     clock.now += 24 * 60 * 60 * 1000;
     const session = manager.getSession();
     assert.strictEqual(session.previousId, undefined);
-    assert.strictEqual(
-        manager.getAttributes()['session.previous_id'],
-        undefined
-    );
 });
 
 test('SessionManager - activity extends the session until max duration', () => {
@@ -275,10 +271,7 @@ test('SessionManager - keeps the session in memory when storage writes fail', ()
 test('SessionManager - reuses the tab id stored in tab storage', () => {
     const {create, tabStorage} = setup();
     tabStorage.setItem(TAB_STORAGE_KEY, 'existing-tab');
-    assert.strictEqual(
-        create().getAttributes()['browser.tab.id'],
-        'existing-tab'
-    );
+    assert.strictEqual(create().getTabId(), 'existing-tab');
 });
 
 test('SessionSampler - uses default ratio if gets incorrect param', () => {
@@ -347,14 +340,18 @@ test('SessionSampler - samples according to the ratio', () => {
     assert.notStrictEqual(rate, 1, 'does sample out sessions');
 });
 
-test('SessionSpanProcessor - forwards spans to inner processors is session is sampled', () => {
+test('SessionSpanProcessor - forwards spans to inner processors if session is sampled', () => {
     const id = generateUUID();
     const sampled = true;
-    const session = {id, sampled};
-    const attrs = {'session.id': id, 'browser-tab-id': generateUUID()};
+    const session = {id, sampled, samplingRate: 1};
+    const attrs = {
+        'session.id': id,
+        'session.sampling_rate': 1,
+        'browser.tab.id': generateUUID(),
+    };
     const managerMock = {
         getSession: mock.fn(() => session),
-        getAttributes: mock.fn(() => attrs),
+        getTabId: mock.fn(() => attrs['browser.tab.id']),
     };
     const processorMock = {
         onStart: mock.fn(() => undefined),
@@ -368,16 +365,21 @@ test('SessionSpanProcessor - forwards spans to inner processors is session is sa
         processors: [processorMock],
     });
     const spanMock = {
-        setAttributes: mock.fn(() => undefined),
+        attributes: undefined,
+        setAttributes: mock.fn((attrs) => {
+            spanMock.attributes = attrs;
+        }),
     };
     const ctx = {};
 
     // @ts-expect-error -- we do not need a full span here
     processor.onStart(spanMock, ctx);
     assert.strictEqual(managerMock.getSession.mock.callCount(), 1);
-    assert.strictEqual(managerMock.getAttributes.mock.callCount(), 1);
+    assert.strictEqual(managerMock.getTabId.mock.callCount(), 1);
     assert.strictEqual(spanMock.setAttributes.mock.callCount(), 1);
-    assert.deepEqual(spanMock.setAttributes.mock.calls[0].arguments, [attrs]);
+    assert.deepStrictEqual(spanMock.setAttributes.mock.calls[0].arguments, [
+        attrs,
+    ]);
     assert.strictEqual(processorMock.onStart.mock.callCount(), 1);
     assert.deepEqual(processorMock.onStart.mock.calls[0].arguments, [
         spanMock,
@@ -386,7 +388,7 @@ test('SessionSpanProcessor - forwards spans to inner processors is session is sa
 
     // @ts-expect-error -- we do not need a full span here
     processor.onEnd(spanMock);
-    assert.strictEqual(managerMock.getSession.mock.callCount(), 2);
+    assert.strictEqual(managerMock.getSession.mock.callCount(), 1);
     assert.strictEqual(processorMock.onEnd.mock.callCount(), 1);
     assert.deepEqual(processorMock.onEnd.mock.calls[0].arguments, [spanMock]);
 
@@ -399,14 +401,18 @@ test('SessionSpanProcessor - forwards spans to inner processors is session is sa
     mock.reset();
 });
 
-test('SessionSpanProcessor - does not forward spans to inner processors is session is not sampled', () => {
+test('SessionSpanProcessor - does not forward spans to inner processors if session is not sampled', () => {
     const id = generateUUID();
     const sampled = false;
-    const session = {id, sampled};
-    const attrs = {'session.id': id, 'browser-tab-id': generateUUID()};
+    const session = {id, sampled, samplingRate: 0};
+    const attrs = {
+        'session.id': id,
+        'session.sampling_rate': 0,
+        'browser.tab.id': generateUUID(),
+    };
     const managerMock = {
         getSession: mock.fn(() => session),
-        getAttributes: mock.fn(() => attrs),
+        getTabId: mock.fn(() => attrs['browser.tab.id']),
     };
     const processorMock = {
         onStart: mock.fn(() => undefined),
@@ -427,14 +433,80 @@ test('SessionSpanProcessor - does not forward spans to inner processors is sessi
     // @ts-expect-error -- we do not need a full span here
     processor.onStart(spanMock, ctx);
     assert.strictEqual(managerMock.getSession.mock.callCount(), 1);
-    assert.strictEqual(managerMock.getAttributes.mock.callCount(), 0);
+    assert.strictEqual(managerMock.getTabId.mock.callCount(), 0);
     assert.strictEqual(spanMock.setAttributes.mock.callCount(), 0);
     assert.strictEqual(processorMock.onStart.mock.callCount(), 0);
 
     // @ts-expect-error -- we do not need a full span here
     processor.onEnd(spanMock);
-    assert.strictEqual(managerMock.getSession.mock.callCount(), 2);
+    assert.strictEqual(managerMock.getSession.mock.callCount(), 1);
     assert.strictEqual(processorMock.onEnd.mock.callCount(), 0);
+
+    processor.forceFlush();
+    assert.strictEqual(processorMock.forceFlush.mock.callCount(), 1);
+
+    processor.shutdown();
+    assert.strictEqual(processorMock.shutdown.mock.callCount(), 1);
+
+    mock.reset();
+});
+
+test('SessionSpanProcessor - forwards spans that started on a sampled session', () => {
+    const id = generateUUID();
+    const sampled = true;
+    const session = {id, sampled, samplingRate: 0.5};
+    const attrs = {
+        'session.id': id,
+        'session.sampling_rate': 0.5,
+        'browser.tab.id': generateUUID(),
+    };
+    const managerMock = {
+        getSession: mock.fn(() => session),
+        getTabId: mock.fn(() => attrs['browser.tab.id']),
+    };
+    const processorMock = {
+        onStart: mock.fn(() => undefined),
+        onEnd: mock.fn(() => undefined),
+        forceFlush: mock.fn(() => Promise.resolve()),
+        shutdown: mock.fn(() => Promise.resolve()),
+    };
+    const processor = new SessionSpanProcessor({
+        // @ts-expect-error -- using a mock
+        manager: managerMock,
+        processors: [processorMock],
+    });
+    const spanMock = {
+        attributes: undefined,
+        setAttributes: mock.fn((attrs) => {
+            spanMock.attributes = attrs;
+        }),
+    };
+    const ctx = {};
+
+    // Start the span with the sampled session
+    // @ts-expect-error -- we do not need a full span here
+    processor.onStart(spanMock, ctx);
+    assert.strictEqual(managerMock.getSession.mock.callCount(), 1);
+    assert.strictEqual(managerMock.getTabId.mock.callCount(), 1);
+    assert.strictEqual(spanMock.setAttributes.mock.callCount(), 1);
+    assert.deepStrictEqual(spanMock.setAttributes.mock.calls[0].arguments, [
+        attrs,
+    ]);
+    assert.strictEqual(processorMock.onStart.mock.callCount(), 1);
+    assert.deepEqual(processorMock.onStart.mock.calls[0].arguments, [
+        spanMock,
+        ctx,
+    ]);
+
+    // Change to a new session that isn't sampled
+    session.id = generateUUID();
+    session.sampled = false;
+
+    // @ts-expect-error -- we do not need a full span here
+    processor.onEnd(spanMock);
+    assert.strictEqual(managerMock.getSession.mock.callCount(), 1);
+    assert.strictEqual(processorMock.onEnd.mock.callCount(), 1);
+    assert.deepEqual(processorMock.onEnd.mock.calls[0].arguments, [spanMock]);
 
     processor.forceFlush();
     assert.strictEqual(processorMock.forceFlush.mock.callCount(), 1);
@@ -448,11 +520,15 @@ test('SessionSpanProcessor - does not forward spans to inner processors is sessi
 test('SessionLogRecorsProcessor - forwards log records to inner processors is session is sampled', () => {
     const id = generateUUID();
     const sampled = true;
-    const session = {id, sampled};
-    const attrs = {'session.id': id, 'browser-tab-id': generateUUID()};
+    const session = {id, sampled, samplingRate: 1};
+    const attrs = {
+        'session.id': id,
+        'session.sampling_rate': 1,
+        'browser.tab.id': generateUUID(),
+    };
     const managerMock = {
         getSession: mock.fn(() => session),
-        getAttributes: mock.fn(() => attrs),
+        getTabId: mock.fn(() => attrs['browser.tab.id']),
     };
     const processorMock = {
         onEmit: mock.fn(() => undefined),
@@ -472,10 +548,11 @@ test('SessionLogRecorsProcessor - forwards log records to inner processors is se
     // @ts-expect-error -- we do not need a full span here
     processor.onEmit(logRecordMock, ctx);
     assert.strictEqual(managerMock.getSession.mock.callCount(), 1);
-    assert.strictEqual(managerMock.getAttributes.mock.callCount(), 1);
-    assert.deepEqual(logRecordMock.setAttributes.mock.calls[0].arguments, [
-        attrs,
-    ]);
+    assert.strictEqual(managerMock.getTabId.mock.callCount(), 1);
+    assert.deepStrictEqual(
+        logRecordMock.setAttributes.mock.calls[0].arguments,
+        [attrs]
+    );
     assert.strictEqual(processorMock.onEmit.mock.callCount(), 1);
     assert.deepEqual(processorMock.onEmit.mock.calls[0].arguments, [
         logRecordMock,
@@ -494,11 +571,15 @@ test('SessionLogRecorsProcessor - forwards log records to inner processors is se
 test('SessionLogRecorsProcessor - does not forward log records to inner processors is session is not sampled', () => {
     const id = generateUUID();
     const sampled = false;
-    const session = {id, sampled};
-    const attrs = {'session.id': id, 'browser-tab-id': generateUUID()};
+    const session = {id, sampled, samplingRate: 0};
+    const attrs = {
+        'session.id': id,
+        'session.sampling_rate': 0,
+        'browser.tab.id': generateUUID(),
+    };
     const managerMock = {
         getSession: mock.fn(() => session),
-        getAttributes: mock.fn(() => attrs),
+        getTabId: mock.fn(() => attrs['browser.tab.id']),
     };
     const processorMock = {
         onEmit: mock.fn(() => undefined),
@@ -518,7 +599,7 @@ test('SessionLogRecorsProcessor - does not forward log records to inner processo
     // @ts-expect-error -- we do not need a full span here
     processor.onEmit(logRecordMock, ctx);
     assert.strictEqual(managerMock.getSession.mock.callCount(), 1);
-    assert.strictEqual(managerMock.getAttributes.mock.callCount(), 0);
+    assert.strictEqual(managerMock.getTabId.mock.callCount(), 0);
     assert.strictEqual(processorMock.onEmit.mock.callCount(), 0);
 
     processor.forceFlush();

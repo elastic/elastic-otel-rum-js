@@ -165,13 +165,4 @@ test('should not export logs/traces for non sampled sessions', async ({
     for (const res of results) {
         expect(res.status).toEqual('rejected');
     }
-
-    // try {
-    //     logs = await collector.getLogs();
-    //     // force failure in case we get some logs
-    //     expect(logs.length).toEqual(0);
-    // } catch (err) {
-    //     // check no logs collected
-    //     expect(logs).toBeUndefined();
-    // }
 });
