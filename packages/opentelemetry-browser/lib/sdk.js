@@ -284,26 +284,6 @@ export function startBrowserSdk(cfg = {}) {
         }
     });
 
-    // By enabling disabling instrumentations we control the export
-    // and at the same time optimize. Instrumentations won't do work that is
-    // ging to be thrown away.
-    sessionManager?.observe('session:start', (session) => {
-        if (session.sampled) {
-            // For sampled sessions only enable the ones configured to be
-            // NOTE: double enabling does nothing
-            instrumentationInstances.forEach((i) => {
-                const config = i.getConfig();
-                if (config.enabled !== false) {
-                    i.enable();
-                }
-            });
-        } else {
-            // For sampled out sessions there is no need to use browser's resoruces to create
-            // Spans or LogRecords that will be droped. EDOT disables the instrumentations
-            instrumentationInstances.forEach((i) => i.disable());
-        }
-    });
-
     // Resolve the session eagerly so `session.start` is emitted on load
     // rather than with the first piece of telemetry.
     sessionManager?.getSession();
