@@ -31,6 +31,7 @@ Ensure your reverse proxy and OTLP endpoint accept the `/v1/metrics` path.
 - Browsers have limited resources. High-cardinality or high-frequency metrics can affect performance and export payload size. Use caution with unbounded attributes (for example user IDs, dynamic URLs) on metrics.
 - Metrics are only sent when the SDK exports (for example on an interval or when the page is unloaded). Temporary or single-page sessions might produce few data points.
 - Browser environments vary (device, network, extensions). Metric values might be noisier or less consistent than server-side metrics.
+- Session sampling (`session.sampleRate`) does not disable metrics export. Application metrics and periodic SDK export continue for unsampled sessions unless you stop them in application code.
 
 ## Traces [traces]
 
@@ -64,7 +65,7 @@ When your backend is instrumented with OpenTelemetry and trace context (trace ID
 - Frontend-to-backend trace continuity depends on your backend and HTTP client propagating the W3C Trace Context headers. If propagation is not configured, browser and backend spans appear as separate traces.
 - Only requests that go through the instrumented `fetch` and `XMLHttpRequest` APIs are captured. Requests made by other mechanisms (for example some third-party scripts, WebSockets, or non-instrumented clients) do not produce spans unless you add custom instrumentation.
 - User actions no longer produce spans, so subsequent `fetch` and `XMLHttpRequest` spans are no longer grouped under a parent click span in the trace view. To correlate network activity with a user action, use the `browser.user_action.click` log records described in [Logs](#logs).
-- Sampling is applied in the browser. High traffic can lead to large trace volume, so configure sampling or export options appropriately.
+- Session-level sampling is applied in the browser via `session.sampleRate`. Entire sessions are either recorded or not; unsampled sessions do not produce automatic instrumentation spans. High traffic can still lead to large trace volume for sampled sessions, so configure `session.sampleRate` appropriately. Refer to [session sampling](configuration.md#otel_browser_session-sampling).
 - Traces are tied to the page. Cross-tab or cross-origin flows might not form a single trace unless you implement custom context propagation.
 
 
@@ -95,7 +96,7 @@ In addition, your application can emit its own records:
 
 ### Known limitations of browser-side logs [logs-limitations]
 
-- Logs are buffered in the browser and sent on the export cycle. High log volume can increase memory use and export payload size, and might affect page performance. Prefer sampling or severity filtering for noisy logs.
+- Logs are buffered in the browser and sent on the export cycle. High log volume can increase memory use and export payload size, and might affect page performance. Automatic log records from instrumentations follow the session sampling decision configured with `session.sampleRate`. Prefer lowering the session sample rate or severity filtering for noisy logs.
 - As with metrics, logs reflect a single client session. You do not get centralized log aggregation in the browser, that happens in {{product.observability}} after export.
 - Logs that are not exported before the user navigates away or closes the tab might be lost unless the SDK supports a reliable flush (for example on `beforeunload`). Be aware that some log data might not reach the backend in edge cases.
 
@@ -105,15 +106,18 @@ Automatic capture of `console` methods (for example `console.log`, `console.erro
 
 ## Sessions [sessions]
 
-EDOT Browser groups telemetry from the same user into sessions. Spans and log records include these attributes:
+EDOT Browser groups telemetry from the same user into sessions. For **sampled** sessions, spans and log records from automatic instrumentations include these attributes:
 
 - `session.id`: a random UUID shared by all tabs and windows of the application. It survives page reloads.
 - `session.previous_id`: the `session.id` of the session that ended right before the current one, when it started less than 24 hours ago.
+- `session.sampling_rate`: the configured `session.sampleRate` for this session. Use it in backends to weight or correct metrics when sampling is below 100%.
 - `browser.tab.id`: a random UUID for the current tab or window. It survives page reloads within the same tab. This attribute is not part of the OpenTelemetry semantic conventions yet.
 
-A `session.start` log record is emitted every time a new session starts.
+A `session.start` log record is emitted when a new **sampled** session starts. It is not emitted for sampled-out sessions.
 
-A session ends after a period without telemetry (30 minutes by default) or when it reaches its maximum duration (4 hours by default). Refer to [session details](configuration.md#otel_browser_session-details) to change these values.
+The sampling decision is fixed for the lifetime of a session until it rotates (inactivity timeout, maximum duration, or invalid stored session data). Refer to [session details](configuration.md#otel_browser_session-details) to change timeouts and the sample rate.
+
+A session ends after a period without telemetry (30 minutes by default) or when it reaches its maximum duration (4 hours by default).
 
 Session attributes are not added to metrics to avoid high-cardinality attributes.
 
@@ -122,6 +126,7 @@ Session attributes are not added to metrics to avoid high-cardinality attributes
 - Sessions are stored in `localStorage` and tab identifiers in `sessionStorage`. If web storage is not available (for example storage is blocked for the site), EDOT Browser does not add session attributes, since they would not persist across page reloads.
 - Duplicating a tab copies its `sessionStorage`, so the duplicated tab reports the same `browser.tab.id` as the original one.
 - Any telemetry, including background requests, counts as activity and extends the session.
+- Sampled-out sessions do not export automatic instrumentation data. Metrics emitted through the OpenTelemetry API in application code are not gated by session sampling.
 
 ## Next steps [next-steps]
 

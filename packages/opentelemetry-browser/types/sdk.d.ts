@@ -35,9 +35,8 @@ export type SdkConfig = {
  * Configuration properties that are only in EDOT
  */
 export type EdotConfig = {
-    sampleRate?: number | undefined;
     instrumentations?: Partial<InstrumentationsConfigMap> | undefined;
     session?: import("./session.js").SessionConfig | undefined;
 };
 export type BrowserSdkConfiguration = SdkConfig & EdotConfig;
-export type DefaultConfigProps = "logLevel" | "serviceName" | "resourceAttributes" | "sampleRate" | "exportConfig";
+export type DefaultConfigProps = "logLevel" | "serviceName" | "resourceAttributes" | "exportConfig";
