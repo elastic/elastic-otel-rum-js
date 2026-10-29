@@ -133,6 +133,7 @@ export class SessionSpanProcessor implements SpanProcessor {
     constructor(options: SessionSpanProcessorOptions);
     _manager: SessionManager;
     _processors: import("@opentelemetry/sdk-trace").SpanProcessor[];
+    _sampledSpans: WeakSet<object>;
     /**
      * @param {import('@opentelemetry/sdk-trace').Span} span
      * @param {import('@opentelemetry/api').Context} ctx
