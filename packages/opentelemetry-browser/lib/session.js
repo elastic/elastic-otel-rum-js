@@ -167,10 +167,13 @@ export class SessionManager {
         this._observers.set(event, handlers);
         // Allow users to remove observers
         return () => {
-            this._observers.set(
-                event,
-                handlers.filter((h) => h !== handler)
-            );
+            const list = this._observers.get(event);
+            if (list) {
+                this._observers.set(
+                    event,
+                    list.filter((h) => h !== handler)
+                );
+            }
         };
     }
 
@@ -320,7 +323,7 @@ export class SessionSampler {
             this._ratio = ratio;
         }
         // Precision will be te to 4 decimal digits (smallest is 0.01%)
-        this._ratio = Math.trunc(this._ratio * 10000) / 10000;
+        this._ratio = Math.round(this._ratio * 10000) / 10000;
     }
 
     get ratio() {
