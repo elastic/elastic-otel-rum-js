@@ -372,6 +372,7 @@ export class SessionSpanProcessor {
     constructor(options) {
         this._manager = options.manager;
         this._processors = options.processors;
+        this._sampledSpans = new WeakSet();
     }
     /**
      * @param {import('@opentelemetry/sdk-trace').Span} span
@@ -387,18 +388,25 @@ export class SessionSpanProcessor {
             for (const p of this._processors) {
                 p.onStart(span, ctx);
             }
+            // track which Spans have been sampled
+            this._sampledSpans.add(span);
         }
     }
     /**
      * @param {import('@opentelemetry/sdk-trace').Span} span
      */
     onEnd(span) {
-        // The presence of the attribute means at the span creation
-        // the session was sampled. It should be exported.
-        if (typeof span.attributes?.[ATTR_SESSION_ID] === 'string') {
+        // We check the Span was sampled and it contains the ID attrib
+        // to discard any Spans being tampered by other processors or
+        // externally
+        if (
+            this._sampledSpans.has(span) &&
+            typeof span.attributes?.[ATTR_SESSION_ID] === 'string'
+        ) {
             for (const p of this._processors) {
                 p.onEnd(span);
             }
+            this._sampledSpans.delete(span);
         }
     }
     forceFlush() {
