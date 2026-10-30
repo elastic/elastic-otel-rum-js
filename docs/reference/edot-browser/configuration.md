@@ -162,7 +162,7 @@ A tab becoming visible extends an active session but does not start a new one. T
 ```js
 const sdk = startBrowserSdk({/* ... */});
 
-sdk.session.getSession(); // { id, previousId, startTimestamp }, or undefined when no session is active
+sdk.session.getSession(); // { id, previousId, startTimestamp, sampled }, or undefined when no session is active
 
 const unsubscribe = sdk.session.addObserver({
   onSessionStarted(session, previous) {

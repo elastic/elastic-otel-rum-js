@@ -26,6 +26,7 @@ import {
  * @property {string} id
  * @property {string} [previousId]
  * @property {number} startTimestamp
+ * @property {boolean} sampled whether the session's telemetry is exported
  */
 
 /**
@@ -58,7 +59,6 @@ import {
  * @property {SessionSampler} [sampler] defaults to sampling every session
  * @property {number} [inactivityTimeout] seconds
  * @property {number} [maxDuration] seconds
- * @property {(session: SessionState) => void} [onSessionStart]
  * @property {() => number} [now]
  * @property {{setTimeout: (fn: () => void, ms: number) => unknown, clearTimeout: (timer: any) => void}} [timers]
  */
@@ -96,7 +96,6 @@ export class SessionManager {
             (opts.inactivityTimeout ?? DEFAULT_INACTIVITY_TIMEOUT_S) * 1000;
         this._maxDurationMs =
             (opts.maxDuration ?? DEFAULT_MAX_DURATION_S) * 1000;
-        this._onSessionStart = opts.onSessionStart;
         this._sampler = opts.sampler ?? new SessionSampler(1);
         this._now = opts.now ?? Date.now;
         // Resolved on each call so patched timers (e.g. fake clocks) apply
@@ -106,12 +105,17 @@ export class SessionManager {
         };
         /** @type {unknown} */
         this._timer = undefined;
+        // Last session read from or written to storage. Also keeps the
+        // session in memory when storage writes fail.
         /** @type {SessionState | undefined} */
-        this._cached = undefined;
+        this._stored = undefined;
         this._persistent = true;
         // Session this tab last announced to observers
         /** @type {SessionState | undefined} */
-        this._active = undefined;
+        this._announced = undefined;
+        // Id of the last session created by this tab, not adopted from another
+        /** @type {string | undefined} */
+        this._createdId = undefined;
         /** @type {SessionState | undefined} */
         this._lastEnded = undefined;
         this._lastActivityCheck = 0;
@@ -119,7 +123,7 @@ export class SessionManager {
         this._stopped = false;
         /** @type {Set<{observer: SessionObserver}>} */
         this._observers = new Set();
-        /** @type {Array<{type: 'ended' | 'started', session: SessionState, created?: boolean}>} */
+        /** @type {Array<{type: 'ended' | 'started', session: SessionState}>} */
         this._events = [];
         this._flushing = false;
         this._tabId = getOrCreateTabId(opts.tabStorage);
@@ -200,11 +204,21 @@ export class SessionManager {
         this._stopped = true;
         this._clearTimer();
         this._observers.clear();
-        this._active = undefined;
+        this._announced = undefined;
     }
 
     getTabId() {
         return this._tabId;
+    }
+
+    /**
+     * Every tab sharing a session is told when it starts, this tells apart
+     * the one that created it, e.g. to report the start only once.
+     * @param {string} sessionId
+     * @returns {boolean}
+     */
+    isCreatedHere(sessionId) {
+        return this._createdId === sessionId;
     }
 
     /**
@@ -234,7 +248,6 @@ export class SessionManager {
         const stored = this._read();
         /** @type {SessionState | undefined} */
         let session;
-        let created = false;
         let extended = false;
 
         if (stored && !this._isExpired(stored, now)) {
@@ -248,8 +261,8 @@ export class SessionManager {
                 extended = true;
             }
         } else if (renew) {
-            created = true;
             const id = generateUUID();
+            this._createdId = id;
             session = {
                 id,
                 previousId:
@@ -268,9 +281,9 @@ export class SessionManager {
             diag.debug('Session started', session);
         }
 
-        const changed = this._sync(session, created);
+        const changed = this._sync(session);
         if (session && (changed || extended)) {
-            this._arm(session);
+            this._scheduleExpiryCheck(session);
         }
         return session;
     }
@@ -281,16 +294,15 @@ export class SessionManager {
      * loop, so reads made from a callback (telemetry) can't announce the same
      * change a second time.
      * @param {SessionState | undefined} session
-     * @param {boolean} created whether this tab just created it
      * @returns {boolean} whether the active session changed
      */
-    _sync(session, created) {
-        const previous = this._active;
+    _sync(session) {
+        const previous = this._announced;
         if (previous?.id === session?.id) {
             return false;
         }
 
-        this._active = session && {...session};
+        this._announced = session && {...session};
         if (previous) {
             this._lastEnded = previous;
             this._expiresAt = 0;
@@ -298,7 +310,7 @@ export class SessionManager {
             this._events.push({type: 'ended', session: previous});
         }
         if (session) {
-            this._events.push({type: 'started', session, created});
+            this._events.push({type: 'started', session});
         }
         this._flush();
         return true;
@@ -317,9 +329,6 @@ export class SessionManager {
                         o.onSessionEnded?.(toSessionInfo(session))
                     );
                     continue;
-                }
-                if (event.created) {
-                    this._onSessionStart?.(session);
                 }
                 // Only the real previous session: this tab may have missed
                 // others that ran while it was idle.
@@ -354,7 +363,7 @@ export class SessionManager {
      * extended the session.
      * @param {SessionState} session
      */
-    _arm(session) {
+    _scheduleExpiryCheck(session) {
         this._clearTimer();
         const expiresAt = Math.min(
             session.lastActivityTimestamp + this._inactivityMs,
@@ -369,7 +378,7 @@ export class SessionManager {
                     renew: false,
                 });
                 if (current) {
-                    this._arm(current);
+                    this._scheduleExpiryCheck(current);
                 }
             },
             Math.min(MAX_TIMER_DELAY_MS, Math.max(0, expiresAt - this._now()))
@@ -402,22 +411,22 @@ export class SessionManager {
     /** @returns {SessionState | undefined} */
     _read() {
         if (!this._persistent) {
-            return this._cached;
+            return this._stored;
         }
         // Read storage on every call so sessions rotated by other tabs are
         // picked up without `storage` event listeners.
         try {
             const raw = this._store.getItem(SESSION_STORAGE_KEY);
-            this._cached = raw ? parseSession(raw) : undefined;
+            this._stored = raw ? parseSession(raw) : undefined;
         } catch (err) {
             diag.debug('Session storage read failed', err);
         }
-        return this._cached;
+        return this._stored;
     }
 
     /** @param {SessionState} session */
     _write(session) {
-        this._cached = session;
+        this._stored = session;
         if (!this._persistent) {
             return;
         }
@@ -439,10 +448,9 @@ export class SessionManager {
  * Returns `undefined` when sessions cannot outlive a page reload so EDOT
  * doesn't report IDs that would split a single user session.
  * @param {SessionConfig | null} [config]
- * @param {(session: SessionState) => void} [onSessionStart]
  * @returns {SessionManager | undefined}
  */
-export function createSessionManager(config, onSessionStart) {
+export function createSessionManager(config) {
     config = normalizeSessionConfig(config);
     const sessionStorage = getStorage('localStorage');
     const tabStorage = getStorage('sessionStorage');
@@ -457,7 +465,6 @@ export function createSessionManager(config, onSessionStart) {
         tabStorage,
         sampler: new SessionSampler(config.sampleRate ?? 1),
         ...resolveSessionTimeouts(config),
-        onSessionStart,
     });
 }
 
@@ -862,6 +869,7 @@ function toSessionInfo(session) {
         id: session.id,
         previousId: session.previousId,
         startTimestamp: session.startTimestamp,
+        sampled: session.sampled,
     };
 }
 

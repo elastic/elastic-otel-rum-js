@@ -2,10 +2,9 @@
  * Returns `undefined` when sessions cannot outlive a page reload so EDOT
  * doesn't report IDs that would split a single user session.
  * @param {SessionConfig | null} [config]
- * @param {(session: SessionState) => void} [onSessionStart]
  * @returns {SessionManager | undefined}
  */
-export function createSessionManager(config?: SessionConfig | null, onSessionStart?: (session: SessionState) => void): SessionManager | undefined;
+export function createSessionManager(config?: SessionConfig | null): SessionManager | undefined;
 /**
  * Invalid values fall back to defaults and out-of-range values are clamped,
  * so a bad config never disables sessions nor rotates them on every event.
@@ -64,6 +63,7 @@ export function generateUUID(): string;
  * @property {string} id
  * @property {string} [previousId]
  * @property {number} startTimestamp
+ * @property {boolean} sampled whether the session's telemetry is exported
  */
 /**
  * Same shape as the upstream `SessionObserver`, with optional callbacks.
@@ -92,7 +92,6 @@ export function generateUUID(): string;
  * @property {SessionSampler} [sampler] defaults to sampling every session
  * @property {number} [inactivityTimeout] seconds
  * @property {number} [maxDuration] seconds
- * @property {(session: SessionState) => void} [onSessionStart]
  * @property {() => number} [now]
  * @property {{setTimeout: (fn: () => void, ms: number) => unknown, clearTimeout: (timer: any) => void}} [timers]
  */
@@ -106,7 +105,6 @@ export class SessionManager {
     _store: Storage;
     _inactivityMs: number;
     _maxDurationMs: number;
-    _onSessionStart: ((session: SessionState) => void) | undefined;
     _sampler: SessionSampler;
     _now: () => number;
     _timers: {
@@ -116,10 +114,12 @@ export class SessionManager {
     /** @type {unknown} */
     _timer: unknown;
     /** @type {SessionState | undefined} */
-    _cached: SessionState | undefined;
+    _stored: SessionState | undefined;
     _persistent: boolean;
     /** @type {SessionState | undefined} */
-    _active: SessionState | undefined;
+    _announced: SessionState | undefined;
+    /** @type {string | undefined} */
+    _createdId: string | undefined;
     /** @type {SessionState | undefined} */
     _lastEnded: SessionState | undefined;
     _lastActivityCheck: number;
@@ -129,11 +129,10 @@ export class SessionManager {
     _observers: Set<{
         observer: SessionObserver;
     }>;
-    /** @type {Array<{type: 'ended' | 'started', session: SessionState, created?: boolean}>} */
+    /** @type {Array<{type: 'ended' | 'started', session: SessionState}>} */
     _events: Array<{
         type: "ended" | "started";
         session: SessionState;
-        created?: boolean;
     }>;
     _flushing: boolean;
     _tabId: string;
@@ -177,6 +176,13 @@ export class SessionManager {
     shutdown(): void;
     getTabId(): string;
     /**
+     * Every tab sharing a session is told when it starts, this tells apart
+     * the one that created it, e.g. to report the start only once.
+     * @param {string} sessionId
+     * @returns {boolean}
+     */
+    isCreatedHere(sessionId: string): boolean;
+    /**
      * Without an active session (expired, waiting for the next user
      * interaction) there is no sampling decision. Everything is exported
      * only when every session would be sampled anyway.
@@ -200,10 +206,9 @@ export class SessionManager {
      * loop, so reads made from a callback (telemetry) can't announce the same
      * change a second time.
      * @param {SessionState | undefined} session
-     * @param {boolean} created whether this tab just created it
      * @returns {boolean} whether the active session changed
      */
-    _sync(session: SessionState | undefined, created: boolean): boolean;
+    _sync(session: SessionState | undefined): boolean;
     _flush(): void;
     /** @param {(observer: SessionObserver) => void} call */
     _notify(call: (observer: SessionObserver) => void): void;
@@ -213,7 +218,7 @@ export class SessionManager {
      * extended the session.
      * @param {SessionState} session
      */
-    _arm(session: SessionState): void;
+    _scheduleExpiryCheck(session: SessionState): void;
     _clearTimer(): void;
     /**
      * @param {SessionState} session
@@ -312,6 +317,10 @@ export type SessionInfo = {
     id: string;
     previousId?: string | undefined;
     startTimestamp: number;
+    /**
+     * whether the session's telemetry is exported
+     */
+    sampled: boolean;
 };
 /**
  * Same shape as the upstream `SessionObserver`, with optional callbacks.
@@ -353,7 +362,6 @@ export type SessionManagerOptions = {
      * seconds
      */
     maxDuration?: number | undefined;
-    onSessionStart?: ((session: SessionState) => void) | undefined;
     now?: (() => number) | undefined;
     timers?: {
         setTimeout: (fn: () => void, ms: number) => unknown;

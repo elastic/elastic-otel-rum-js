@@ -152,19 +152,23 @@ export function startBrowserSdk(cfg = {}) {
     diag.disable();
 
     const edotLogger = logs.getLogger(EDOT_SCOPE_NAME, EDOT_VERSION);
-    const sessionManager = createSessionManager(config.session, (session) => {
-        if (!session.sampled) {
-            return;
-        }
-        /** @type {import('@opentelemetry/api').Attributes} */
-        const attributes = {[ATTR_SESSION_ID]: session.id};
-        if (session.previousId) {
-            attributes[ATTR_SESSION_PREVIOUS_ID] = session.previousId;
-        }
-        edotLogger.emit({
-            eventName: EVENT_SESSION_START,
-            attributes,
-        });
+    const sessionManager = createSessionManager(config.session);
+    sessionManager?.addObserver({
+        onSessionStarted(session) {
+            // Tabs sharing the session are told too, only its creator reports it
+            if (!session.sampled || !sessionManager.isCreatedHere(session.id)) {
+                return;
+            }
+            /** @type {import('@opentelemetry/api').Attributes} */
+            const attributes = {[ATTR_SESSION_ID]: session.id};
+            if (session.previousId) {
+                attributes[ATTR_SESSION_PREVIOUS_ID] = session.previousId;
+            }
+            edotLogger.emit({
+                eventName: EVENT_SESSION_START,
+                attributes,
+            });
+        },
     });
 
     // To have full control of what's exported we need to build the processor

@@ -66,7 +66,7 @@ class MemoryStorage {
  */
 function setup(opts = {}) {
     const clock = {now: 1_000_000};
-    /** @type {import('../../lib/session.js').SessionState[]} */
+    /** @type {import('../../lib/session.js').SessionInfo[]} */
     const started = [];
     const sessionStorage = new MemoryStorage();
     const tabStorage = new MemoryStorage();
@@ -101,17 +101,26 @@ function setup(opts = {}) {
         clock.now = target;
     };
     const activeTimers = () => pending.filter((t) => !t.cleared);
-    const create = (/** @type {MemoryStorage} */ tab = tabStorage) =>
-        new SessionManager({
+    const create = (/** @type {MemoryStorage} */ tab = tabStorage) => {
+        const manager = new SessionManager({
             sessionStorage,
             tabStorage: tab,
             inactivityTimeout: 60,
             maxDuration: 600,
-            onSessionStart: (s) => started.push(s),
             now: () => clock.now,
             timers,
             ...opts,
         });
+        // What the SDK does to report `session.start` once
+        manager.addObserver({
+            onSessionStarted: (s) => {
+                if (manager.isCreatedHere(s.id)) {
+                    started.push(s);
+                }
+            },
+        });
+        return manager;
+    };
     /** Like production, where `start()` runs right after creation. */
     const createStarted = (/** @type {MemoryStorage} */ tab = tabStorage) => {
         const manager = create(tab);
@@ -697,6 +706,7 @@ test('createSessionApi - exposes the current session without internals', () => {
     assert.deepStrictEqual(Object.keys(session ?? {}).sort(), [
         'id',
         'previousId',
+        'sampled',
         'startTimestamp',
     ]);
     assert.strictEqual(session?.id, manager.getSessionId());
@@ -751,6 +761,7 @@ test('createSessionApi - forwards observers without internals and their unsubscr
     assert.deepStrictEqual(Object.keys(session).sort(), [
         'id',
         'previousId',
+        'sampled',
         'startTimestamp',
     ]);
     assert.strictEqual(previous.id, /** @type {any} */ (ended[0]).id);
