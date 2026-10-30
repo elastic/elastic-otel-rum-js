@@ -39,6 +39,10 @@ To check for security updates, go to [Security announcements for the Elastic sta
 * Align configuration with the upstream [browser-sdk](https://github.com/open-telemetry/opentelemetry-browser/tree/main/packages/sdk).
 * Add session tracking. Spans and log records include `session.id`, `session.previous_id`, and `browser.tab.id` attributes. A `session.start` event is emitted when a session starts.
   Ref: https://github.com/elastic/elastic-otel-rum-js/issues/115
+* Expire sessions based on user activity. Sessions end after 30 minutes without user interaction, or 4 hours in total. Telemetry sent after that has no `session.id` until the next interaction. Set `session.activityEvents` to define what counts as activity.
+  Ref: https://github.com/elastic/elastic-otel-rum-js/issues/81
+* Add a session API. `startBrowserSdk` returns `sdk.session.getSession()` and `sdk.session.addObserver()` for reading the current session and reacting when sessions start and end.
+  Ref: https://github.com/elastic/elastic-otel-rum-js/issues/81
 * Add session-level sampling via `session.sampleRate`. Sampled sessions export automatic RUM telemetry; unsampled sessions disable instrumentations. Spans and logs include `session.sampling_rate` for backend weighting. Refer to [Configure EDOT Browser](../reference/edot-browser/configuration.md#otel_browser_session-sampling).
   Ref: https://github.com/elastic/elastic-otel-rum-js/pull/128
 
