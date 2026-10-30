@@ -43,6 +43,8 @@ To check for security updates, go to [Security announcements for the Elastic sta
   Ref: https://github.com/elastic/elastic-otel-rum-js/issues/81
 * Add a session API. `startBrowserSdk` returns `sdk.session.getSession()` and `sdk.session.addObserver()` for reading the current session and reacting when sessions start and end.
   Ref: https://github.com/elastic/elastic-otel-rum-js/issues/81
+* Add session-level sampling via `session.sampleRate`. Sampled sessions export automatic RUM telemetry; unsampled sessions disable instrumentations. Spans and logs include `session.sampling_rate` for backend weighting. Refer to [Configure EDOT Browser](../reference/edot-browser/configuration.md#otel_browser_session-sampling).
+  Ref: https://github.com/elastic/elastic-otel-rum-js/pull/128
 
 ### Chores [edot-browser-X.X.X-chores]
 

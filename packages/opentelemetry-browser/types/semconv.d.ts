@@ -86,3 +86,11 @@ export const EVENT_SESSION_START: "session.start";
  * @note Not defined in semantic conventions yet. EDOT specific until the Browser SIG settles on a name.
  */
 export const ATTR_BROWSER_TAB_ID: "browser.tab.id";
+/**
+ * The value of the sampling rate for sessions. Necessary to calculate metrics
+ *
+ * @example 0.1234
+ *
+ * @experimental This attribute is experimental and is subject to breaking changes in minor releases of `@opentelemetry/semantic-conventions`.
+ */
+export const ATTR_SESSION_SAMPLING_RATE: "session.sampling_rate";

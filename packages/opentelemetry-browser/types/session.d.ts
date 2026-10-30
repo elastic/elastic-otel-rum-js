@@ -53,10 +53,10 @@ export function createSessionApi(manager: SessionManager | undefined): SessionAp
 export function generateUUID(): string;
 /**
  * @typedef {Object} SessionConfig
- * @property {boolean} [enabled] // defaults to true
  * @property {number} [inactivityTimeout] // seconds, defaults to 30 minutes
  * @property {number} [maxDuration] // seconds, defaults to 4 hours
  * @property {string[]} [activityEvents] // DOM events that count as user activity
+ * @property {number} [sampleRate] // within [0..1] range, default 1
  */
 /**
  * Public view of a session.
@@ -82,11 +82,14 @@ export function generateUUID(): string;
  * @property {string} [previousId]
  * @property {number} startTimestamp
  * @property {number} lastActivityTimestamp
+ * @property {boolean} sampled
+ * @property {number} samplingRate
  */
 /**
  * @typedef {Object} SessionManagerOptions
  * @property {Storage} sessionStorage storage shared by all tabs of the same origin
  * @property {Storage} tabStorage storage scoped to the current tab
+ * @property {SessionSampler} [sampler] defaults to sampling every session
  * @property {number} [inactivityTimeout] seconds
  * @property {number} [maxDuration] seconds
  * @property {(session: SessionState) => void} [onSessionStart]
@@ -104,6 +107,7 @@ export class SessionManager {
     _inactivityMs: number;
     _maxDurationMs: number;
     _onSessionStart: ((session: SessionState) => void) | undefined;
+    _sampler: SessionSampler;
     _now: () => number;
     _timers: {
         setTimeout: (fn: () => void, ms: number) => unknown;
@@ -171,6 +175,14 @@ export class SessionManager {
     addObserver(observer: SessionObserver): () => void;
     /** Stops tracking for good: no timers, reads or notifications. */
     shutdown(): void;
+    getTabId(): string;
+    /**
+     * Without an active session (expired, waiting for the next user
+     * interaction) there is no sampling decision. Everything is exported
+     * only when every session would be sampled anyway.
+     * @returns {boolean}
+     */
+    exportsWithoutSession(): boolean;
     /** @returns {import('@opentelemetry/api').Attributes} */
     getAttributes(): import("@opentelemetry/api").Attributes;
     /**
@@ -213,41 +225,85 @@ export class SessionManager {
     /** @param {SessionState} session */
     _write(session: SessionState): void;
 }
-/** @typedef {import('@opentelemetry/sdk-trace').SpanProcessor} SpanProcessor */
+export type SamplingDecision = number;
+export namespace SamplingDecision {
+    let NOT_RECORD: number;
+    let RECORD: number;
+}
 /**
- * Adds session attributes on span start.
+ * @typedef {Object} SamplingResult
+ * @property {SamplingDecision} decision
+ */
+/**
+ *
+ */
+export class SessionSampler {
+    /** @param {number} ratio */
+    constructor(ratio: number);
+    _ratio: number;
+    get ratio(): number;
+    /**
+     * @param {string} sessionId
+     * @returns {SamplingResult}
+     */
+    shouldSample(sessionId: string): SamplingResult;
+    toString(): string;
+}
+/**
+ * Adds session attributes on span start and lets only the spans of sampled
+ * sessions reach the wrapped processors.
  * @implements {SpanProcessor}
  */
 export class SessionSpanProcessor implements SpanProcessor {
-    /** @param {SessionManager} manager */
-    constructor(manager: SessionManager);
+    /** @param {SessionSpanProcessorOptions} options */
+    constructor(options: SessionSpanProcessorOptions);
     _manager: SessionManager;
+    _processors: import("@opentelemetry/sdk-trace").SpanProcessor[];
+    _sampledSpans: WeakSet<object>;
+    /**
+     * @param {import('@opentelemetry/sdk-trace').Span} span
+     * @param {import('@opentelemetry/api').Context} ctx
+     */
+    onStart(span: import("@opentelemetry/sdk-trace").Span, ctx: import("@opentelemetry/api").Context): void;
     /** @param {import('@opentelemetry/sdk-trace').Span} span */
-    onStart(span: import("@opentelemetry/sdk-trace").Span): void;
-    onEnd(): void;
-    forceFlush(): Promise<void>;
-    shutdown(): Promise<void>;
+    onEnd(span: import("@opentelemetry/sdk-trace").Span): void;
+    forceFlush(): Promise<undefined>;
+    shutdown(): Promise<undefined>;
 }
+/** @typedef {import('@opentelemetry/sdk-logs').LogRecordProcessor} LogRecordProcessor */
 /**
- * Adds session attributes on log emit. Must be registered before exporting
+ * @typedef {Object} SessionLogRecordProcessorOptions
+ * @property {SessionManager} manager
+ * @property {LogRecordProcessor[]} processors
+ */
+/**
+ * Adds session attributes on log emit and lets only the records of sampled
+ * sessions reach the wrapped processors. Must be registered before exporting
  * processors since records become read-only after all `onEmit` calls.
  */
 export class SessionLogRecordProcessor {
-    /** @param {SessionManager} manager */
-    constructor(manager: SessionManager);
+    /** @param {SessionLogRecordProcessorOptions} options */
+    constructor(options: SessionLogRecordProcessorOptions);
     _manager: SessionManager;
-    /** @param {{setAttributes: (attrs: import('@opentelemetry/api').Attributes) => unknown}} logRecord */
-    onEmit(logRecord: {
-        setAttributes: (attrs: import("@opentelemetry/api").Attributes) => unknown;
-    }): void;
-    forceFlush(): Promise<void>;
-    shutdown(): Promise<void>;
+    _processors: import("@opentelemetry/sdk-logs").LogRecordProcessor[];
+    /**
+     * @param {import('@opentelemetry/sdk-logs').SdkLogRecord} logRecord
+     * @param {import('@opentelemetry/api').Context} [ctx]
+     */
+    onEmit(logRecord: import("@opentelemetry/sdk-logs").SdkLogRecord, ctx?: import("@opentelemetry/api").Context): void;
+    forceFlush(): Promise<undefined>;
+    shutdown(): Promise<undefined>;
 }
+export type SpanProcessor = import("@opentelemetry/sdk-trace").SpanProcessor;
+export type SessionSpanProcessorOptions = {
+    manager: SessionManager;
+    processors: SpanProcessor[];
+};
 export type SessionConfig = {
-    enabled?: boolean | undefined;
     inactivityTimeout?: number | undefined;
     maxDuration?: number | undefined;
     activityEvents?: string[] | undefined;
+    sampleRate?: number | undefined;
 };
 /**
  * Public view of a session.
@@ -273,6 +329,8 @@ export type SessionState = {
     previousId?: string | undefined;
     startTimestamp: number;
     lastActivityTimestamp: number;
+    sampled: boolean;
+    samplingRate: number;
 };
 export type SessionManagerOptions = {
     /**
@@ -283,6 +341,10 @@ export type SessionManagerOptions = {
      * storage scoped to the current tab
      */
     tabStorage: Storage;
+    /**
+     * defaults to sampling every session
+     */
+    sampler?: SessionSampler | undefined;
     /**
      * seconds
      */
@@ -298,4 +360,11 @@ export type SessionManagerOptions = {
         clearTimeout: (timer: any) => void;
     } | undefined;
 };
-export type SpanProcessor = import("@opentelemetry/sdk-trace").SpanProcessor;
+export type SamplingResult = {
+    decision: SamplingDecision;
+};
+export type LogRecordProcessor = import("@opentelemetry/sdk-logs").LogRecordProcessor;
+export type SessionLogRecordProcessorOptions = {
+    manager: SessionManager;
+    processors: LogRecordProcessor[];
+};
