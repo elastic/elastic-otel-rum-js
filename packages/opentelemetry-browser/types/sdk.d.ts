@@ -38,7 +38,7 @@ export type SdkConfig = {
  */
 export type EdotConfig = {
     instrumentations?: Partial<InstrumentationsConfigMap> | undefined;
-    session?: import("./session.js").SessionConfig | undefined;
+    session?: import("./session/config.js").SessionConfig | undefined;
 };
 export type BrowserSdkConfiguration = SdkConfig & EdotConfig;
 export type DefaultConfigProps = "logLevel" | "serviceName" | "resourceAttributes" | "exportConfig";
