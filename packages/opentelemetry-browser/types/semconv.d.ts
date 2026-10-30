@@ -126,3 +126,11 @@ export const ATTR_ELASTIC_USER_ACCOUNT: "elastic.user.account";
  * @note Not defined in semantic conventions. EDOT specific so custom keys cannot clash with `user.*` attributes added to semantic conventions later.
  */
 export const ATTR_ELASTIC_USER_ATTRIBUTES_PREFIX: "elastic.user.attributes.";
+/**
+ * The value of the sampling rate for sessions. Necessary to calculate metrics
+ *
+ * @example 0.1234
+ *
+ * @experimental This attribute is experimental and is subject to breaking changes in minor releases of `@opentelemetry/semantic-conventions`.
+ */
+export const ATTR_SESSION_SAMPLING_RATE: "session.sampling_rate";

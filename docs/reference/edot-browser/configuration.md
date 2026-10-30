@@ -70,11 +70,10 @@ Configuration is passed as an object to `startBrowserSdk`. The following options
 | `serviceName`         | `string`                 | Logical name of the frontend service. Defaults to `unknown_service:web` if not set. |
 | `serviceVersion`      | `string`                 | Version of the application. Optional. |
 | `logLevel` | `"none" \| "error" \| "warn" \| "info" \| "debug" \| "verbose" \| "all"` | Diagnostic log level for the SDK internal logger. Defaults to `info`. Values are lowercase; the SDK accepts them case-insensitively. |
-| `sampleRate`          | `number`                 | Trace sampling ratio (0–1). Defaults to `1` (100%). |
 | `resourceAttributes`  | `Record<string, any>`    | Optional resource attributes to attach to telemetry. For example: `{ 'deployment.environment.name': 'production' }`. |
 | `disabled`            | `boolean`                | If `true`, the SDK does not start. |
 | `instrumentations`    | `Record<string, Object>` | Per-instrumentation config. Set `{ enabled: false }` for a key to turn off that instrumentation. Refer to [instrumentations details](#otel_browser_instrumentations-details) for more information. |
-| `session`             | `{ enabled?: boolean; inactivityTimeout?: number; maxDuration?: number }` | Session tracking. Refer to [session details](#otel_browser_session-details) for more information. |
+| `session`             | `{ sampleRate?: number; inactivityTimeout?: number; maxDuration?: number }` | Session tracking and session-level sampling. Refer to [session details](#otel_browser_session-details) for more information. |
 | `exportConfig`    | `{ url?: string; headers?: Record<string, string>}` | Configuration for exporters of the different signals. |
 | `exportConfig.url`    | `string` | Base URL of the OTLP export endpoint (reverse proxy). Do not include signal paths such as `/v1/traces`. Defaults to `http://localhost:4318`. |
 | `exportConfig.headers`    | `Record<string, string>` | Headers to send with export requests. Defaults to `{}`. The reverse proxy typically injects `Authorization`; do not put API keys here in browser code. |
@@ -133,15 +132,25 @@ The following keys are supported:
 
 ### `session` details [otel_browser_session-details]
 
-EDOT Browser adds `session.id`, `session.previous_id` (after a session rotates), and `browser.tab.id` attributes to spans and log records. Refer to [Sessions](telemetry.md#sessions) for details.
+EDOT Browser adds `session.id`, `session.previous_id` (after a session rotates), `session.sampling_rate`, and `browser.tab.id` attributes to spans and log records for **sampled** sessions. Refer to [Sessions](telemetry.md#sessions) for details.
 
 | Option              | Type      | Description |
 |---------------------|-----------|-------------|
-| `enabled`           | `boolean` | Set to `false` to turn off session tracking. Defaults to `true`. |
+| `sampleRate`        | `number`  | Fraction of sessions to record, in the range 0–1. Defaults to `1` (100%). The decision is made when a session starts and stays fixed until the session rotates. Invalid values log a warning and fall back to the default; out-of-range values are clamped. Values are truncated to four decimal places (minimum step 0.0001). At `0`, automatic RUM instrumentations are disabled for that session and the `session.start` log record is not emitted. |
 | `inactivityTimeout` | `number`  | Seconds without telemetry after which the session ends. Defaults to `1800` (30 minutes). Must be between `300` (5 minutes) and `maxDuration`. |
 | `maxDuration`       | `number`  | Maximum session length in seconds, regardless of activity. Defaults to `14400` (4 hours). Must be between `1800` (30 minutes) and `86400` (24 hours). |
 
-Incorrect values fall back to the default and out-of-range values are clamped to the closest limit. In both cases EDOT Browser logs a warning.
+Incorrect values for `inactivityTimeout` and `maxDuration` fall back to the default and out-of-range values are clamped to the closest limit. In both cases EDOT Browser logs a warning.
+
+#### Session sampling [otel_browser_session-sampling]
+
+Session sampling controls whether EDOT Browser exports automatic RUM telemetry (instrumentation spans and log records) for a given user session. The sampling rate is configured with `session.sampleRate`, not a top-level `sampleRate` option.
+
+When a session is **sampled in**, all configured instrumentations run for that session until it ends or rotates. When a session is **sampled out**, EDOT Browser disables automatic instrumentations for that session so the browser does not collect spans or log records that would be dropped anyway.
+
+To stop automatic RUM export while keeping session machinery active, set `session.sampleRate` to `0`. With `sampleRate: 0`, session state still exists client-side but automatic export is suppressed.
+
+Metrics your application emits through the OpenTelemetry API are not gated by session sampling today. Refer to [Sessions](telemetry.md#sessions) for signal-specific behavior.
 
 ## Next steps [next-steps]
 
