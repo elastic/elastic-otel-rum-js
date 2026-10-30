@@ -20,6 +20,10 @@ export function createUserApi(manager: UserManager | undefined): UserApi;
  * @property {(user: UserIdentity) => void} setUser
  * @property {() => void} clearUser
  */
+/** Custom attributes beyond this count are ignored */
+export const MAX_USER_ATTRIBUTES: 20;
+/** Longer string values are truncated, `id` excepted */
+export const MAX_USER_VALUE_LENGTH: 256;
 /**
  * Holds the identity of the current end-user. It is applied to spans and log
  * records by the processors below, so it can change at any time (for example
@@ -29,10 +33,10 @@ export class UserManager {
     /** @type {import('@opentelemetry/api').Attributes} */
     _attributes: import("@opentelemetry/api").Attributes;
     /**
-     * Replaces the current identity. Requires a non-empty `id`; optional
-     * fields that are not non-empty strings are ignored. Entries of
-     * `attributes` must have a non-empty key and a string, finite number or
-     * boolean value, others are ignored.
+     * Replaces the current identity. Requires a non-empty `id`. Invalid
+     * optional fields, invalid custom attributes and custom attributes beyond
+     * {@link MAX_USER_ATTRIBUTES} are ignored with a warning. Strings other
+     * than `id` are truncated to {@link MAX_USER_VALUE_LENGTH} characters.
      * @param {UserIdentity} user
      */
     setUser(user: UserIdentity): void;

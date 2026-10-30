@@ -10,10 +10,34 @@ import {diag, DiagLogLevel} from '@opentelemetry/api';
 
 import {
     createUserApi,
+    MAX_USER_ATTRIBUTES,
+    MAX_USER_VALUE_LENGTH,
     UserLogRecordProcessor,
     UserManager,
     UserSpanProcessor,
 } from '../../lib/user.js';
+
+/** Captures `diag.warn` calls while `fn` runs. */
+function captureWarnings(/** @type {() => void} */ fn) {
+    /** @type {string[]} */
+    const warnings = [];
+    diag.setLogger(
+        {
+            warn: (msg) => warnings.push(msg),
+            error() {},
+            info() {},
+            debug() {},
+            verbose() {},
+        },
+        {logLevel: DiagLogLevel.WARN}
+    );
+    try {
+        fn();
+    } finally {
+        diag.disable();
+    }
+    return warnings;
+}
 
 /** Minimal span / log record that records attributes. */
 function fakeRecord() {
@@ -201,4 +225,72 @@ test('user api delegates to the manager and is a no-op without one', () => {
         noop.setUser({id: 'u-1'});
         noop.clearUser();
     });
+});
+
+test('setUser warns about ignored fields by key only', () => {
+    const manager = new UserManager();
+    const warnings = captureWarnings(() =>
+        manager.setUser({
+            id: 'u-1',
+            email: /** @type {any} */ (null),
+            name: /** @type {any} */ (42),
+            attributes: /** @type {any} */ ({plan: [], secret: {a: 1}}),
+        })
+    );
+    assert.deepEqual(manager.getAttributes(), {'user.id': 'u-1'});
+    assert.equal(warnings.length, 1);
+    assert.match(
+        warnings[0],
+        /email, name, attributes\.plan, attributes\.secret/
+    );
+    assert.doesNotMatch(warnings[0], /\[object/);
+
+    const nonObject = captureWarnings(() =>
+        manager.setUser({id: 'u-1', attributes: /** @type {any} */ ([1])})
+    );
+    assert.match(nonObject[0], /attributes$/);
+
+    assert.deepEqual(
+        captureWarnings(() => manager.setUser({id: 'u-1', email: 'a@b.co'})),
+        []
+    );
+});
+
+test('empty custom string values are dropped like empty fixed fields', () => {
+    const manager = new UserManager();
+    captureWarnings(() =>
+        manager.setUser({id: 'u-1', email: '', attributes: {plan: ''}})
+    );
+    assert.deepEqual(manager.getAttributes(), {'user.id': 'u-1'});
+});
+
+test('custom attributes are capped and long values truncated', () => {
+    const manager = new UserManager();
+    /** @type {Record<string, string>} */
+    const custom = {};
+    for (let i = 0; i < MAX_USER_ATTRIBUTES + 5; i++) {
+        custom[`k${i}`] = 'v';
+    }
+    const long = 'x'.repeat(MAX_USER_VALUE_LENGTH + 10);
+    const warnings = captureWarnings(() =>
+        manager.setUser({id: long, email: long, attributes: custom})
+    );
+    const attrs = manager.getAttributes();
+    const customKeys = Object.keys(attrs).filter((k) =>
+        k.startsWith('elastic.user.attributes.')
+    );
+    assert.equal(customKeys.length, MAX_USER_ATTRIBUTES);
+    assert.equal(attrs['elastic.user.attributes.k0'], 'v');
+    assert.equal(attrs['elastic.user.attributes.k20'], undefined);
+    assert.equal(attrs['user.email'], 'x'.repeat(MAX_USER_VALUE_LENGTH));
+    // ids are kept whole so distinct users can't collapse into one
+    assert.equal(attrs['user.id'], long);
+    assert.match(warnings[0], /attributes\.k20/);
+});
+
+test('attributes handed to processors cannot be mutated', () => {
+    const manager = new UserManager();
+    assert.ok(Object.isFrozen(manager.getAttributes()));
+    manager.setUser({id: 'u-1'});
+    assert.ok(Object.isFrozen(manager.getAttributes()));
 });

@@ -85,10 +85,14 @@ import {EDOT_VERSION} from './version.js';
 
 const EDOT_SCOPE_NAME = '@elastic/opentelemetry-browser';
 
+// Module scoped so a handle from a second `startBrowserSdk` call, which gets
+// the no-op SDK, still sets the user of the SDK that is running.
+const userManager = new UserManager();
+
 // SDK returned when invalid config or some error happens at start
 const NOOP_SDK = {
     shutdown: () => Promise.resolve(),
-    ...createUserApi(undefined),
+    ...createUserApi(userManager),
 };
 
 // To control multiple calls to `startBrowserSdk`
@@ -170,8 +174,6 @@ export function startBrowserSdk(cfg = {}) {
             });
         }
     });
-
-    const userManager = new UserManager();
 
     // To have full control of what's exported we need to build the processor
     // ourselves with a custom exporter

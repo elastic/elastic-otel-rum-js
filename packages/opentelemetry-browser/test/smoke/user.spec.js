@@ -60,3 +60,16 @@ test('should add user attributes to telemetry after setUser until clearUser', as
     expect(cleared['user.email']).toBeUndefined();
     expect(cleared['elastic.user.attributes.plan']).toBeUndefined();
 });
+
+test('should set the user from the handle of a second startBrowserSdk call', async ({
+    page,
+}) => {
+    const collector = createCollector(page);
+    await page.goto(FIXTURE);
+
+    await page.evaluate(() =>
+        globalThis.startBrowserSdk({}).setUser({id: 'u-2'})
+    );
+    const identified = await clickAndGetAttributes(page, collector);
+    expect(identified['user.id']).toStrictEqual('u-2');
+});
