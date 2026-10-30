@@ -128,6 +128,21 @@ Session attributes are not added to metrics to avoid high-cardinality attributes
 - Any telemetry, including background requests, counts as activity and extends the session.
 - Sampled-out sessions do not export automatic instrumentation data. Metrics emitted through the OpenTelemetry API in application code are not gated by session sampling.
 
+## Page routes [page-routes]
+
+Full URLs are a poor way to group pages: `/product/123` and `/product/456?ref=ad` are the same page for your users. EDOT Browser adds the route of the current page to spans and log records as the `url.template` attribute (for example `/product/{id}`), so you can aggregate telemetry such as Core Web Vitals, errors, or navigations per page.
+
+By default, the route is inferred from the URL by replacing ID-like path segments with `{id}` and dropping the query string. Use the `pageRoute` configuration or the `setPageRoute` function to provide the routes your application knows. Refer to [page route details](configuration.md#otel_browser_page-route-details).
+
+Page routes are not added to metrics to avoid high-cardinality attributes.
+
+### Known limitations of page routes [page-routes-limitations]
+
+- The route is the one of the page displayed when the span starts or the log record is emitted. Telemetry reported after an in-page navigation, such as Core Web Vitals or resource timings, gets the route of the new page.
+- Inferred routes only replace numbers, UUIDs, hashes, and ULIDs. Other dynamic segments such as slugs are kept, and segments such as years are replaced with `{id}`.
+- Spans that already have a `url.template` attribute keep their value. Client spans, such as `fetch` and `XMLHttpRequest` requests, don't get the page route, since on them `url.template` is the template of the request URL.
+- A route passed to `setPageRoute` before the router updates the URL is discarded when the path changes.
+
 ## Next steps [next-steps]
 
 - Refer to [Set up EDOT Browser](setup.md), [Install the agent](install-agent.md), and [Proxy and CORS](proxy-cors.md) for installation and export configuration.

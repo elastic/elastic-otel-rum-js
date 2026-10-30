@@ -32,6 +32,12 @@ import {AsyncApisContextManager} from './context.js';
 import {createLogger} from './logging.js';
 import {detectResource} from './detector.js';
 import {
+    PageRouteLogRecordProcessor,
+    PageRouteManager,
+    PageRouteSpanProcessor,
+    resolvePageRouteConfig,
+} from './page-route.js';
+import {
     ATTR_SESSION_ID,
     ATTR_SESSION_PREVIOUS_ID,
     EVENT_SESSION_START,
@@ -72,6 +78,7 @@ import {EDOT_VERSION} from './version.js';
  * @typedef {Object} EdotConfig
  * @property {Partial<InstrumentationsConfigMap>} [instrumentations]
  * @property {import('./session.js').SessionConfig} [session]
+ * @property {import('./page-route.js').PageRouteResolver | false} [pageRoute] // defaults to `inferPageRoute`
  */
 /**
  * @typedef {SdkConfig & EdotConfig} BrowserSdkConfiguration
@@ -84,6 +91,9 @@ const NOOP_SDK = {shutdown: () => Promise.resolve()};
 
 // To control multiple calls to `startBrowserSdk`
 let sdkStarted = false;
+
+// Module scoped so routers can set the route before the SDK starts
+const pageRouteManager = new PageRouteManager();
 
 /** @typedef { 'logLevel' | 'serviceName' | 'resourceAttributes' | 'exportConfig'} DefaultConfigProps*/
 /** @type {Required<Pick<BrowserSdkConfiguration, DefaultConfigProps>>} */
@@ -139,13 +149,16 @@ export function startBrowserSdk(cfg = {}) {
         serviceVersion
     );
 
+    // Before disabling our logger so their config warnings are shown
+    pageRouteManager.setResolver(resolvePageRouteConfig(config.pageRoute));
+    const sessionManager = createSessionManager(config.session);
+
     // Disable our logger to let the upstream take its place
     // TODO: if upstream exports its method to register a logger
     // we could get rid of this
     diag.disable();
 
     const edotLogger = logs.getLogger(EDOT_SCOPE_NAME, EDOT_VERSION);
-    const sessionManager = createSessionManager(config.session);
     sessionManager?.observe('session:start', (session) => {
         if (session.sampled) {
             /** @type {import('@opentelemetry/api').Attributes} */
@@ -190,7 +203,10 @@ export function startBrowserSdk(cfg = {}) {
         logLevel,
         resourceAttributes,
         contextManager: AsyncApisContextManager.enable(),
-        processors: spanProcessors,
+        processors: [
+            new PageRouteSpanProcessor(pageRouteManager),
+            ...spanProcessors,
+        ],
     });
 
     const logsUrl = appendPath(endpointUrl, 'v1/logs').href;
@@ -216,7 +232,10 @@ export function startBrowserSdk(cfg = {}) {
     const logsSdk = startLogsSdk({
         logLevel,
         resourceAttributes,
-        processors: logProcessors,
+        processors: [
+            new PageRouteLogRecordProcessor(pageRouteManager),
+            ...logProcessors,
+        ],
     });
 
     // metrics signal configuration
@@ -293,6 +312,7 @@ export function startBrowserSdk(cfg = {}) {
 
     return {
         shutdown() {
+            pageRouteManager.setResolver(undefined);
             disableInstrumentations();
             return Promise.allSettled([
                 tracesSdk.shutdown(),
@@ -309,6 +329,17 @@ export function startBrowserSdk(cfg = {}) {
             });
         },
     };
+}
+
+/**
+ * Sets the low-cardinality route of the current page (e.g. `/product/{id}`),
+ * added as `url.template` to spans and log records. The route applies until
+ * the page path changes, so call it after your router updates the URL.
+ * Passing `undefined` falls back to the `pageRoute` configuration.
+ * @param {string | undefined} route
+ */
+export function setPageRoute(route) {
+    pageRouteManager.setRoute(route);
 }
 
 // -- helper functions

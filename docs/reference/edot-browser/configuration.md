@@ -74,6 +74,7 @@ Configuration is passed as an object to `startBrowserSdk`. The following options
 | `disabled`            | `boolean`                | If `true`, the SDK does not start. |
 | `instrumentations`    | `Record<string, Object>` | Per-instrumentation config. Set `{ enabled: false }` for a key to turn off that instrumentation. Refer to [instrumentations details](#otel_browser_instrumentations-details) for more information. |
 | `session`             | `{ sampleRate?: number; inactivityTimeout?: number; maxDuration?: number }` | Session tracking and session-level sampling. Refer to [session details](#otel_browser_session-details) for more information. |
+| `pageRoute`           | `((url: URL) => string \| undefined) \| false` | Function that returns the low-cardinality route of a page, added as `url.template` to spans and log records. Defaults to `inferPageRoute`. Set to `false` to only use routes passed to `setPageRoute`. Refer to [page route details](#otel_browser_page-route-details) for more information. |
 | `exportConfig`    | `{ url?: string; headers?: Record<string, string>}` | Configuration for exporters of the different signals. |
 | `exportConfig.url`    | `string` | Base URL of the OTLP export endpoint (reverse proxy). Do not include signal paths such as `/v1/traces`. Defaults to `http://localhost:4318`. |
 | `exportConfig.headers`    | `Record<string, string>` | Headers to send with export requests. Defaults to `{}`. The reverse proxy typically injects `Authorization`; do not put API keys here in browser code. |
@@ -151,6 +152,36 @@ When a session is **sampled in**, all configured instrumentations run for that s
 To stop automatic RUM export while keeping session machinery active, set `session.sampleRate` to `0`. With `sampleRate: 0`, session state still exists client-side but automatic export is suppressed.
 
 Metrics your application emits through the OpenTelemetry API are not gated by session sampling today. Refer to [Sessions](telemetry.md#sessions) for signal-specific behavior.
+
+### `pageRoute` details [otel_browser_page-route-details]
+
+EDOT Browser adds a `url.template` attribute with the route of the current page (for example `/product/{id}`) to spans and log records. Refer to [Page routes](telemetry.md#page-routes) for details.
+
+By default, EDOT Browser infers the route from the URL with `inferPageRoute`. It replaces ID-like path segments (numbers, UUIDs, hashes, and ULIDs) with `{id}`, drops the query string, and keeps the route of hash-based routers. For example, `/product/123?ref=ad` becomes `/product/{id}` and `/#/cart/42` becomes `/#/cart/{id}`.
+
+Inferred routes keep other path segments as they are, so URLs with slugs (for example `/blog/my-first-post`) still produce one route per page. To control the routes, set `pageRoute` to a function that receives the URL of the current page and returns its route, or `undefined` to omit the attribute. EDOT Browser calls it once per URL, including after in-page (SPA) navigations. You can fall back to `inferPageRoute` for URLs you don't handle:
+
+```js
+import { inferPageRoute, startBrowserSdk } from '@elastic/opentelemetry-browser';
+
+startBrowserSdk({
+  serviceName: 'my-web-app',
+  pageRoute: (url) =>
+    url.pathname.startsWith('/blog/') ? '/blog/{slug}' : inferPageRoute(url),
+});
+```
+
+Set `pageRoute` to `false` to stop inferring routes. Only routes passed to `setPageRoute` are added then.
+
+Routers already know the route of the current page. Pass it with `setPageRoute` after the router updates the URL, for example in an after-navigation hook. The route applies until the page path or hash route changes, and takes precedence over `pageRoute`. Passing `undefined` falls back to `pageRoute`:
+
+```js
+import { setPageRoute } from '@elastic/opentelemetry-browser';
+
+router.afterEach((to) => setPageRoute(to.matched.at(-1)?.path));
+```
+
+When you load EDOT Browser from a `<script>` tag, `setPageRoute` and `inferPageRoute` are available as globals.
 
 ## Next steps [next-steps]
 

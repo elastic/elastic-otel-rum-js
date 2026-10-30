@@ -3,6 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import {startBrowserSdk} from './sdk.js';
+import {inferPageRoute} from './page-route.js';
+import {setPageRoute, startBrowserSdk} from './sdk.js';
 
 globalThis['startBrowserSdk'] = startBrowserSdk;
+globalThis['setPageRoute'] = setPageRoute;
+globalThis['inferPageRoute'] = inferPageRoute;

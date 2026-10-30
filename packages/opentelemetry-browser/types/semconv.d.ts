@@ -87,6 +87,16 @@ export const EVENT_SESSION_START: "session.start";
  */
 export const ATTR_BROWSER_TAB_ID: "browser.tab.id";
 /**
+ * The low-cardinality template of an [absolute path reference](https://www.rfc-editor.org/rfc/rfc3986#section-4.2).
+ *
+ * @example /users/{id}
+ * @example /users/:id
+ * @example /users?id={id}
+ *
+ * @experimental This attribute is experimental and is subject to breaking changes in minor releases of `@opentelemetry/semantic-conventions`.
+ */
+export const ATTR_URL_TEMPLATE: "url.template";
+/**
  * The value of the sampling rate for sessions. Necessary to calculate metrics
  *
  * @example 0.1234
