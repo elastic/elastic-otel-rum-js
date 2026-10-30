@@ -3,6 +3,7 @@
  * @typedef {Object} SessionApi
  * @property {() => import('./state.js').SessionInfo | undefined} getSession
  * @property {(observer: import('./observers.js').SessionObserver) => () => void} addObserver
+ * @property {() => void} endSession
  */
 /**
  * Public session API. A no-op when sessions are unavailable so callers
@@ -15,4 +16,5 @@ export type SessionManager = import("./manager.js").SessionManager;
 export type SessionApi = {
     getSession: () => import("./state.js").SessionInfo | undefined;
     addObserver: (observer: import("./observers.js").SessionObserver) => () => void;
+    endSession: () => void;
 };

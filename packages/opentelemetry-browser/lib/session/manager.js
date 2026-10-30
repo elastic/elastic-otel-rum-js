@@ -115,6 +115,26 @@ export class SessionManager {
     }
 
     /**
+     * Ends the active session in every tab, e.g. on logout. As after an
+     * expiry, the next session starts on the next user activity or page load
+     * and links this one as previous.
+     */
+    endSession() {
+        if (this._stopped) {
+            return;
+        }
+        const now = this._now();
+        const stored = this._store.get();
+        if (stored && !isExpired(stored, now, this._limits)) {
+            // Kept in storage rather than removed so other tabs see the end
+            // and the next session can link it as previous
+            this._store.save({...stored, ended: true});
+            diag.debug('Session ended', stored);
+        }
+        this._resolve(now, {extend: false, renew: false});
+    }
+
+    /**
      * Callbacks run synchronously, in registration order. `onSessionEnded`
      * is reported by an expiry timer, or on the next read if the timer was
      * throttled (background tabs) or the session was replaced by another tab.

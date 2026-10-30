@@ -45,6 +45,8 @@ To check for security updates, go to [Security announcements for the Elastic sta
   Ref: https://github.com/elastic/elastic-otel-rum-js/issues/81
 * Add session-level sampling via `session.sampleRate`. Sampled sessions export automatic RUM telemetry; unsampled sessions disable instrumentations. Spans and logs include `session.sampling_rate` for backend weighting. Refer to [Configure EDOT Browser](../reference/edot-browser/configuration.md#otel_browser_session-sampling).
   Ref: https://github.com/elastic/elastic-otel-rum-js/pull/128
+* Add `sdk.session.endSession()` to end the current session, for example on logout. The next session starts on the next user interaction.
+  Ref: https://github.com/elastic/elastic-otel-rum-js/issues/123
 
 ### Chores [edot-browser-X.X.X-chores]
 

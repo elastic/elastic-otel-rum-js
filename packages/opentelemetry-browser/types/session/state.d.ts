@@ -14,6 +14,7 @@
  * @property {number} lastActivityTimestamp
  * @property {boolean} sampled
  * @property {number} samplingRate
+ * @property {boolean} [ended] set when the application ended the session
  */
 /**
  * @param {SessionState} session
@@ -45,4 +46,8 @@ export type SessionState = {
     lastActivityTimestamp: number;
     sampled: boolean;
     samplingRate: number;
+    /**
+     * set when the application ended the session
+     */
+    ended?: boolean | undefined;
 };
