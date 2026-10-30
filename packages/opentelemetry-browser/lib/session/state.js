@@ -27,6 +27,7 @@ import {
  * @property {number} lastActivityTimestamp
  * @property {boolean} sampled
  * @property {number} samplingRate
+ * @property {boolean} [ended] set when the application ended the session
  */
 
 /**

@@ -60,6 +60,7 @@ export function isExpired(session, now, limits) {
     const ahead =
         Math.max(session.startTimestamp, session.lastActivityTimestamp) - now;
     return (
+        session.ended === true ||
         ahead > MAX_CLOCK_SKEW_MS ||
         now - session.lastActivityTimestamp >= limits.inactivityMs ||
         now - session.startTimestamp >= limits.maxDurationMs

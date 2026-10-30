@@ -119,7 +119,8 @@ function parseSession(raw) {
             typeof s.sampled === 'boolean' &&
             typeof s.samplingRate === 'number'
         ) {
-            return {
+            /** @type {SessionState} */
+            const session = {
                 id: s.id,
                 previousId:
                     typeof s.previousId === 'string' ? s.previousId : undefined,
@@ -128,6 +129,10 @@ function parseSession(raw) {
                 sampled: s.sampled,
                 samplingRate: s.samplingRate,
             };
+            if (s.ended === true) {
+                session.ended = true;
+            }
+            return session;
         }
     } catch {
         // fall through

@@ -117,7 +117,7 @@ A `session.start` log record is emitted when a new **sampled** session starts. I
 
 The sampling decision is fixed for the lifetime of a session until it rotates (inactivity timeout, maximum duration, or invalid stored session data). Refer to [session details](configuration.md#otel_browser_session-details) to change timeouts and the sample rate.
 
-A session ends after a period without user activity (30 minutes by default) or when it reaches its maximum duration (4 hours by default). Refer to [session details](configuration.md#otel_browser_session-details) to change these values.
+A session ends after a period without user activity (30 minutes by default) or when it reaches its maximum duration (4 hours by default). Refer to [session details](configuration.md#otel_browser_session-details) to change these values. Applications can also end it, for example on logout. Refer to [End a session](configuration.md#otel_browser_session-end).
 
 Session attributes are not added to metrics to avoid high-cardinality attributes.
 
@@ -126,7 +126,7 @@ Session attributes are not added to metrics to avoid high-cardinality attributes
 - Sessions are stored in `localStorage` and tab identifiers in `sessionStorage`. If web storage is not available (for example storage is blocked for the site), EDOT Browser does not add session attributes, since they would not persist across page reloads.
 - Duplicating a tab copies its `sessionStorage`, so the duplicated tab reports the same `browser.tab.id` as the original one.
 - Only user activity extends the session (by default `pointerdown`, `keydown`, `scroll`, and `wheel`, plus a tab becoming visible). Telemetry produced while the user is idle, such as background requests, does not.
-- After a session expires, telemetry carries `browser.tab.id` but no `session.id` until the next user interaction starts a new session. The same happens when `localStorage` is cleared, for example on logout, and the new session has no `session.previous_id`.
+- After a session expires or is ended by the application, telemetry carries `browser.tab.id` but no `session.id` until the next user interaction starts a new session. The same happens when `localStorage` is cleared, and the new session has no `session.previous_id`.
 - Loading a page counts as activity. A page that reloads itself with no user present, such as a wall dashboard, keeps its session until the maximum duration.
 - If the device clock moves back by more than 5 minutes, the stored session is treated as expired.
 - Sampled-out sessions do not export automatic instrumentation data. Metrics emitted through the OpenTelemetry API in application code are not gated by session sampling.

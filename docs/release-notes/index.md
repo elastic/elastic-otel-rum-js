@@ -49,6 +49,8 @@ To check for security updates, go to [Security announcements for the Elastic sta
 * Add a user identity API. `startBrowserSdk` returns `setUser()` and `clearUser()` to add `user.id`, `user.email`,
   `user.full_name`, `elastic.user.account` and custom `elastic.user.attributes.*` attributes to spans and log records.
   Ref: https://github.com/elastic/elastic-otel-rum-js/issues/124
+* Add `sdk.session.endSession()` to end the current session, for example on logout. The next session starts on the next user interaction.
+  Ref: https://github.com/elastic/elastic-otel-rum-js/issues/123
 
 ### Chores [edot-browser-X.X.X-chores]
 
