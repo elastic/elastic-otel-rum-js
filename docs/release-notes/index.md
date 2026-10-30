@@ -32,9 +32,9 @@ To check for security updates, go to [Security announcements for the Elastic sta
 % ### Chores [edot-browser-X.X.X-chores]
 % *
 
-## X.X.X [edot-browser-X.X.X-release-notes]
+## 0.4.0 [edot-browser-0.4.0-release-notes]
 
-### Features and enhancements [edot-browser-X.X.X-features-enhancements]
+### Features and enhancements [edot-browser-0.4.0-features-enhancements]
 
 * Align configuration with the upstream [browser-sdk](https://github.com/open-telemetry/opentelemetry-browser/tree/main/packages/sdk).
 * Add session tracking. Spans and log records include `session.id`, `session.previous_id`, and `browser.tab.id` attributes. A `session.start` event is emitted when a session starts.
@@ -42,7 +42,7 @@ To check for security updates, go to [Security announcements for the Elastic sta
 * Add session-level sampling via `session.sampleRate`. Sampled sessions export automatic RUM telemetry; unsampled sessions disable instrumentations. Spans and logs include `session.sampling_rate` for backend weighting. Refer to [Configure EDOT Browser](../reference/edot-browser/configuration.md#otel_browser_session-sampling).
   Ref: https://github.com/elastic/elastic-otel-rum-js/pull/128
 
-### Chores [edot-browser-X.X.X-chores]
+### Chores [edot-browser-0.4.0-chores]
 
 * Use the new upstream `@opentelemetry/browser-sdk` package to setup traces and logs signal.
 * Switch to the new upstream `navigation` instrumentation from  `@opentelemetry/browser-sdk` package.

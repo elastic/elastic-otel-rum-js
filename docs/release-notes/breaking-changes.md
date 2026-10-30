@@ -28,7 +28,7 @@ Breaking changes can impact your applications, potentially disrupting normal ope
 % ::::
 % TEMPLATE END
 
-## Next version [edot-browser-X.X.X-breaking-changes]
+## 0.4.0 [edot-browser-0-4-0-breaking-changes]
 
 ::::{dropdown} Session sampling replaces root `sampleRate`
 EDOT Browser now applies sampling at **session** scope. Configure the rate with `session.sampleRate` (0–1). The former top-level `sampleRate` option (trace-ID ratio sampling) is removed.
