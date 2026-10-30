@@ -9,13 +9,14 @@ import {
     ATTR_BROWSER_TAB_ID,
     ATTR_SESSION_ID,
     ATTR_SESSION_PREVIOUS_ID,
+    ATTR_SESSION_SAMPLING_RATE,
 } from './semconv.js';
 
 /**
  * @typedef {Object} SessionConfig
- * @property {boolean} [enabled] // defaults to true
  * @property {number} [inactivityTimeout] // seconds, defaults to 30 minutes
  * @property {number} [maxDuration] // seconds, defaults to 4 hours
+ * @property {number} [sampleRate] // within [0..1] range, default 1
  */
 
 /**
@@ -24,16 +25,22 @@ import {
  * @property {string} [previousId]
  * @property {number} startTimestamp
  * @property {number} lastActivityTimestamp
+ * @property {boolean} sampled
+ * @property {number} samplingRate
  */
 
 /**
  * @typedef {Object} SessionManagerOptions
  * @property {Storage} sessionStorage storage shared by all tabs of the same origin
  * @property {Storage} tabStorage storage scoped to the current tab
+ * @property {SessionSampler} sampler
  * @property {number} [inactivityTimeout] seconds
  * @property {number} [maxDuration] seconds
- * @property {(session: SessionState) => void} [onSessionStart]
  * @property {() => number} [now]
+ */
+
+/**
+ * @typedef {'session:start' | 'session:end'} SessionEvent
  */
 
 export const SESSION_STORAGE_KEY = 'elastic_otel_browser.session';
@@ -57,12 +64,14 @@ export class SessionManager {
             (opts.inactivityTimeout ?? DEFAULT_INACTIVITY_TIMEOUT_S) * 1000;
         this._maxDurationMs =
             (opts.maxDuration ?? DEFAULT_MAX_DURATION_S) * 1000;
-        this._onSessionStart = opts.onSessionStart;
         this._now = opts.now ?? Date.now;
         /** @type {SessionState | undefined} */
         this._cached = undefined;
         this._persistent = true;
         this._tabId = getOrCreateTabId(opts.tabStorage);
+        this._sampler = opts.sampler;
+        /** @type {Map<SessionEvent, Array<(session: SessionState) => void>>} */
+        this._observers = new Map();
     }
 
     /**
@@ -74,6 +83,10 @@ export class SessionManager {
         return this.getSession().id;
     }
 
+    getTabId() {
+        return this._tabId;
+    }
+
     /**
      * Returns the active session, rotating it if expired. Every call counts
      * as activity since it happens when telemetry is produced.
@@ -82,11 +95,14 @@ export class SessionManager {
     getSession() {
         const now = this._now();
         const stored = this._read();
+        const expired = stored && this._isExpired(stored, now);
 
-        if (!stored || this._isExpired(stored, now)) {
+        if (!stored || expired) {
+            const id = generateUUID();
+            const samplingResult = this._sampler.shouldSample(id);
             /** @type {SessionState} */
             const session = {
-                id: generateUUID(),
+                id,
                 previousId:
                     stored &&
                     now - stored.startTimestamp < PREVIOUS_ID_MAX_AGE_MS
@@ -94,10 +110,16 @@ export class SessionManager {
                         : undefined,
                 startTimestamp: now,
                 lastActivityTimestamp: now,
+                sampled: samplingResult.decision === SamplingDecision.RECORD,
+                samplingRate: this._sampler.ratio,
             };
             this._write(session);
+            if (expired) {
+                diag.debug('Session ended', stored);
+                this._notify('session:end', stored);
+            }
             diag.debug('Session started', session);
-            this._onSessionStart?.(session);
+            this._notify('session:start', session);
             return session;
         }
 
@@ -108,18 +130,35 @@ export class SessionManager {
         return stored;
     }
 
-    /** @returns {import('@opentelemetry/api').Attributes} */
-    getAttributes() {
-        const session = this.getSession();
-        /** @type {import('@opentelemetry/api').Attributes} */
-        const attributes = {
-            [ATTR_SESSION_ID]: session.id,
-            [ATTR_BROWSER_TAB_ID]: this._tabId,
-        };
-        if (session.previousId) {
-            attributes[ATTR_SESSION_PREVIOUS_ID] = session.previousId;
+    /**
+     * @param {SessionEvent} event
+     * @param {(session: SessionState) => void} handler
+     * @returns {(() => void) | undefined}
+     */
+    observe(event, handler) {
+        if (!/^session:(start|end)$/.test(event)) {
+            diag.debug(`Session event "${event}" not recognized`);
+            return;
         }
-        return attributes;
+        if (typeof handler !== 'function') {
+            diag.debug(
+                `Handler for session event "${event}" must be a function`
+            );
+            return;
+        }
+        const handlers = this._observers.get(event) ?? [];
+        handlers.push(handler);
+        this._observers.set(event, handlers);
+        // Allow users to remove observers
+        return () => {
+            const list = this._observers.get(event);
+            if (list) {
+                this._observers.set(
+                    event,
+                    list.filter((h) => h !== handler)
+                );
+            }
+        };
     }
 
     /**
@@ -167,19 +206,36 @@ export class SessionManager {
             );
         }
     }
+
+    /**
+     * Runs all observers for a given event is a safe way
+     * @param {SessionEvent} event
+     * @param {any} payload
+     */
+    _notify(event, payload) {
+        const handlers = this._observers.get(event);
+        if (Array.isArray(handlers)) {
+            for (const handlerFn of handlers) {
+                try {
+                    handlerFn(payload);
+                } catch (err) {
+                    diag.warn(
+                        `Handler for session event "${event}" failed`,
+                        err
+                    );
+                }
+            }
+        }
+    }
 }
 
 /**
  * Returns `undefined` when sessions cannot outlive a page reload so EDOT
  * doesn't report IDs that would split a single user session.
  * @param {SessionConfig} [config]
- * @param {(session: SessionState) => void} [onSessionStart]
  * @returns {SessionManager | undefined}
  */
-export function createSessionManager(config = {}, onSessionStart) {
-    if (config.enabled === false) {
-        return undefined;
-    }
+export function createSessionManager(config = {}) {
     const sessionStorage = getStorage('localStorage');
     const tabStorage = getStorage('sessionStorage');
     if (!sessionStorage || !tabStorage) {
@@ -191,8 +247,8 @@ export function createSessionManager(config = {}, onSessionStart) {
     return new SessionManager({
         sessionStorage,
         tabStorage,
+        sampler: new SessionSampler(config.sampleRate ?? 1),
         ...resolveSessionTimeouts(config),
-        onSessionStart,
     });
 }
 
@@ -220,48 +276,193 @@ export function resolveSessionTimeouts(config) {
     return {inactivityTimeout, maxDuration};
 }
 
+/** @enum {number} */
+export const SamplingDecision = {
+    NOT_RECORD: 0,
+    RECORD: 1,
+};
+/**
+ * @typedef {Object} SamplingResult
+ * @property {SamplingDecision} decision
+ */
+
+/**
+ *
+ */
+export class SessionSampler {
+    /** @param {number} ratio */
+    constructor(ratio) {
+        if (typeof ratio !== 'number' || isNaN(ratio)) {
+            diag.warn(
+                `session sampling rate must be a valid number. Using default.`
+            );
+            this._ratio = 1;
+        } else if (ratio < 0 || ratio > 1) {
+            const clamped = Math.min(Math.max(ratio, 0), 1);
+            diag.warn(
+                `session sampling rate must be between 0 and 1. Using ${clamped}.`
+            );
+            this._ratio = clamped;
+        } else {
+            this._ratio = ratio;
+        }
+        // Precision will be te to 4 decimal digits (smallest is 0.01%)
+        this._ratio = Math.round(this._ratio * 10000) / 10000;
+    }
+
+    get ratio() {
+        return this._ratio;
+    }
+
+    /**
+     * @param {string} sessionId
+     * @returns {SamplingResult}
+     */
+    shouldSample(sessionId) {
+        if (this._ratio === 0) {
+            return {decision: SamplingDecision.NOT_RECORD};
+        } else if (this._ratio === 1) {
+            return {decision: SamplingDecision.RECORD};
+        }
+
+        const clean = sessionId.replace(/-/g, '').toLowerCase();
+        const value = parseInt(clean.slice(0, 8), 16);
+        const probability = value / 0xffffffff;
+        if (probability < this._ratio) {
+            return {decision: SamplingDecision.RECORD};
+        }
+        return {decision: SamplingDecision.NOT_RECORD};
+    }
+
+    toString() {
+        return `SessionSampler(ratio=${this._ratio})`;
+    }
+}
+
 /** @typedef {import('@opentelemetry/sdk-trace').SpanProcessor} SpanProcessor */
+/**
+ * @typedef {Object} SessionSpanProcessorOptions
+ * @property {SessionManager} manager
+ * @property {SpanProcessor[]} processors
+ */
+
+/**
+ *
+ * @param {SessionState} session
+ * @returns {import('@opentelemetry/api').Attributes}
+ */
+function sessionToAttributes(session) {
+    /** @type {import('@opentelemetry/api').Attributes} */
+    const attributes = {
+        [ATTR_SESSION_ID]: session.id,
+        [ATTR_SESSION_SAMPLING_RATE]: session.samplingRate,
+    };
+    if (session.previousId) {
+        attributes[ATTR_SESSION_PREVIOUS_ID] = session.previousId;
+    }
+    return attributes;
+}
 
 /**
  * Adds session attributes on span start.
  * @implements {SpanProcessor}
  */
 export class SessionSpanProcessor {
-    /** @param {SessionManager} manager */
-    constructor(manager) {
-        this._manager = manager;
+    /** @param {SessionSpanProcessorOptions} options */
+    constructor(options) {
+        this._manager = options.manager;
+        this._processors = options.processors;
+        this._sampledSpans = new WeakSet();
     }
-    /** @param {import('@opentelemetry/sdk-trace').Span} span */
-    onStart(span) {
-        span.setAttributes(this._manager.getAttributes());
+    /**
+     * @param {import('@opentelemetry/sdk-trace').Span} span
+     * @param {import('@opentelemetry/api').Context} ctx
+     */
+    onStart(span, ctx) {
+        const session = this._manager.getSession();
+        if (session.sampled) {
+            span.setAttributes({
+                ...sessionToAttributes(session),
+                [ATTR_BROWSER_TAB_ID]: this._manager.getTabId(),
+            });
+            for (const p of this._processors) {
+                p.onStart(span, ctx);
+            }
+            // track which Spans have been sampled
+            this._sampledSpans.add(span);
+        }
     }
-    onEnd() {}
+    /**
+     * @param {import('@opentelemetry/sdk-trace').Span} span
+     */
+    onEnd(span) {
+        // We check the Span was sampled and it contains the ID attrib
+        // to discard any Spans being tampered by other processors or
+        // externally
+        if (
+            this._sampledSpans.has(span) &&
+            typeof span.attributes?.[ATTR_SESSION_ID] === 'string'
+        ) {
+            for (const p of this._processors) {
+                p.onEnd(span);
+            }
+            this._sampledSpans.delete(span);
+        }
+    }
     forceFlush() {
-        return Promise.resolve();
+        return Promise.all(this._processors.map((p) => p.forceFlush())).then(
+            () => undefined
+        );
     }
     shutdown() {
-        return Promise.resolve();
+        return Promise.all(this._processors.map((p) => p.shutdown())).then(
+            () => undefined
+        );
     }
 }
 
+/** @typedef {import('@opentelemetry/sdk-logs').LogRecordProcessor} LogRecordProcessor */
+/**
+ * @typedef {Object} SessionLogRecordProcessorOptions
+ * @property {SessionManager} manager
+ * @property {LogRecordProcessor[]} processors
+ */
 /**
  * Adds session attributes on log emit. Must be registered before exporting
  * processors since records become read-only after all `onEmit` calls.
  */
 export class SessionLogRecordProcessor {
-    /** @param {SessionManager} manager */
-    constructor(manager) {
-        this._manager = manager;
+    /** @param {SessionLogRecordProcessorOptions} options */
+    constructor(options) {
+        this._manager = options.manager;
+        this._processors = options.processors;
     }
     /** @param {{setAttributes: (attrs: import('@opentelemetry/api').Attributes) => unknown}} logRecord */
-    onEmit(logRecord) {
-        logRecord.setAttributes(this._manager.getAttributes());
+    /**
+     * @param {import('@opentelemetry/sdk-logs').SdkLogRecord} logRecord
+     * @param {import('@opentelemetry/api').Context} [ctx]
+     */
+    onEmit(logRecord, ctx) {
+        const session = this._manager.getSession();
+        if (session.sampled) {
+            logRecord.setAttributes({
+                ...sessionToAttributes(session),
+                [ATTR_BROWSER_TAB_ID]: this._manager.getTabId(),
+            });
+            for (const p of this._processors) {
+                p.onEmit(logRecord, ctx);
+            }
+        }
     }
     forceFlush() {
-        return Promise.resolve();
+        return Promise.all(this._processors.map((p) => p.forceFlush())).then(
+            () => undefined
+        );
     }
     shutdown() {
-        return Promise.resolve();
+        return Promise.all(this._processors.map((p) => p.shutdown())).then(
+            () => undefined
+        );
     }
 }
 
@@ -371,7 +572,9 @@ function parseSession(raw) {
         if (
             typeof s?.id === 'string' &&
             typeof s.startTimestamp === 'number' &&
-            typeof s.lastActivityTimestamp === 'number'
+            typeof s.lastActivityTimestamp === 'number' &&
+            typeof s.sampled === 'boolean' &&
+            typeof s.samplingRate === 'number'
         ) {
             return {
                 id: s.id,
@@ -379,6 +582,8 @@ function parseSession(raw) {
                     typeof s.previousId === 'string' ? s.previousId : undefined,
                 startTimestamp: s.startTimestamp,
                 lastActivityTimestamp: s.lastActivityTimestamp,
+                sampled: s.sampled,
+                samplingRate: s.samplingRate,
             };
         }
     } catch {

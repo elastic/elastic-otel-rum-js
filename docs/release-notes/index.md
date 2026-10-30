@@ -40,6 +40,8 @@ To check for security updates, go to [Security announcements for the Elastic sta
 * Add session tracking. Spans and log records include `session.id`, `session.previous_id`, and `browser.tab.id` attributes. A `session.start` event is emitted when a session starts.
 * Add page routes. Spans and log records include the route of the current page in the `url.template` attribute. Routes are inferred from URLs by default and can be provided with the `pageRoute` configuration or the `setPageRoute` function.
   Ref: https://github.com/elastic/elastic-otel-rum-js/issues/115
+* Add session-level sampling via `session.sampleRate`. Sampled sessions export automatic RUM telemetry; unsampled sessions disable instrumentations. Spans and logs include `session.sampling_rate` for backend weighting. Refer to [Configure EDOT Browser](../reference/edot-browser/configuration.md#otel_browser_session-sampling).
+  Ref: https://github.com/elastic/elastic-otel-rum-js/pull/128
 
 ### Chores [edot-browser-X.X.X-chores]
 

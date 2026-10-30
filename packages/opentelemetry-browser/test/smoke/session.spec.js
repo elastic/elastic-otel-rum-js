@@ -136,17 +136,33 @@ test('should rotate an active session after 4 hours', async ({page}) => {
     expect(clicks[10].attributes['session.previous_id']).toStrictEqual(firstId);
 });
 
-test('should not add session attributes when disabled', async ({page}) => {
+test('should not export logs/traces for non sampled sessions', async ({
+    page,
+}) => {
+    const fixture = '/fixtures/use-manual-instrumentation.html';
     const collector = createCollector(page);
     const config = encodeURIComponent(
-        JSON.stringify({session: {enabled: false}})
+        JSON.stringify({session: {sampleRate: 0}})
     );
-    await page.goto(`${FIXTURE}?config=${config}`);
+    await page.goto(`${fixture}?config=${config}`);
 
-    const logs = await collector.getLogs();
-    expect(logs.length).toBeGreaterThan(0);
-    for (const log of logs) {
-        expect(log.attributes['session.id']).toBeUndefined();
-        expect(log.attributes['browser.tab.id']).toBeUndefined();
+    // Perform some actions that trigger the manual instrumentations
+    // - span
+    await page.click('#span');
+    await page.waitForFunction(
+        () => document.getElementById('status')?.innerText === 'finished'
+    );
+    // - log
+    await page.click('#log');
+
+    let span, logs;
+    const results = await Promise.allSettled([
+        collector.getSpans(),
+        collector.getLogs(),
+    ]);
+
+    // No spans or logs, collector throws for both
+    for (const res of results) {
+        expect(res.status).toEqual('rejected');
     }
 });

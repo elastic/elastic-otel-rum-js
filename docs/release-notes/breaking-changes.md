@@ -30,6 +30,18 @@ Breaking changes can impact your applications, potentially disrupting normal ope
 
 ## Next version [edot-browser-X.X.X-breaking-changes]
 
+::::{dropdown} Session sampling replaces root `sampleRate`
+EDOT Browser now applies sampling at **session** scope. Configure the rate with `session.sampleRate` (0–1). The former top-level `sampleRate` option (trace-ID ratio sampling) is removed.
+**Impact**<br>
+- Top-level `sampleRate` is ignored at runtime. TypeScript types may still list it until updated.
+- Sampling is **per session**, not per trace ID. For a sampled session, automatic spans and log records are collected for the whole session; for an unsampled session, instrumentations are disabled.
+**Action**<br>
+- Move `sampleRate` into `session: { sampleRate: … }`.
+- Revisit dashboards and volume estimates if you relied on trace-ID sampling for partial span volume within a single user session.
+Refer to [PR #128](https://github.com/elastic/elastic-otel-rum-js/pull/128).
+::::
+
+
 ::::{dropdown} Replacement of document load instrumentation for navigation timing
 Document instrumentation (@opentelemetry/instrumentation-document-load) has been replaced by `navigation-timing` from `@opentelemetry/browser-instrumentation`. The new instrumentation emits a log records instead of a trace Span to report the timings.
 **Impact**<br>
