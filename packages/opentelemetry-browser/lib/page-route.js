@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import {diag} from '@opentelemetry/api';
+import {diag, SpanKind} from '@opentelemetry/api';
 
 import {ATTR_URL_TEMPLATE} from './semconv.js';
 
@@ -154,7 +154,8 @@ export function inferPageRoute(url) {
 
 /**
  * Adds the page route on span start. Spans that already have a route are
- * left untouched.
+ * left untouched, and so are client spans: on them `url.template` is the
+ * template of the request URL, not of the page.
  * @implements {SpanProcessor}
  */
 export class PageRouteSpanProcessor {
@@ -162,9 +163,11 @@ export class PageRouteSpanProcessor {
     constructor(manager) {
         this._manager = manager;
     }
-    /** @param {Signal} span */
+    /** @param {Signal & {kind?: SpanKind}} span */
     onStart(span) {
-        addRoute(span, this._manager);
+        if (span.kind !== SpanKind.CLIENT) {
+            addRoute(span, this._manager);
+        }
     }
     onEnd() {}
     forceFlush() {

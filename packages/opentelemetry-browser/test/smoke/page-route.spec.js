@@ -54,9 +54,9 @@ test('should add url.template to spans and logs', async ({page}) => {
     const fetchSpan = spans.find(
         (s) => s.scope.name === '@opentelemetry/browser-instrumentation/fetch'
     );
-    expect(fetchSpan?.attributes['url.template']).toStrictEqual(
-        '/product/:productId'
-    );
+    // On client spans `url.template` is the template of the request URL
+    expect(fetchSpan).toBeDefined();
+    expect(fetchSpan?.attributes['url.template']).toBeUndefined();
 });
 
 test('should not infer url.template when "pageRoute" is false', async ({
@@ -75,4 +75,17 @@ test('should not infer url.template when "pageRoute" is false', async ({
     for (const log of navigations) {
         expect(log.attributes['url.template']).toBeUndefined();
     }
+});
+
+test('should warn about an invalid "pageRoute" value', async ({page}) => {
+    /** @type {string[]} */
+    const messages = [];
+    // EDOT's logger prints warnings with `console.error`
+    page.on('console', (msg) => messages.push(msg.text()));
+    const config = encodeURIComponent(JSON.stringify({pageRoute: 'nope'}));
+    await page.goto(`${FIXTURE}?config=${config}`);
+
+    await expect
+        .poll(() => messages.some((m) => m.includes('Invalid "pageRoute"')))
+        .toBe(true);
 });

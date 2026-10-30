@@ -60,15 +60,18 @@ export class PageRouteManager {
 /** @typedef {import('@opentelemetry/sdk-trace').SpanProcessor} SpanProcessor */
 /**
  * Adds the page route on span start. Spans that already have a route are
- * left untouched.
+ * left untouched, and so are client spans: on them `url.template` is the
+ * template of the request URL, not of the page.
  * @implements {SpanProcessor}
  */
 export class PageRouteSpanProcessor implements SpanProcessor {
     /** @param {PageRouteManager} manager */
     constructor(manager: PageRouteManager);
     _manager: PageRouteManager;
-    /** @param {Signal} span */
-    onStart(span: Signal): void;
+    /** @param {Signal & {kind?: SpanKind}} span */
+    onStart(span: Signal & {
+        kind?: SpanKind;
+    }): void;
     onEnd(): void;
     forceFlush(): Promise<void>;
     shutdown(): Promise<void>;
@@ -102,3 +105,4 @@ export type PageRouteManagerOptions = {
     getHref?: (() => string | undefined) | undefined;
 };
 export type SpanProcessor = import("@opentelemetry/sdk-trace").SpanProcessor;
+import { SpanKind } from '@opentelemetry/api';

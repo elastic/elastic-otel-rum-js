@@ -149,15 +149,16 @@ export function startBrowserSdk(cfg = {}) {
         serviceVersion
     );
 
+    // Before disabling our logger so their config warnings are shown
+    pageRouteManager.setResolver(resolvePageRouteConfig(config.pageRoute));
+    const sessionManager = createSessionManager(config.session);
+
     // Disable our logger to let the upstream take its place
     // TODO: if upstream exports its method to register a logger
     // we could get rid of this
     diag.disable();
 
-    pageRouteManager.setResolver(resolvePageRouteConfig(config.pageRoute));
-
     const edotLogger = logs.getLogger(EDOT_SCOPE_NAME, EDOT_VERSION);
-    const sessionManager = createSessionManager(config.session);
     sessionManager?.observe('session:start', (session) => {
         if (session.sampled) {
             /** @type {import('@opentelemetry/api').Attributes} */

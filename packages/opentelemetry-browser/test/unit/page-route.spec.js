@@ -6,6 +6,8 @@
 import assert from 'node:assert';
 import {test} from 'node:test';
 
+import {SpanKind} from '@opentelemetry/api';
+
 import {
     inferPageRoute,
     PageRouteLogRecordProcessor,
@@ -199,4 +201,18 @@ test('processors add url.template', () => {
         process(createSignal({'url.template': '/api/items/{id}'})),
         {'url.template': '/api/items/{id}'}
     );
+});
+
+test('span processor skips client spans', () => {
+    const {manager} = setup('https://shop.test/cart');
+    manager.setRoute('/cart');
+    const processor = new PageRouteSpanProcessor(manager);
+
+    const client = {...createSignal(), kind: SpanKind.CLIENT};
+    processor.onStart(client);
+    assert.deepStrictEqual(client.attributes, {});
+
+    const internal = {...createSignal(), kind: SpanKind.INTERNAL};
+    processor.onStart(internal);
+    assert.deepStrictEqual(internal.attributes, {'url.template': '/cart'});
 });
