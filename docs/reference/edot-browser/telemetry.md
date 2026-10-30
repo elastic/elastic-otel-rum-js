@@ -128,6 +128,43 @@ Session attributes are not added to metrics to avoid high-cardinality attributes
 - Any telemetry, including background requests, counts as activity and extends the session.
 - Sampled-out sessions do not export automatic instrumentation data. Metrics emitted through the OpenTelemetry API in application code are not gated by session sampling.
 
+## User identity [user-identity]
+
+Spans and log records can carry the identity of the signed-in user. Call `setUser` on the object returned by `startBrowserSdk` to identify the user, and `clearUser` to remove the identity, for example on logout:
+
+```js
+const sdk = startBrowserSdk({ /* ... */ });
+
+sdk.setUser({
+  id: 'u-123',
+  email: 'ada@example.com',
+  name: 'Ada Lovelace',
+  account: 'acme',
+  attributes: { plan: 'premium' },
+});
+sdk.clearUser();
+```
+
+Only `id` is required. The identity is added to spans and log records created after the call, so it can be set or changed at any time, such as after the user logs in. Telemetry that was already created is not changed. These attributes are used:
+
+| Field     | Attribute              | Notes |
+|-----------|------------------------|-------|
+| `id`      | `user.id`              | |
+| `email`   | `user.email`           | |
+| `name`    | `user.full_name`       | |
+| `account` | `elastic.user.account` | The organization or tenant of the user. It is not part of the OpenTelemetry semantic conventions yet. |
+| `attributes` | `elastic.user.attributes.<key>` | Custom attributes. Keys must not be empty and values must be strings, finite numbers or booleans. |
+
+Calling `setUser` replaces the whole identity. A call without a non-empty string `id` is ignored and logs a warning. Optional fields that are not non-empty strings, custom attributes with invalid keys or values, and custom attributes beyond the first 20 are ignored, and a warning lists their names. String values other than `id` are truncated to 256 characters. Custom attributes use their own prefix, so they never override `user.*` attributes.
+
+If `startBrowserSdk` is called more than once, every returned object sets the user of the running SDK.
+
+User attributes are not added to metrics to avoid high-cardinality attributes. The identity is kept in memory only: it is not persisted across page loads, so call `setUser` again after a reload. It is not tied to sessions either, so ending a session does not clear it.
+
+:::{important}
+`email` and `name` are personal data. EDOT Browser only sends what you pass to `setUser`, so pass only the fields you are allowed to collect.
+:::
+
 ## Next steps [next-steps]
 
 - Refer to [Set up EDOT Browser](setup.md), [Install the agent](install-agent.md), and [Proxy and CORS](proxy-cors.md) for installation and export configuration.

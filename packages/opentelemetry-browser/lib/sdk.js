@@ -41,6 +41,12 @@ import {
     SessionLogRecordProcessor,
     SessionSpanProcessor,
 } from './session.js';
+import {
+    createUserApi,
+    UserLogRecordProcessor,
+    UserManager,
+    UserSpanProcessor,
+} from './user.js';
 import {EDOT_VERSION} from './version.js';
 
 /**
@@ -79,8 +85,15 @@ import {EDOT_VERSION} from './version.js';
 
 const EDOT_SCOPE_NAME = '@elastic/opentelemetry-browser';
 
+// Module scoped so a handle from a second `startBrowserSdk` call, which gets
+// the no-op SDK, still sets the user of the SDK that is running.
+const userManager = new UserManager();
+
 // SDK returned when invalid config or some error happens at start
-const NOOP_SDK = {shutdown: () => Promise.resolve()};
+const NOOP_SDK = {
+    shutdown: () => Promise.resolve(),
+    ...createUserApi(userManager),
+};
 
 // To control multiple calls to `startBrowserSdk`
 let sdkStarted = false;
@@ -100,6 +113,8 @@ const defaultConfig = {
  * @param {BrowserSdkConfiguration} cfg
  * @returns {{
  *      shutdown: () => Promise<void>;
+ *      setUser: import('./user.js').UserApi['setUser'];
+ *      clearUser: import('./user.js').UserApi['clearUser'];
  * }}
  */
 export function startBrowserSdk(cfg = {}) {
@@ -190,7 +205,7 @@ export function startBrowserSdk(cfg = {}) {
         logLevel,
         resourceAttributes,
         contextManager: AsyncApisContextManager.enable(),
-        processors: spanProcessors,
+        processors: [new UserSpanProcessor(userManager), ...spanProcessors],
     });
 
     const logsUrl = appendPath(endpointUrl, 'v1/logs').href;
@@ -216,7 +231,7 @@ export function startBrowserSdk(cfg = {}) {
     const logsSdk = startLogsSdk({
         logLevel,
         resourceAttributes,
-        processors: logProcessors,
+        processors: [new UserLogRecordProcessor(userManager), ...logProcessors],
     });
 
     // metrics signal configuration
@@ -292,6 +307,7 @@ export function startBrowserSdk(cfg = {}) {
     sdkStarted = true;
 
     return {
+        ...createUserApi(userManager),
         shutdown() {
             disableInstrumentations();
             return Promise.allSettled([

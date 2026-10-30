@@ -41,6 +41,9 @@ To check for security updates, go to [Security announcements for the Elastic sta
   Ref: https://github.com/elastic/elastic-otel-rum-js/issues/115
 * Add session-level sampling via `session.sampleRate`. Sampled sessions export automatic RUM telemetry; unsampled sessions disable instrumentations. Spans and logs include `session.sampling_rate` for backend weighting. Refer to [Configure EDOT Browser](../reference/edot-browser/configuration.md#otel_browser_session-sampling).
   Ref: https://github.com/elastic/elastic-otel-rum-js/pull/128
+* Add a user identity API. `startBrowserSdk` returns `setUser()` and `clearUser()` to add `user.id`, `user.email`,
+  `user.full_name`, `elastic.user.account` and custom `elastic.user.attributes.*` attributes to spans and log records.
+  Ref: https://github.com/elastic/elastic-otel-rum-js/issues/124
 
 ### Chores [edot-browser-X.X.X-chores]
 

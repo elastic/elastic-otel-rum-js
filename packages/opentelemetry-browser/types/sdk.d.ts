@@ -2,10 +2,14 @@
  * @param {BrowserSdkConfiguration} cfg
  * @returns {{
  *      shutdown: () => Promise<void>;
+ *      setUser: import('./user.js').UserApi['setUser'];
+ *      clearUser: import('./user.js').UserApi['clearUser'];
  * }}
  */
 export function startBrowserSdk(cfg?: BrowserSdkConfiguration): {
     shutdown: () => Promise<void>;
+    setUser: import("./user.js").UserApi["setUser"];
+    clearUser: import("./user.js").UserApi["clearUser"];
 };
 export type InstrumentationsConfigMap = {
     "navigation": import("@opentelemetry/browser-instrumentation/experimental/navigation").NavigationInstrumentationConfig;
