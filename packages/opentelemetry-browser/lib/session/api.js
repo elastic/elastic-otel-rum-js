@@ -11,6 +11,7 @@ import {toSessionInfo} from './state.js';
  * @typedef {Object} SessionApi
  * @property {() => import('./state.js').SessionInfo | undefined} getSession
  * @property {(observer: import('./observers.js').SessionObserver) => () => void} addObserver
+ * @property {() => void} endSession
  */
 
 /**
@@ -27,6 +28,9 @@ export function createSessionApi(manager) {
         },
         addObserver(observer) {
             return manager ? manager.addObserver(observer) : () => {};
+        },
+        endSession() {
+            manager?.endSession();
         },
     };
 }

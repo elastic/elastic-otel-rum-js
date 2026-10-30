@@ -529,3 +529,49 @@ test('should replace a session dated in the future without spinning on timers', 
     expect.soft(reads).toBeLessThan(50);
     expect.soft(logs[0].attributes['session.id']).not.toStrictEqual(planted.id);
 });
+
+test('should end the session from the API until the next user interaction', async ({
+    page,
+}) => {
+    const collector = createCollector(page);
+    await page.goto(FIXTURE);
+    const [initialStart] = (await collector.getLogs()).filter(
+        (l) => l.eventName === 'session.start'
+    );
+    const initialId = initialStart.attributes['session.id'];
+
+    collector.clear();
+    const ended = await page.evaluate(() => {
+        /** @type {string[]} */
+        const events = [];
+        // @ts-expect-error - set by the injected snippet
+        const {session} = globalThis.edotBrowser;
+        session.addObserver({
+            onSessionEnded: (/** @type {any} */ s) => events.push(s.id),
+        });
+        session.endSession();
+        return fetch('/')
+            .then((r) => r.text())
+            .then(() => ({events, session: session.getSession()}));
+    });
+    expect(ended.events).toStrictEqual([initialId]);
+    expect(ended.session).toBeUndefined();
+
+    const spans = await collector.getSpans();
+    const [fetchSpan] = spans.filter(
+        (s) => s.scope.name === '@opentelemetry/browser-instrumentation/fetch'
+    );
+    expect(fetchSpan.attributes['session.id']).toBeUndefined();
+
+    collector.clear();
+    await page.click('body > h1');
+    const {clicks, starts} = await getClickLogs(collector, 1);
+    expect(starts.length).toStrictEqual(1);
+    expect(starts[0].attributes['session.id']).not.toStrictEqual(initialId);
+    expect(starts[0].attributes['session.previous_id']).toStrictEqual(
+        initialId
+    );
+    expect(clicks[0].attributes['session.id']).toStrictEqual(
+        starts[0].attributes['session.id']
+    );
+});

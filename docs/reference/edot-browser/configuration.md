@@ -176,11 +176,24 @@ const unsubscribe = sdk.session.addObserver({
 
 Both callbacks are optional and run synchronously. The observer has the same shape as the upstream `@opentelemetry/browser-sdk/session` one.
 
-- `onSessionEnded` is called when the session expires, when another tab replaces the session, and when `localStorage` is cleared. Expiry calls it even if the application produces no telemetry.
+- `onSessionEnded` is called when the session expires, when the application ends it with `endSession()`, when another tab replaces the session, and when `localStorage` is cleared. Expiry calls it even if the application produces no telemetry.
 - `onSessionStarted` is called when this tab starts a session or adopts one started by another tab. `previous` is set only when this tab sees the preceding session end. Observers added after `startBrowserSdk` returns do not receive the initial session. Use `getSession()` to read it.
 - Browsers throttle timers in background tabs, so `onSessionEnded` can be delayed until the tab is used again.
 
-When web storage is unavailable or after `sdk.shutdown()`, `getSession()` returns `undefined` and `addObserver()` has no effect.
+#### End a session [otel_browser_session-end]
+
+Call `endSession()` to end the current session before it expires, for example when the user logs out, so the next user does not share the same `session.id`:
+
+```js
+function logout() {
+  sdk.session.endSession();
+  // ...
+}
+```
+
+The session ends in every tab of the application and observers get `onSessionEnded`. As after an expiry, telemetry has no `session.id` until the next user interaction or page load starts a new session, which has the ended session as `session.previous_id`. Calling it when no session is active has no effect.
+
+When web storage is unavailable or after `sdk.shutdown()`, `getSession()` returns `undefined`, and `addObserver()` and `endSession()` have no effect.
 
 ## Next steps [next-steps]
 

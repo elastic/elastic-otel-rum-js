@@ -838,3 +838,92 @@ test('SessionManager - exports without a session only when every session is samp
         false
     );
 });
+
+test('SessionManager - endSession ends the session until the next activity', () => {
+    const {createStarted, clock, started, activeTimers} = setup();
+    const manager = createStarted();
+    const first = manager.getSession();
+    const {calls, previous} = observe(manager);
+
+    manager.endSession();
+
+    assert.deepStrictEqual(calls, [`ended:${first?.id}`]);
+    assert.strictEqual(manager.getSession(), undefined);
+    assert.strictEqual(manager.getAttributes()['session.id'], undefined);
+    assert.strictEqual(activeTimers().length, 0);
+
+    // Within the activity throttle window of the page load
+    clock.now += 1_000;
+    manager.recordActivity();
+
+    const second = manager.getSession();
+    assert.ok(second);
+    assert.notStrictEqual(second.id, first?.id);
+    assert.strictEqual(second.previousId, first?.id);
+    assert.deepStrictEqual(calls, [
+        `ended:${first?.id}`,
+        `started:${second.id}`,
+    ]);
+    assert.strictEqual(previous[0]?.id, first?.id);
+    assert.strictEqual(started.length, 2);
+});
+
+test('SessionManager - endSession is not undone by presence or a reload', () => {
+    const {createStarted, create} = setup();
+    const manager = createStarted();
+    const first = manager.getSession();
+
+    manager.endSession();
+    manager.recordActivity({renew: false});
+    assert.strictEqual(manager.getSession(), undefined);
+
+    const reloaded = create();
+    assert.strictEqual(reloaded.getSession(), undefined);
+    reloaded.start();
+    assert.strictEqual(reloaded.getSession()?.previousId, first?.id);
+});
+
+test('SessionManager - endSession ends the session in every tab', () => {
+    const {createStarted, advance} = setup();
+    const tabA = createStarted();
+    const tabB = createStarted(new MemoryStorage());
+    const first = tabA.getSession();
+    const {calls} = observe(tabB);
+
+    tabA.endSession();
+
+    // Tab B notices on its expiry timer or its next read
+    advance(61_000);
+    assert.deepStrictEqual(calls, [`ended:${first?.id}`]);
+
+    tabB.recordActivity();
+    const second = tabB.getSession();
+    assert.strictEqual(second?.previousId, first?.id);
+    assert.strictEqual(tabA.getSession()?.id, second?.id);
+});
+
+test('SessionManager - endSession does nothing without an active session', () => {
+    const {createStarted, clock, sessionStorage} = setup();
+    const manager = createStarted();
+    const {calls} = observe(manager);
+    manager.endSession();
+    const stored = sessionStorage.getItem(SESSION_STORAGE_KEY);
+
+    manager.endSession();
+    clock.now += 61_000;
+    manager.endSession();
+
+    assert.strictEqual(calls.length, 1);
+    assert.strictEqual(sessionStorage.getItem(SESSION_STORAGE_KEY), stored);
+});
+
+test('SessionManager - endSession does nothing after shutdown', () => {
+    const {createStarted, sessionStorage} = setup();
+    const manager = createStarted();
+    const stored = sessionStorage.getItem(SESSION_STORAGE_KEY);
+    manager.shutdown();
+
+    manager.endSession();
+
+    assert.strictEqual(sessionStorage.getItem(SESSION_STORAGE_KEY), stored);
+});
