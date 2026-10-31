@@ -26,6 +26,15 @@ Tests are run on every PR and are required to be passing before merge.
 - test workflow: https://github.com/elastic/elastic-otel-rum-js/blob/main/.github/workflows/test-edot.yml
 - "main" branch latest test runs: https://github.com/elastic/elastic-otel-rum-js/actions/workflows/test-edot.yml?query=branch%3Amain
 
+After the smoke tests build the bundles, CI reports their raw, gzip and Brotli
+sizes in bytes in the job summary and logs. Compression uses Node.js defaults.
+The report excludes source maps and does not enforce a size budget.
+To generate it locally after `npm run build`:
+
+```
+npm run --silent report:bundle-size
+```
+
 
 ## Testing locally for development
 

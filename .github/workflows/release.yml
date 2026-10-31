@@ -1,13 +1,25 @@
 # Release a tagged version of the '@elastic/opentelemetry-browser' package.
 name: release
 
-# Primarily this workflow is about doing a release for a *tag*. However, this is
-# also run for pushes to "main" to (a) go through some of the motions for
-# testing, and (b) publishing the Docker image with an "edge" label.
+# `release`: version tag push. `release-canary`: push to `canary`.
+# `release-manual`: run from the Actions UI (workflow_dispatch).
 on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: Git branch to release from (must exist on origin).
+        required: true
+        type: string
+      sha:
+        description: Must belong to the given branch. Leave empty to use the branch HEAD.
+        required: false
+        type: string
+        default: ''
   push:
     tags:
       - v*.*.*
+    branches:
+      - canary
     paths:
       - 'packages/opentelemetry-browser/**'
       - '.github/workflows/release.yml'
@@ -17,20 +29,20 @@ permissions:
 
 jobs:
   release:
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-24.04
     permissions:
       contents: write
       id-token: write # Required for OIDC and provenance (npm publish)
       pull-requests: read
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
-          # Require npm 11.5.1 or later for https://docs.npmjs.com/trusted-publishers.
-          node-version: 'v24.8.0'
+          node-version-file: '.nvmrc'
           registry-url: 'https://registry.npmjs.org'
           package-manager-cache: false
 
@@ -62,3 +74,126 @@ jobs:
           bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
           channel-id: "#apm-agent-js"
           message: '[${{ github.repository }}] Release `@elastic/opentelemetry-browser` *${{ github.ref_name }}*'
+
+  # Canary release publishes latest HEAD of the canary branch
+  # It does not generate notice or a GH release
+  release-canary:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/canary'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      id-token: write # Required for OIDC and provenance (npm publish)
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+          registry-url: 'https://registry.npmjs.org'
+          package-manager-cache: false
+
+      - name: npm ci
+        run: npm run ci-all
+
+      - name: Set canary version
+        run: node ./scripts/set-canary-version.js ${{ github.sha }} default
+
+      - name: npm publish
+        working-directory: ./packages/opentelemetry-browser
+        run: npm publish --tag canary
+
+      - name: Notify in Slack
+        # Only notify on failure, because on success the published GitHub
+        # Release will result in a notification from the GitHub Slack app
+        # (assuming '/github subscribe elastic/elastic-otel-rum-js').
+        if: ${{ failure() }}
+        uses: elastic/oblt-actions/slack/notify-result@v1
+        with:
+          bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
+          channel-id: "#apm-agent-js"
+          message: '[${{ github.repository }}] Canary release `@elastic/opentelemetry-browser` *${{ github.ref_name }}*'
+
+  # Manual release is for devs that need a specific revision from any branch
+  release-manual:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      id-token: write # Required for OIDC and provenance (npm publish)
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.inputs.branch }}
+
+      - name: Validate branch and commit, checkout revision
+        env:
+          BRANCH: ${{ github.event.inputs.branch }}
+          SHA: ${{ github.event.inputs.sha }}
+        run: |
+          set -euo pipefail
+          SHA="${SHA// /}"
+
+          if git show-ref --verify --quiet "refs/remotes/origin/${BRANCH}"; then
+            BRANCH_REF="origin/${BRANCH}"
+          elif git show-ref --verify --quiet "refs/heads/${BRANCH}"; then
+            BRANCH_REF="${BRANCH}"
+          else
+            echo "ERROR: Branch '${BRANCH}' does not exist."
+            exit 1
+          fi
+
+          if [[ -z "$SHA" ]]; then
+            git checkout "$BRANCH_REF"
+            echo "Commit SHA empty; using HEAD of ${BRANCH}: $(git rev-parse HEAD)"
+            exit 0
+          fi
+
+          echo "Checking whether commit ${SHA} has the right format"
+          if [[ ! "$SHA" =~ ^[0-9a-fA-F]{40}$ ]]; then
+            echo "Invalid input: commit sha must be exactly 40 hexadecimal characters."
+            exit 1
+          fi
+
+          if ! git cat-file -e "${SHA}^{commit}" 2>/dev/null; then
+            echo "ERROR: Commit ${SHA} does not exist in this repository."
+            exit 1
+          fi
+
+          echo "Checking whether commit ${SHA} belongs to ${BRANCH}"
+          if git merge-base --is-ancestor "$SHA" "$BRANCH_REF"; then
+            echo "Commit ${SHA} belongs to branch ${BRANCH}"
+          else
+            echo "ERROR: Commit ${SHA} does not belong to branch ${BRANCH}"
+            exit 1
+          fi
+
+          git checkout "$SHA"
+          echo "Checked out commit $(git rev-parse HEAD)"
+
+          # The slugified branch name will be used for version and npm tag
+          SLUG=$(echo "$BRANCH" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g; s/^-+|-+$//g')
+          echo "SLUG=$SLUG" >> "$GITHUB_ENV"
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+          registry-url: 'https://registry.npmjs.org'
+          package-manager-cache: false
+
+      - name: npm ci
+        run: npm run ci-all
+
+      - name: Set canary version
+        env:
+          BRANCH: ${{ github.event.inputs.branch }}
+        run: node ./scripts/set-canary-version.js "$(git rev-parse HEAD)" "$SLUG"
+
+      - name: npm publish
+        working-directory: ./packages/opentelemetry-browser
+        run: npm publish --tag "canary-$SLUG"
+      

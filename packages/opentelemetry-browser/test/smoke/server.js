@@ -3,14 +3,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-// NOTE: we get the @types/node here because of transitive deps
-// @opentelemetry/exporter-*-otlp-http
-//  -> @opentelemetry/otlp-transformer
-//      -> protobufjs
-//          -> @types/node
-// it's okay for now but wee need to add a 3-slash reference once this
-// transitive deps are resolved
-
 import {createReadStream, lstatSync, readFileSync} from 'fs';
 import {createServer} from 'http';
 
@@ -62,8 +54,9 @@ const server = createServer((req, res) => {
         // anythign starting with "/v1/*" will be dumped here
         // to show the traces, metrics & logs exports
         if (firstSegment === 'v1') {
-            const signal = secondSegment;
+            /** @type {Uint8Array[]} */
             const chunks = [];
+            const signal = secondSegment;
             req.on('data', (chunk) => chunks.push(chunk));
             req.on('end', () => {
                 try {
@@ -87,10 +80,17 @@ const server = createServer((req, res) => {
 });
 
 server.listen(3000);
-console.log(`server listening to http://localhost:${server.address().port}`);
+console.log(`server listening to http://localhost:3000`);
 
 // -- helper functions
 
+/**
+ * Injects the EDOT script tag with the given configuraiton in sync or async mode
+ * @param {string} html
+ * @param {Record<string, any>} config
+ * @param {boolean} jsSync
+ * @returns
+ */
 function injectSdk(html, config, jsSync) {
     const placeholder = '<!-- EDOT_PLACEHOLDER (DO NOT REMOVE)-->';
     const codeAsync = `

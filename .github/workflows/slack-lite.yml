@@ -19,6 +19,8 @@ env:
 on:
   issues:
     types: [opened, reopened, closed]
+  # This cannot be 'pull_request', otherwise a PR submitter can write whatever
+  # message they want.
   pull_request_target:
     types: [opened, ready_for_review, reopened, closed]
 

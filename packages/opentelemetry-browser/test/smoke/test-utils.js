@@ -5,8 +5,33 @@
 
 /**
  * @typedef {{
+ *  resource: { attributes: Record<string, any> };
+ *  scope: {name: string; version: string};
+ *  traceId: string;
+ *  spanId: string;
+ *  kind: string;
+ *  status: string;
+ *  startTimeUnixNano: string;
+ *  endTimeUnixNano: string;
+ *  attributes: Record<string, any>;
+ * }} CollectedSpan
+ */
+/**
+ * @typedef {{
+ *  scope: {name: string; version: string};
+ *  eventName: string;
+ *  severityNumber: number;
+ *  timeUnixNano: string;
+ *  observedTimeUnixNano: string;
+ *  body: any;
+ *  attributes: Record<string, any>;
+ * }} CollectedLog
+ */
+
+/**
+ * @typedef {{
  *  getRequests: () => any[];
- *  getSpans: (options?: {flush: boolean}) => Promise<any[]>;
+ *  getSpans: (options?: {flush: boolean}) => Promise<CollectedSpan[]>;
  *  getMetrics: (options?: {flush: boolean}) => Promise<any[]>;
  *  getLogs: (options?: {flush: boolean}) => Promise<any[]>;
  *  clear: () => void;
@@ -18,6 +43,7 @@
  * @returns {Collector}
  */
 export function createCollector(page) {
+    /** @type {Record<string, any>} */
     const raw = {
         requests: [],
         traces: [],
@@ -27,14 +53,23 @@ export function createCollector(page) {
     // intercept EDOT exports
     page.route(/\/v1\/(traces|metrics|logs)$/, async (route, req) => {
         const url = req.url();
+        const payload = req.postData();
         const signal = url.split('/').pop();
-        const data = JSON.parse(req.postData());
-        raw[signal].push(data);
-        raw.requests.push({
-            url,
-            data,
-            headers: req.headers(),
-        });
+        const data = payload && JSON.parse(payload);
+
+        // Add only if data & signal available
+        if (data && signal) {
+            raw[signal].push(data);
+            raw.requests.push({
+                url,
+                data,
+                headers: req.headers(),
+            });
+        } else {
+            console.warn(
+                `Error adding data to endpoint ${url}: ${data ? 'signal' : 'data'} is missing.`
+            );
+        }
         await route.fulfill({
             status: 200,
             contentType: 'application/json',
@@ -97,43 +132,55 @@ export function createCollector(page) {
         },
         async getSpans(options = {flush: true}) {
             const rawTraces = await waitForData('traces', options.flush);
+            /** @type {CollectedSpan[]} */
             const spans = [];
             rawTraces.forEach((trace) => {
-                trace.resourceSpans.forEach((resourceSpan) => {
-                    normalizeAttributes(resourceSpan.resource);
-                    resourceSpan.scopeSpans.forEach((scopeSpan) => {
-                        scopeSpan.spans.forEach((span) => {
-                            normalizeSpan(span);
-                            span.resource = resourceSpan.resource;
-                            span.scope = scopeSpan.scope;
-                            spans.push(span);
-                        });
-                    });
-                });
+                trace.resourceSpans.forEach(
+                    (/** @type {any} */ resourceSpan) => {
+                        normalizeAttributes(resourceSpan.resource);
+                        resourceSpan.scopeSpans.forEach(
+                            (/** @type {any} */ scopeSpan) => {
+                                scopeSpan.spans.forEach(
+                                    (/** @type {any} */ span) => {
+                                        normalizeSpan(span);
+                                        span.resource = resourceSpan.resource;
+                                        span.scope = scopeSpan.scope;
+                                        spans.push(span);
+                                    }
+                                );
+                            }
+                        );
+                    }
+                );
             });
-            // TODO: sort spans?
             return spans;
         },
         async getMetrics(options = {flush: true}) {
             const rawMetrics = await waitForData('metrics', options.flush);
             // TODO: normalization
+            /** @type {any[]} */
             const metrics = [];
             return metrics;
         },
         async getLogs(options = {flush: true}) {
-            const rawLogs = await waitForData('logs', options.flush);
+            /** @type {CollectedLog[]} */
             const records = [];
+            const rawLogs = await waitForData('logs', options.flush);
             rawLogs.forEach((logs) => {
-                logs.resourceLogs.forEach((resourceLogs) => {
+                logs.resourceLogs.forEach((/** @type {any} */ resourceLogs) => {
                     normalizeAttributes(resourceLogs.resource);
-                    resourceLogs.scopeLogs.forEach((scopeLog) => {
-                        scopeLog.logRecords.forEach((logRecord) => {
-                            normalizeAttributes(logRecord);
-                            logRecord.resource = resourceLogs.resource;
-                            logRecord.scope = scopeLog.scope;
-                            records.push(logRecord);
-                        });
-                    });
+                    resourceLogs.scopeLogs.forEach(
+                        (/** @type {any} */ scopeLog) => {
+                            scopeLog.logRecords.forEach(
+                                (/** @type {any} */ logRecord) => {
+                                    normalizeAttributes(logRecord);
+                                    logRecord.resource = resourceLogs.resource;
+                                    logRecord.scope = scopeLog.scope;
+                                    records.push(logRecord);
+                                }
+                            );
+                        }
+                    );
                 });
             });
             return records;
@@ -146,11 +193,13 @@ export function createCollector(page) {
 }
 
 // -- helper functions
+/** @type {Record<number, string>} */
 const StatusCodeMap = {
     0: 'STATUS_CODE_UNSET',
     1: 'STATUS_CODE_OK',
     2: 'STATUS_CODE_ERROR',
 };
+/** @type {Record<number, string>} */
 const SpanKindMap = {
     0: 'SPAN_KIND_UNSPECIFIED',
     1: 'SPAN_KIND_INTERNAL',
@@ -185,6 +234,7 @@ function normalizeSpan(span) {
 function normalizeAttributes(obj) {
     const {attributes} = obj;
     if (Array.isArray(attributes)) {
+        /** @type {Record<string, any>} */
         const attrs = {};
         for (let i = 0; i < attributes.length; i++) {
             const attr = attributes[i];
@@ -225,6 +275,7 @@ function normAttrValue(v) {
             return Number(v.intValue);
         }
     } else if ('kvlistValue' in v) {
+        /** @type {Record<string, any>} */
         const obj = {};
         if (v.kvlistValue.values) {
             for (let keyValue of v.kvlistValue.values) {

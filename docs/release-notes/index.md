@@ -32,13 +32,17 @@ To check for security updates, go to [Security announcements for the Elastic sta
 % ### Chores [edot-browser-X.X.X-chores]
 % *
 
-## X.X.X [edot-browser-X.X.X-release-notes]
+## 0.4.0 [edot-browser-0.4.0-release-notes]
 
-### Features and enhancements [edot-browser-X.X.X-features-enhancements]
+### Features and enhancements [edot-browser-0.4.0-features-enhancements]
 
 * Align configuration with the upstream [browser-sdk](https://github.com/open-telemetry/opentelemetry-browser/tree/main/packages/sdk).
+* Add session tracking. Spans and log records include `session.id`, `session.previous_id`, and `browser.tab.id` attributes. A `session.start` event is emitted when a session starts.
+  Ref: https://github.com/elastic/elastic-otel-rum-js/issues/115
+* Add session-level sampling via `session.sampleRate`. Sampled sessions export automatic RUM telemetry; unsampled sessions disable instrumentations. Spans and logs include `session.sampling_rate` for backend weighting. Refer to [Configure EDOT Browser](../reference/edot-browser/configuration.md#otel_browser_session-sampling).
+  Ref: https://github.com/elastic/elastic-otel-rum-js/pull/128
 
-### Chores [edot-browser-X.X.X-chores]
+### Chores [edot-browser-0.4.0-chores]
 
 * Use the new upstream `@opentelemetry/browser-sdk` package to setup traces and logs signal.
 * Switch to the new upstream `navigation` instrumentation from  `@opentelemetry/browser-sdk` package.
@@ -46,10 +50,10 @@ To check for security updates, go to [Security announcements for the Elastic sta
     from [opentelemetry-js-contrib](https://github.com/open-telemetry/opentelemetry-js-contrib) to
     [opentelemetry-browser](https://github.com/open-telemetry/opentelemetry-browser). There are no changes in the data
     model rather than the scope.
-  * This change breaks the configuration interface of instrumentation switching the configuration key form the full
+  * This change breaks the configuration interface of instrumentation switching the configuration key from the full
     scope to a shorter name `navigation`.
 * Update `typescript` package to match the version in [opentelemetry-browser](https://github.com/open-telemetry/opentelemetry-browser).
-  * SDK has ben updated to retun a no-op SDK to conform to the types in the previous version.
+  * SDK has been updated to return a no-op SDK to conform to the types in the previous version.
   * Internal JSDoc comments have been updated for better type checking.
 * Remove patching of `window.setImmediate` function in the context manager. The function is deprecated and not available
   in the majority of browsers. Ref: https://developer.mozilla.org/en-US/docs/Web/API/Window/setImmediate

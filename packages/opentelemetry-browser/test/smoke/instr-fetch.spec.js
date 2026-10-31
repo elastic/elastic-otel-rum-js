@@ -54,6 +54,8 @@ test('should export fetch related spans', async ({page}) => {
     expect(fetchSpans[0].attributes['url.full']).toStrictEqual(
         'http://localhost:3000/api/method'
     );
+    expect(fetchSpans[0].attributes['session.id']).toBeDefined();
+    expect(fetchSpans[0].attributes['browser.tab.id']).toBeDefined();
     expect(fetchSpans[1].kind).toStrictEqual('SPAN_KIND_CLIENT');
     expect(fetchSpans[1].attributes['http.url']).not.toBeDefined();
     expect(fetchSpans[1].attributes['url.full']).toStrictEqual(
