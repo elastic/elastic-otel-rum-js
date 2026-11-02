@@ -99,8 +99,9 @@ To turn off an instrumentation, pass `instrumentations` to `startBrowserSdk` wit
 | OpenTelemetry JS API (`@opentelemetry/api`) | ^1.9.0 |
 | OpenTelemetry Browser SDK (`@opentelemetry/browser-sdk`) | ^0.3.0 |
 | OpenTelemetry Browser Instrumentation (`@opentelemetry/browser-instrumentation`) | ^0.8.0 |
-| OpenTelemetry JS Trace SDK (`@opentelemetry/sdk-trace`) | ^2.10.0 |
+| OpenTelemetry JS Trace SDK (`@opentelemetry/sdk-trace`) | ^2.12.0 |
 | OpenTelemetry JS Metrics SDK (`@opentelemetry/sdk-metrics`) | ^2.2.0 |
+| OpenTelemetry JS Logs SDK (`@opentelemetry/sdk-logs`) | ^0.223.0 |
 | OpenTelemetry JS Logs API (`@opentelemetry/api-logs`) | ^0.221.0 |
 
 <!-- TODO: document compatibility matrix once versioning strategy is defined -->

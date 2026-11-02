@@ -20,7 +20,7 @@ This page explains how to configure EDOT Browser, which settings are supported, 
 EDOT Browser follows OpenTelemetry configuration conventions where possible. Like the upstream OpenTelemetry Browser SDK, it uses explicit configuration at initialization rather than environment variables, which are not available in the browser.
 
 :::{important}
-In versions after 0.3, several configuration keys changed to align with the upstream OpenTelemetry Browser SDK. For example, `otlpEndpoint` and `exportHeaders` moved to `exportConfig.url` and `exportConfig.headers`, and instrumentation keys use short names such as `fetch` and `user-action`. If you're upgrading, refer to [EDOT Browser breaking changes](../../release-notes/breaking-changes.md) for the full list of changes and migration steps.
+In 0.4 and later, several configuration keys changed to align with the upstream OpenTelemetry Browser SDK. For example, `otlpEndpoint` and `exportHeaders` moved to `exportConfig.url` and `exportConfig.headers`, the top-level `sampleRate` option moved to `session.sampleRate`, and instrumentation keys use short names such as `fetch` and `user-action`. If you're upgrading, refer to [EDOT Browser breaking changes](../../release-notes/breaking-changes.md) for the full list of changes and migration steps.
 :::
 
 ## Configuration model in the browser [configuration-model-in-the-browser]

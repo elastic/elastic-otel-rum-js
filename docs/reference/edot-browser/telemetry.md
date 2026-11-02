@@ -55,7 +55,7 @@ EDOT Browser initializes tracing and registers instrumentations that produce spa
 Long tasks no longer produce spans. EDOT Browser no longer includes the `@opentelemetry/instrumentation-long-task` instrumentation. A replacement based on [long animation frame](https://developer.mozilla.org/en-US/docs/Web/API/PerformanceLongAnimationFrameTiming) timing is planned for a future release.
 :::
 
-In versions after 0.3, page and resource load timing, user actions (clicks), and navigation are exported on the logs signal instead of as spans. Refer to [Logs](#logs) for details on each record type. If you're upgrading, refer to [EDOT Browser breaking changes](../../release-notes/breaking-changes.md) for the affected instrumentation keys and migration steps.
+In 0.4 and later, page and resource load timing, user actions (clicks), and navigation are exported on the logs signal instead of as spans. Refer to [Logs](#logs) for details on each record type. If you're upgrading, refer to [EDOT Browser breaking changes](../../release-notes/breaking-changes.md) for the affected instrumentation keys and migration steps.
 
 When your backend is instrumented with OpenTelemetry and trace context (trace ID, span ID) is propagated in HTTP headers, the browser’s `external.http` span and the backend spans appear in the same trace, giving you end-to-end visibility in Discover and Service Maps. Refer to [What to expect in {{kib}}](setup.md#what-to-expect-in-kibana) for how these traces appear in the Observability app.
 
