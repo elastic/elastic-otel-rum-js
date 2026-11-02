@@ -2,9 +2,9 @@
 navigation_title: Configuration
 description: Configure the Elastic Distribution of OpenTelemetry Browser (EDOT Browser).
 applies_to:
-  stack: ga
+  stack:
   serverless:
-    observability: ga
+    observability:
   product:
     edot_browser: preview
 products:
@@ -18,6 +18,10 @@ products:
 This page explains how to configure EDOT Browser, which settings are supported, and what's required to start exporting browser telemetry.
 
 EDOT Browser follows OpenTelemetry configuration conventions where possible. Like the upstream OpenTelemetry Browser SDK, it uses explicit configuration at initialization rather than environment variables, which are not available in the browser.
+
+:::{important}
+In versions after 0.3, several configuration keys changed to align with the upstream OpenTelemetry Browser SDK. For example, `otlpEndpoint` and `exportHeaders` moved to `exportConfig.url` and `exportConfig.headers`, and instrumentation keys use short names such as `fetch` and `user-action`. If you're upgrading, refer to [EDOT Browser breaking changes](../../release-notes/breaking-changes.md) for the full list of changes and migration steps.
+:::
 
 ## Configuration model in the browser [configuration-model-in-the-browser]
 

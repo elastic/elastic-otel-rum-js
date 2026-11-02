@@ -2,9 +2,9 @@
 navigation_title: Supported technologies
 description: Supported browsers and instrumentations in EDOT Browser.
 applies_to:
-  stack: ga
+  stack:
   serverless:
-    observability: ga
+    observability:
   product:
     edot_browser: preview
 products:
@@ -96,10 +96,12 @@ To turn off an instrumentation, pass `instrumentations` to `startBrowserSdk` wit
 
 | Component | Version |
 |----------|---------|
-| OpenTelemetry JS API | ^1.9.0 |
-| OpenTelemetry JS Trace SDK | ^2.2.0 |
-| OpenTelemetry JS Metrics SDK | ^2.2.0 |
-| OpenTelemetry JS Logs SDK | ^0.213.0 |
+| OpenTelemetry JS API (`@opentelemetry/api`) | ^1.9.0 |
+| OpenTelemetry Browser SDK (`@opentelemetry/browser-sdk`) | ^0.3.0 |
+| OpenTelemetry Browser Instrumentation (`@opentelemetry/browser-instrumentation`) | ^0.8.0 |
+| OpenTelemetry JS Trace SDK (`@opentelemetry/sdk-trace`) | ^2.10.0 |
+| OpenTelemetry JS Metrics SDK (`@opentelemetry/sdk-metrics`) | ^2.2.0 |
+| OpenTelemetry JS Logs API (`@opentelemetry/api-logs`) | ^0.221.0 |
 
 <!-- TODO: document compatibility matrix once versioning strategy is defined -->
 

@@ -2,9 +2,9 @@
 navigation_title: Install the agent
 description: Install and initialize the EDOT Browser agent (package or bundle).
 applies_to:
-  stack: ga
+  stack:
   serverless:
-    observability: ga
+    observability:
   product:
     edot_browser: preview
 products:
