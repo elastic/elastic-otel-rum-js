@@ -37,9 +37,12 @@ import {
     EVENT_SESSION_START,
 } from './semconv.js';
 import {
+    createSessionApi,
     createSessionManager,
+    resolveActivityEvents,
     SessionLogRecordProcessor,
     SessionSpanProcessor,
+    trackUserActivity,
 } from './session.js';
 import {
     createUserApi,
@@ -93,6 +96,7 @@ const userManager = new UserManager();
 const NOOP_SDK = {
     shutdown: () => Promise.resolve(),
     ...createUserApi(userManager),
+    session: createSessionApi(undefined),
 };
 
 // To control multiple calls to `startBrowserSdk`
@@ -115,6 +119,7 @@ const defaultConfig = {
  *      shutdown: () => Promise<void>;
  *      setUser: import('./user.js').UserApi['setUser'];
  *      clearUser: import('./user.js').UserApi['clearUser'];
+ *      session: import('./session.js').SessionApi;
  * }}
  */
 export function startBrowserSdk(cfg = {}) {
@@ -161,8 +166,12 @@ export function startBrowserSdk(cfg = {}) {
 
     const edotLogger = logs.getLogger(EDOT_SCOPE_NAME, EDOT_VERSION);
     const sessionManager = createSessionManager(config.session);
-    sessionManager?.observe('session:start', (session) => {
-        if (session.sampled) {
+    sessionManager?.addObserver({
+        onSessionStarted(session) {
+            // Tabs sharing the session are told too, only its creator reports it
+            if (!session.sampled || !sessionManager.isCreatedHere(session.id)) {
+                return;
+            }
             /** @type {import('@opentelemetry/api').Attributes} */
             const attributes = {[ATTR_SESSION_ID]: session.id};
             if (session.previousId) {
@@ -172,7 +181,7 @@ export function startBrowserSdk(cfg = {}) {
                 eventName: EVENT_SESSION_START,
                 attributes,
             });
-        }
+        },
     });
 
     // To have full control of what's exported we need to build the processor
@@ -233,6 +242,15 @@ export function startBrowserSdk(cfg = {}) {
         resourceAttributes,
         processors: [new UserLogRecordProcessor(userManager), ...logProcessors],
     });
+    // Start eagerly so `session.start` is emitted on load rather than with
+    // the first piece of telemetry.
+    sessionManager?.start();
+    const stopActivityTracking =
+        sessionManager &&
+        trackUserActivity(
+            sessionManager,
+            resolveActivityEvents(config.session)
+        );
 
     // metrics signal configuration
     // possible `startMetricsSdk` function
@@ -299,16 +317,15 @@ export function startBrowserSdk(cfg = {}) {
         }
     });
 
-    // Resolve the session eagerly so `session.start` is emitted on load
-    // rather than with the first piece of telemetry.
-    sessionManager?.getSession();
-
     // Flag as started
     sdkStarted = true;
 
     return {
         ...createUserApi(userManager),
+        session: createSessionApi(sessionManager),
         shutdown() {
+            stopActivityTracking?.();
+            sessionManager?.shutdown();
             disableInstrumentations();
             return Promise.allSettled([
                 tracesSdk.shutdown(),
