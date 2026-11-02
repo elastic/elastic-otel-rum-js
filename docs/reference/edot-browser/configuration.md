@@ -158,14 +158,14 @@ A tab becoming visible extends an active session but does not start a new one. T
 
 #### Observe sessions
 
-`startBrowserSdk` returns a `session` object to read the current session and to react when sessions start or end:
+The object `startBrowserSdk` returns has methods to read the current session and to react when sessions start or end:
 
 ```js
 const sdk = startBrowserSdk({/* ... */});
 
-sdk.session.getSession(); // { id, previousId, startTimestamp, sampled }, or undefined when no session is active
+sdk.getSession(); // { id, previousId, startTimestamp, sampled }, or undefined when no session is active
 
-const unsubscribe = sdk.session.addObserver({
+const unsubscribe = sdk.addObserver({
   onSessionStarted(session, previous) {
     console.log('Session started', session.id, 'after', previous?.id);
   },
@@ -187,7 +187,7 @@ Call `endSession()` to end the current session before it expires, for example wh
 
 ```js
 function logout() {
-  sdk.session.endSession();
+  sdk.endSession();
   // ...
 }
 ```

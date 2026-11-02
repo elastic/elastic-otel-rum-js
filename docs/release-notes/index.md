@@ -42,14 +42,14 @@ To check for security updates, go to [Security announcements for the Elastic sta
   Ref: https://github.com/elastic/elastic-otel-rum-js/issues/115
 * Expire sessions based on user activity. Sessions end after 30 minutes without user interaction, or 4 hours in total. Telemetry sent after that has no `session.id` until the next interaction. Set `session.activityEvents` to define what counts as activity.
   Ref: https://github.com/elastic/elastic-otel-rum-js/issues/81
-* Add a session API. `startBrowserSdk` returns `sdk.session.getSession()` and `sdk.session.addObserver()` for reading the current session and reacting when sessions start and end.
+* Add a session API. The SDK returned by `startBrowserSdk` has `sdk.getSession()` and `sdk.addObserver()` for reading the current session and reacting when sessions start and end.
   Ref: https://github.com/elastic/elastic-otel-rum-js/issues/81
 * Add session-level sampling via `session.sampleRate`. Sampled sessions export automatic RUM telemetry; unsampled sessions disable instrumentations. Spans and logs include `session.sampling_rate` for backend weighting. Refer to [Configure EDOT Browser](../reference/edot-browser/configuration.md#otel_browser_session-sampling).
   Ref: https://github.com/elastic/elastic-otel-rum-js/pull/128
 * Add a user identity API. `startBrowserSdk` returns `setUser()` and `clearUser()` to add `user.id`, `user.email`,
   `user.full_name`, `elastic.user.account` and custom `elastic.user.attributes.*` attributes to spans and log records.
   Ref: https://github.com/elastic/elastic-otel-rum-js/issues/124
-* Add `sdk.session.endSession()` to end the current session, for example on logout. The next session starts on the next user interaction.
+* Add `sdk.endSession()` to end the current session, for example on logout. The next session starts on the next user interaction.
   Ref: https://github.com/elastic/elastic-otel-rum-js/issues/123
 
 ### Chores [edot-browser-X.X.X-chores]

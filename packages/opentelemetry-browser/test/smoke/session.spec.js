@@ -252,13 +252,13 @@ test('should notify session observers when the session ends and starts', async (
 
     const initial = await page.evaluate(() =>
         // @ts-expect-error - set by the injected snippet
-        globalThis.edotBrowser.session.getSession()
+        globalThis.edotBrowser.getSession()
     );
     await page.evaluate(() => {
         // @ts-expect-error - test globals
         globalThis.sessionEvents = [];
         // @ts-expect-error - set by the injected snippet
-        globalThis.edotBrowser.session.addObserver({
+        globalThis.edotBrowser.addObserver({
             onSessionStarted: (/** @type {any} */ s, /** @type {any} */ p) =>
                 // @ts-expect-error - test globals
                 globalThis.sessionEvents.push(['started', s, p]),
@@ -277,7 +277,7 @@ test('should notify session observers when the session ends and starts', async (
     expect(
         await page.evaluate(() =>
             // @ts-expect-error - set by the injected snippet
-            globalThis.edotBrowser.session.getSession()
+            globalThis.edotBrowser.getSession()
         )
     ).toBeUndefined();
 
@@ -349,7 +349,7 @@ test('should stop tracking the session on shutdown', async ({page}) => {
         // @ts-expect-error - test globals
         globalThis.sessionEvents = [];
         // @ts-expect-error - set by the injected snippet
-        globalThis.edotBrowser.session.addObserver({
+        globalThis.edotBrowser.addObserver({
             onSessionStarted: () =>
                 // @ts-expect-error - test globals
                 globalThis.sessionEvents.push('started'),
@@ -378,11 +378,12 @@ test('should expose a no-op session API when the SDK does not start', async ({
 
     const result = await page.evaluate(() => {
         // @ts-expect-error - set by the injected snippet
-        const {session} = globalThis.edotBrowser;
-        const unsubscribe = session.addObserver({});
+        const sdk = globalThis.edotBrowser;
+        const unsubscribe = sdk.addObserver({});
         unsubscribe();
+        sdk.endSession();
         return {
-            session: session.getSession(),
+            session: sdk.getSession(),
             unsubscribe: typeof unsubscribe,
         };
     });
@@ -444,8 +445,8 @@ test('should not notify observers after shutdown when another tab rotates the se
         /** @type {string[]} */
         const seen = [];
         // @ts-expect-error - set by the injected snippet
-        const {session, shutdown} = globalThis.edotBrowser;
-        session.addObserver({
+        const {addObserver, getSession, shutdown} = globalThis.edotBrowser;
+        addObserver({
             onSessionStarted: () => seen.push('started'),
             onSessionEnded: () => seen.push('ended'),
         });
@@ -460,7 +461,7 @@ test('should not notify observers after shutdown when another tab rotates the se
                 lastActivityTimestamp: Date.now(),
             })
         );
-        const after = session.getSession();
+        const after = getSession();
         return {seen, after};
     });
 
@@ -545,14 +546,14 @@ test('should end the session from the API until the next user interaction', asyn
         /** @type {string[]} */
         const events = [];
         // @ts-expect-error - set by the injected snippet
-        const {session} = globalThis.edotBrowser;
-        session.addObserver({
+        const sdk = globalThis.edotBrowser;
+        sdk.addObserver({
             onSessionEnded: (/** @type {any} */ s) => events.push(s.id),
         });
-        session.endSession();
+        sdk.endSession();
         return fetch('/')
             .then((r) => r.text())
-            .then(() => ({events, session: session.getSession()}));
+            .then(() => ({events, session: sdk.getSession()}));
     });
     expect(ended.events).toStrictEqual([initialId]);
     expect(ended.session).toBeUndefined();

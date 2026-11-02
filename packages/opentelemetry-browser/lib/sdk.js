@@ -100,7 +100,9 @@ const EDOT_SCOPE_NAME = '@elastic/opentelemetry-browser';
  * @property {() => Promise<void>} shutdown
  * @property {import('./user.js').UserApi['setUser']} setUser
  * @property {import('./user.js').UserApi['clearUser']} clearUser
- * @property {import('./session.js').SessionApi} session
+ * @property {import('./session.js').SessionApi['getSession']} getSession
+ * @property {import('./session.js').SessionApi['addObserver']} addObserver
+ * @property {import('./session.js').SessionApi['endSession']} endSession
  * @property {(route: string | undefined) => void} setPageRoute Sets the
  *  low-cardinality route of the current page (e.g. `/product/{id}`), added as
  *  `url.template` to spans and log records. The route applies until the page
@@ -117,7 +119,7 @@ const userManager = new UserManager();
 const NOOP_SDK = {
     shutdown: () => Promise.resolve(),
     ...createUserApi(userManager),
-    session: createSessionApi(undefined),
+    ...createSessionApi(undefined),
     setPageRoute() {},
 };
 
@@ -351,7 +353,7 @@ export function startBrowserSdk(cfg = {}) {
 
     return {
         ...createUserApi(userManager),
-        session: createSessionApi(sessionManager),
+        ...createSessionApi(sessionManager),
         shutdown() {
             pageRouteManager.setResolver(undefined);
             stopActivityTracking?.();
