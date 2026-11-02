@@ -132,7 +132,7 @@ Session attributes are not added to metrics to avoid high-cardinality attributes
 
 Full URLs are a poor way to group pages: `/product/123` and `/product/456?ref=ad` are the same page for your users. EDOT Browser adds the route of the current page to spans and log records as the `url.template` attribute (for example `/product/{id}`), so you can aggregate telemetry such as Core Web Vitals, errors, or navigations per page.
 
-By default, the route is inferred from the URL by replacing ID-like path segments with `{id}` and dropping the query string. Use the `pageRoute` configuration or the `setPageRoute` function to provide the routes your application knows. Refer to [page route details](configuration.md#otel_browser_page-route-details).
+By default, the route is inferred from the URL by replacing ID-like path segments with `{id}` and dropping the query string. Use the `pageRoute` configuration or the `setPageRoute` method of the SDK to provide the routes your application knows. Refer to [page route details](configuration.md#otel_browser_page-route-details).
 
 Page routes are not added to metrics to avoid high-cardinality attributes.
 
@@ -142,6 +142,7 @@ Page routes are not added to metrics to avoid high-cardinality attributes.
 - Inferred routes only replace numbers, UUIDs, hashes, and ULIDs. Other dynamic segments such as slugs are kept, and segments such as years are replaced with `{id}`.
 - Spans that already have a `url.template` attribute keep their value. Client spans, such as `fetch` and `XMLHttpRequest` requests, don't get the page route, since on them `url.template` is the template of the request URL.
 - A route passed to `setPageRoute` before the router updates the URL is discarded when the path changes.
+- `setPageRoute` is only available after EDOT Browser starts. The route of the page where it starts comes from the `pageRoute` configuration.
 
 ## Next steps [next-steps]
 

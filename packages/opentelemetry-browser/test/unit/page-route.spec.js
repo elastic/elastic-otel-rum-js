@@ -109,6 +109,17 @@ test('PageRouteManager', async (t) => {
         ]);
     });
 
+    await t.test('passes inferPageRoute to the resolver as fallback', () => {
+        const {page, manager} = setup('https://shop.test/blog/my-post');
+        manager.setResolver((url, infer) =>
+            url.pathname.startsWith('/blog/') ? '/blog/{slug}' : infer(url)
+        );
+
+        assert.strictEqual(manager.getRoute(), '/blog/{slug}');
+        page.href = 'https://shop.test/product/42?ref=ad';
+        assert.strictEqual(manager.getRoute(), '/product/{id}');
+    });
+
     await t.test('ignores invalid resolvers and results', () => {
         const {manager} = setup('https://shop.test/product/1');
 

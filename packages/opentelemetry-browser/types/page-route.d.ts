@@ -95,9 +95,10 @@ export type Signal = {
 };
 /**
  * Returns the low-cardinality route of the page at the given URL (e.g.
- * `/product/{id}`), or `undefined` to omit it.
+ * `/product/{id}`), or `undefined` to omit it. `inferPageRoute` is passed so
+ * resolvers can fall back to it for the URLs they don't handle.
  */
-export type PageRouteResolver = (url: URL) => string | undefined;
+export type PageRouteResolver = (url: URL, inferPageRoute: (url: URL | string) => string) => string | undefined;
 export type PageRouteManagerOptions = {
     /**
      * returns the current page URL

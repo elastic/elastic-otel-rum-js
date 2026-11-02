@@ -9,8 +9,9 @@ import {ATTR_URL_TEMPLATE} from './semconv.js';
 
 /**
  * Returns the low-cardinality route of the page at the given URL (e.g.
- * `/product/{id}`), or `undefined` to omit it.
- * @typedef {(url: URL) => string | undefined} PageRouteResolver
+ * `/product/{id}`), or `undefined` to omit it. `inferPageRoute` is passed so
+ * resolvers can fall back to it for the URLs they don't handle.
+ * @typedef {(url: URL, inferPageRoute: (url: URL | string) => string) => string | undefined} PageRouteResolver
  */
 
 /**
@@ -229,7 +230,7 @@ function addRoute(signal, manager) {
  */
 function resolveRoute(resolver, href) {
     try {
-        const route = resolver(new URL(href));
+        const route = resolver(new URL(href), inferPageRoute);
         if (route === undefined || typeof route === 'string') {
             return route || undefined;
         }

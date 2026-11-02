@@ -19,7 +19,7 @@ test('should add url.template to spans and logs', async ({page}) => {
     await page.evaluate(() => history.pushState({}, '', '/product/123'));
     // Route set by the application wins until the path changes
     await page.evaluate(async () => {
-        setPageRoute('/product/:productId');
+        edotBrowser.setPageRoute('/product/:productId');
         history.replaceState({}, '', '/product/123?tab=reviews');
         await fetch('/api/items/1');
         history.pushState({}, '', '/cart');
@@ -57,6 +57,38 @@ test('should add url.template to spans and logs', async ({page}) => {
     // On client spans `url.template` is the template of the request URL
     expect(fetchSpan).toBeDefined();
     expect(fetchSpan?.attributes['url.template']).toBeUndefined();
+});
+
+test('should only expose startBrowserSdk as a global', async ({page}) => {
+    await page.goto(`${FIXTURE}?sync=true`);
+    expect(
+        await page.evaluate(() => [
+            typeof startBrowserSdk,
+            typeof setPageRoute,
+            typeof inferPageRoute,
+        ])
+    ).toStrictEqual(['function', 'undefined', 'undefined']);
+});
+
+test('should ignore page routes set on a SDK that did not start', async ({
+    page,
+}) => {
+    const collector = createCollector(page);
+    await page.goto(`${FIXTURE}?sync=true`);
+    await page.evaluate(() => {
+        // Already started, so this returns the no-op SDK
+        startBrowserSdk({}).setPageRoute('/ignored');
+        // A query change would keep a route that was set
+        history.replaceState({}, '', '?tab=reviews');
+    });
+
+    const navigations = (await collector.getLogs()).filter(
+        (l) => l.eventName === 'browser.navigation'
+    );
+    expect(navigations.length).toStrictEqual(2);
+    expect(navigations[1].attributes['url.template']).toStrictEqual(
+        '/fixtures/use-navigation-timing.html'
+    );
 });
 
 test('should not infer url.template when "pageRoute" is false', async ({

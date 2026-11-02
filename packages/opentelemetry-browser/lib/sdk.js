@@ -86,14 +86,22 @@ import {EDOT_VERSION} from './version.js';
 
 const EDOT_SCOPE_NAME = '@elastic/opentelemetry-browser';
 
+/**
+ * @typedef {Object} BrowserSdk
+ * @property {() => Promise<void>} shutdown
+ * @property {(route: string | undefined) => void} setPageRoute Sets the
+ *  low-cardinality route of the current page (e.g. `/product/{id}`), added as
+ *  `url.template` to spans and log records. The route applies until the page
+ *  path changes, so call it after your router updates the URL. Passing
+ *  `undefined` falls back to the `pageRoute` configuration.
+ */
+
 // SDK returned when invalid config or some error happens at start
-const NOOP_SDK = {shutdown: () => Promise.resolve()};
+/** @type {BrowserSdk} */
+const NOOP_SDK = {shutdown: () => Promise.resolve(), setPageRoute() {}};
 
 // To control multiple calls to `startBrowserSdk`
 let sdkStarted = false;
-
-// Module scoped so routers can set the route before the SDK starts
-const pageRouteManager = new PageRouteManager();
 
 /** @typedef { 'logLevel' | 'serviceName' | 'resourceAttributes' | 'exportConfig'} DefaultConfigProps*/
 /** @type {Required<Pick<BrowserSdkConfiguration, DefaultConfigProps>>} */
@@ -108,9 +116,7 @@ const defaultConfig = {
 
 /**
  * @param {BrowserSdkConfiguration} cfg
- * @returns {{
- *      shutdown: () => Promise<void>;
- * }}
+ * @returns {BrowserSdk}
  */
 export function startBrowserSdk(cfg = {}) {
     if (sdkStarted || cfg.disabled) {
@@ -150,6 +156,7 @@ export function startBrowserSdk(cfg = {}) {
     );
 
     // Before disabling our logger so their config warnings are shown
+    const pageRouteManager = new PageRouteManager();
     pageRouteManager.setResolver(resolvePageRouteConfig(config.pageRoute));
     const sessionManager = createSessionManager(config.session);
 
@@ -328,18 +335,10 @@ export function startBrowserSdk(cfg = {}) {
                 }
             });
         },
+        setPageRoute(route) {
+            pageRouteManager.setRoute(route);
+        },
     };
-}
-
-/**
- * Sets the low-cardinality route of the current page (e.g. `/product/{id}`),
- * added as `url.template` to spans and log records. The route applies until
- * the page path changes, so call it after your router updates the URL.
- * Passing `undefined` falls back to the `pageRoute` configuration.
- * @param {string | undefined} route
- */
-export function setPageRoute(route) {
-    pageRouteManager.setRoute(route);
 }
 
 // -- helper functions
