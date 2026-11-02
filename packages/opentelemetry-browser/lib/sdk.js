@@ -3,8 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import {diag, DiagLogLevel, metrics} from '@opentelemetry/api';
+import {context, diag, DiagLogLevel, metrics, trace} from '@opentelemetry/api';
 import {logs} from '@opentelemetry/api-logs';
+import {suppressTracing} from '@opentelemetry/core';
 import {startLogsSdk} from '@opentelemetry/browser-sdk/logs';
 import {startTracesSdk} from '@opentelemetry/browser-sdk/traces';
 import {OTLPMetricExporter} from '@opentelemetry/exporter-metrics-otlp-http';
@@ -13,10 +14,6 @@ import {
     MeterProvider,
     PeriodicExportingMetricReader,
 } from '@opentelemetry/sdk-metrics';
-import {BatchSpanProcessor} from '@opentelemetry/sdk-trace';
-import {OTLPTraceExporter} from '@opentelemetry/exporter-trace-otlp-http';
-import {BatchLogRecordProcessor} from '@opentelemetry/sdk-logs';
-import {OTLPLogExporter} from '@opentelemetry/exporter-logs-otlp-http';
 
 import {registerInstrumentations} from '@opentelemetry/instrumentation';
 import {NavigationInstrumentation} from '@opentelemetry/browser-instrumentation/experimental/navigation';
@@ -164,24 +161,14 @@ export function startBrowserSdk(cfg = {}) {
     // ourselves with a custom exporter
     const tracesUrl = appendPath(endpointUrl, 'v1/traces').href;
     const spanProcessors = [];
-    const edotSpanProcessor = new BatchSpanProcessor({
-        exporter: new OTLPTraceExporter({
-            url: tracesUrl,
-            headers: config.exportConfig.headers,
-        }),
-    });
 
-    // If session available it we use a processor that controls others based
-    // on session state.
+    // If session available it we use a processor to add the session attributes
     if (sessionManager) {
         spanProcessors.push(
             new SessionSpanProcessor({
                 manager: sessionManager,
-                processors: [edotSpanProcessor],
             })
         );
-    } else {
-        spanProcessors.push(edotSpanProcessor);
     }
 
     // NOTE: export payloads can be seen in DevTools network tab in JSON format
@@ -191,32 +178,30 @@ export function startBrowserSdk(cfg = {}) {
         resourceAttributes,
         contextManager: AsyncApisContextManager.enable(),
         processors: spanProcessors,
+        exportConfig: {
+            url: tracesUrl,
+            headers: config.exportConfig.headers,
+        },
     });
 
     const logsUrl = appendPath(endpointUrl, 'v1/logs').href;
     const logProcessors = [];
-    const edotLogProcessor = new BatchLogRecordProcessor({
-        exporter: new OTLPLogExporter({
-            url: logsUrl,
-            headers: config.exportConfig.headers,
-        }),
-    });
-    // If session available it we use a processor that controls others based
-    // on session state.
+    // If session available it we use a processor to add the session attributes
     if (sessionManager) {
         logProcessors.push(
             new SessionLogRecordProcessor({
                 manager: sessionManager,
-                processors: [edotLogProcessor],
             })
         );
-    } else {
-        logProcessors.push(edotLogProcessor);
     }
     const logsSdk = startLogsSdk({
         logLevel,
         resourceAttributes,
         processors: logProcessors,
+        exportConfig: {
+            url: logsUrl,
+            headers: config.exportConfig.headers,
+        },
     });
 
     // metrics signal configuration
@@ -233,6 +218,53 @@ export function startBrowserSdk(cfg = {}) {
         readers: [metricsReader],
     });
     metrics.setGlobalMeterProvider(meterProvider);
+
+    // The best way to cut the flow is to not produce any data
+    // - loggers to not emit
+    // - tracers to not start spans
+    // - meters to not collect?
+    if (sessionManager) {
+        const tracerProvider = trace.getTracerProvider();
+        const tracerFn = tracerProvider.getTracer;
+        tracerProvider.getTracer = function (name, version, options) {
+            const tracer = tracerFn.call(this, name, version, options);
+            const startSpanFn = tracer.startSpan;
+
+            // If session is sampled out we mark the context to suppres tracing
+            // making the tracer to retunr nonrecording Spans which will be dropped
+            // by the BatchSpan processor.
+            // NOTE: `startActiveSpan` uses this method to create the Span so is not necessary to patch
+            tracer.startSpan = function (name, options, ctx) {
+                const session = sessionManager.getSession();
+                const sessCtx = session.sampled
+                    ? ctx
+                    : suppressTracing(ctx || context.active());
+                return startSpanFn.call(this, name, options, sessCtx);
+            };
+            return tracer;
+        };
+
+        const loggerProvider = logs.getLoggerProvider();
+        const loggerFn = loggerProvider.getLogger;
+        loggerProvider.getLogger = function (name, version, options) {
+            const logger = loggerFn.call(this, name, version, options);
+            const emitLogFn = logger.emit;
+
+            // If session is sampled out we do not actually emit so nothing gets
+            // processed or exported
+            logger.emit = function (record) {
+                const session = sessionManager.getSession();
+                if (session.sampled) {
+                    console.log('emit', record);
+                    emitLogFn.call(this, record);
+                }
+            };
+            return logger;
+        };
+        // TODO: for metrics we could patch the create functions of a meter
+        // - for sync instuments make `_record` aware of the session
+        // - for observable make the `addCallback` aware of the session
+    }
 
     // Resgister instrumentations. The `registerInstrumentations` enabled all of them
     // regardless of the configuration so EDOT only add the ones that are not disabled
