@@ -42,6 +42,7 @@
     };
 
     const script = document.createElement('script');
+    script.async = false;
     script.src = `https://unpkg.com/@elastic/opentelemetry-browser@${v}/build/elastic-otel-browser.min.js`;
     script.onload = function onEdotBundleLoaded() {
         if (typeof window.startBrowserSdk !== 'function') {
