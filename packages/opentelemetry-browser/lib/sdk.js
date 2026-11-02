@@ -261,12 +261,20 @@ export function startBrowserSdk(cfg = {}) {
             };
             return logger;
         };
-        // TODO: for metrics we could patch the create functions of a meter
-        // - for sync instuments make `_record` aware of the session
-        // - for observable make the `addCallback` aware of the session
+        // NOTE: metrics is different in semantics. dependinh on the user's inent:
+        // - there could be metrics that outlive session limits
+        // - there could be metrics attached to a session (sampled)
+        //
+        // The 1st type of metics are allways collected and exported with no session attributes and
+        // the 2nd should have session attributes and should be reset/recreated whenever
+        // a session starts. Also collection and export is tied to the sampling decision.
+        // By doing nothing we have the 1st type of metrics. We should check how
+        // to provide the 2nd type. A possible implementation could be to have API to create
+        // proxy instruments that inject the session attributes and recretes on each new session
+        // (proposed in https://github.com/open-telemetry/opentelemetry-browser/discussions/265)
     }
 
-    // Resgister instrumentations. The `registerInstrumentations` enabled all of them
+    // Register instrumentations. The `registerInstrumentations` enabled all of them
     // regardless of the configuration so EDOT only add the ones that are not disabled
     // by configuration
     /** @type {Record<keyof InstrumentationsConfigMap, (cfg: any) => any>} */
