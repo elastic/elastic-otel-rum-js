@@ -1,0 +1,89 @@
+:root {
+  color-scheme: light dark;
+  font-family: system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+body {
+  margin: 0;
+  padding: 12px 14px 16px;
+  width: 360px;
+  box-sizing: border-box;
+}
+
+h1 {
+  font-size: 1.1rem;
+  margin: 0 0 4px;
+}
+
+h2 {
+  font-size: 0.95rem;
+  margin: 16px 0 8px;
+}
+
+.subtitle {
+  margin: 0 0 12px;
+  color: #666;
+  font-size: 0.85rem;
+}
+
+form label {
+  display: block;
+  margin-bottom: 8px;
+}
+
+input {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 4px;
+  padding: 6px 8px;
+}
+
+.form-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+button {
+  cursor: pointer;
+  padding: 6px 10px;
+}
+
+button.secondary {
+  background: transparent;
+}
+
+#website-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+#website-list li {
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  margin-bottom: 8px;
+  padding: 8px 10px;
+}
+
+.site-host {
+  font-weight: 600;
+}
+
+.site-meta {
+  font-size: 0.8rem;
+  color: #666;
+  margin: 4px 0 8px;
+}
+
+.site-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.site-actions button {
+  font-size: 0.8rem;
+}

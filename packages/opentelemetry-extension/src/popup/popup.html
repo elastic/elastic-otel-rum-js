@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>EDOT Browser Monitor</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <header>
+      <h1>Monitored websites</h1>
+      <p class="subtitle">Inject EDOT Browser when a tab matches the configured host.</p>
+    </header>
+
+    <form id="website-form" autocomplete="off">
+      <input type="hidden" id="website-id" name="id" value="" />
+
+      <label>
+        Host
+        <input id="host" name="host" type="text" placeholder="example.com" required />
+      </label>
+
+      <label>
+        EDOT version
+        <input id="version" name="version" type="text" placeholder="0.4.0" required />
+      </label>
+
+      <label>
+        OTLP endpoint
+        <input id="endpoint" name="endpoint" type="url" placeholder="https://…/otlp" required />
+      </label>
+
+      <label>
+        API key
+        <input id="api_key" name="api_key" type="password" placeholder="ApiKey value" required />
+      </label>
+
+      <label>
+        Service name
+        <input id="service_name" name="service_name" type="text" placeholder="my-service" required />
+      </label>
+
+      <label>
+        Service version
+        <input id="service_version" name="service_version" type="text" placeholder="0.0.1" required />
+      </label>
+
+      <div class="form-actions">
+        <button type="submit" id="save-btn">Save website</button>
+        <button type="button" id="reset-btn" class="secondary">Clear form</button>
+      </div>
+    </form>
+
+    <section>
+      <h2>Saved entries</h2>
+      <ul id="website-list"></ul>
+    </section>
+
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>
