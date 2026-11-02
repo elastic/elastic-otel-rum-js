@@ -49,6 +49,9 @@ jobs:
     - name: Run Smoke tests
       run: npm run test:smoke
       working-directory: packages/opentelemetry-browser
+    - name: Run Bundler tests
+      run: npm run test:bundle
+      working-directory: packages/opentelemetry-browser
     - name: Report bundle sizes
       run: npm run --silent report:bundle-size
       working-directory: packages/opentelemetry-browser

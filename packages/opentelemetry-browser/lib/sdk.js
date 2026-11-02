@@ -43,9 +43,12 @@ import {
     EVENT_SESSION_START,
 } from './semconv.js';
 import {
+    createSessionApi,
     createSessionManager,
+    resolveActivityEvents,
     SessionLogRecordProcessor,
     SessionSpanProcessor,
+    trackUserActivity,
 } from './session.js';
 import {EDOT_VERSION} from './version.js';
 
@@ -89,6 +92,7 @@ const EDOT_SCOPE_NAME = '@elastic/opentelemetry-browser';
 /**
  * @typedef {Object} BrowserSdk
  * @property {() => Promise<void>} shutdown
+ * @property {import('./session.js').SessionApi} session
  * @property {(route: string | undefined) => void} setPageRoute Sets the
  *  low-cardinality route of the current page (e.g. `/product/{id}`), added as
  *  `url.template` to spans and log records. The route applies until the page
@@ -98,7 +102,11 @@ const EDOT_SCOPE_NAME = '@elastic/opentelemetry-browser';
 
 // SDK returned when invalid config or some error happens at start
 /** @type {BrowserSdk} */
-const NOOP_SDK = {shutdown: () => Promise.resolve(), setPageRoute() {}};
+const NOOP_SDK = {
+    shutdown: () => Promise.resolve(),
+    session: createSessionApi(undefined),
+    setPageRoute() {},
+};
 
 // To control multiple calls to `startBrowserSdk`
 let sdkStarted = false;
@@ -166,8 +174,12 @@ export function startBrowserSdk(cfg = {}) {
     diag.disable();
 
     const edotLogger = logs.getLogger(EDOT_SCOPE_NAME, EDOT_VERSION);
-    sessionManager?.observe('session:start', (session) => {
-        if (session.sampled) {
+    sessionManager?.addObserver({
+        onSessionStarted(session) {
+            // Tabs sharing the session are told too, only its creator reports it
+            if (!session.sampled || !sessionManager.isCreatedHere(session.id)) {
+                return;
+            }
             /** @type {import('@opentelemetry/api').Attributes} */
             const attributes = {[ATTR_SESSION_ID]: session.id};
             if (session.previousId) {
@@ -177,7 +189,7 @@ export function startBrowserSdk(cfg = {}) {
                 eventName: EVENT_SESSION_START,
                 attributes,
             });
-        }
+        },
     });
 
     // To have full control of what's exported we need to build the processor
@@ -244,6 +256,15 @@ export function startBrowserSdk(cfg = {}) {
             ...logProcessors,
         ],
     });
+    // Start eagerly so `session.start` is emitted on load rather than with
+    // the first piece of telemetry.
+    sessionManager?.start();
+    const stopActivityTracking =
+        sessionManager &&
+        trackUserActivity(
+            sessionManager,
+            resolveActivityEvents(config.session)
+        );
 
     // metrics signal configuration
     // possible `startMetricsSdk` function
@@ -310,16 +331,15 @@ export function startBrowserSdk(cfg = {}) {
         }
     });
 
-    // Resolve the session eagerly so `session.start` is emitted on load
-    // rather than with the first piece of telemetry.
-    sessionManager?.getSession();
-
     // Flag as started
     sdkStarted = true;
 
     return {
+        session: createSessionApi(sessionManager),
         shutdown() {
             pageRouteManager.setResolver(undefined);
+            stopActivityTracking?.();
+            sessionManager?.shutdown();
             disableInstrumentations();
             return Promise.allSettled([
                 tracesSdk.shutdown(),

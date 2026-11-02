@@ -18,7 +18,7 @@ export type InstrumentationsConfigMap = {
  */
 export type SdkConfig = {
     disabled?: boolean | undefined;
-    logLevel?: "warn" | "none" | "error" | "info" | "debug" | "verbose" | "all" | undefined;
+    logLevel?: "warn" | "error" | "none" | "info" | "debug" | "verbose" | "all" | undefined;
     serviceName?: string | undefined;
     serviceVersion?: string | undefined;
     resourceAttributes?: import("@opentelemetry/api").Attributes | undefined;
@@ -38,6 +38,7 @@ export type EdotConfig = {
 export type BrowserSdkConfiguration = SdkConfig & EdotConfig;
 export type BrowserSdk = {
     shutdown: () => Promise<void>;
+    session: import("./session.js").SessionApi;
     /**
      * Sets the
      * low-cardinality route of the current page (e.g. `/product/{id}`), added as
