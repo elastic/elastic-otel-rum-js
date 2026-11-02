@@ -221,8 +221,8 @@ export function startBrowserSdk(cfg = {}) {
 
     // The best way to cut the flow is to not produce any data
     // - loggers to not emit
-    // - tracers to not start spans
-    // - meters to not collect?
+    // - tracers to start non recording spans
+    // - TODO: meters to reset/recreate?
     if (sessionManager) {
         const tracerProvider = trace.getTracerProvider();
         const tracerFn = tracerProvider.getTracer;
