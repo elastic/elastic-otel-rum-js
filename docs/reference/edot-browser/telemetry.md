@@ -2,9 +2,9 @@
 navigation_title: Metrics, traces, and logs
 description: What EDOT Browser emits for each telemetry signal and known limitations.
 applies_to:
-  stack: ga
+  stack:
   serverless:
-    observability: ga
+    observability:
   product:
     edot_browser: preview
 products:
@@ -50,13 +50,12 @@ This mechanism ensures that when these asynchronous operations execute, they do 
 EDOT Browser initializes tracing and registers instrumentations that produce spans:
 
 - Each outgoing request using `fetch` or `XMLHttpRequest` is captured as an `external.http` span with attributes such as URL, HTTP method, and status code. These spans represent the client-side portion of the request.
-- Spans for task executions that take longer than 50ms and might impact the user experience. For more information, refer to [PerformanceLongTaskTiming](https://developer.mozilla.org/en-US/docs/Web/API/PerformanceLongTaskTiming).
 
 :::{note}
-The `@opentelemetry/instrumentation-long-task` instrumentation has been removed since the API is deprecated. This instrumentation is planned to be replaced by [long animation frame](https://developer.mozilla.org/en-US/docs/Web/API/PerformanceLongAnimationFrameTiming) instrumentation in a future release.
+Long tasks no longer produce spans. EDOT Browser no longer includes the `@opentelemetry/instrumentation-long-task` instrumentation. A replacement based on [long animation frame](https://developer.mozilla.org/en-US/docs/Web/API/PerformanceLongAnimationFrameTiming) timing is planned for a future release.
 :::
 
-Other browser activity that was previously captured as spans is now emitted as log records. Page and resource load timing, user actions (clicks), and navigation are exported on the logs signal. Refer to [Logs](#logs) for details.
+In 0.4 and later, page and resource load timing, user actions (clicks), and navigation are exported on the logs signal instead of as spans. Refer to [Logs](#logs) for details on each record type. If you're upgrading, refer to [EDOT Browser breaking changes](../../release-notes/breaking-changes.md) for the affected instrumentation keys and migration steps.
 
 When your backend is instrumented with OpenTelemetry and trace context (trace ID, span ID) is propagated in HTTP headers, the browser’s `external.http` span and the backend spans appear in the same trace, giving you end-to-end visibility in Discover and Service Maps. Refer to [What to expect in {{kib}}](setup.md#what-to-expect-in-kibana) for how these traces appear in the Observability app.
 
