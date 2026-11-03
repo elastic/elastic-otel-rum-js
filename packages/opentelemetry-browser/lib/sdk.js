@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import {diag, DiagLogLevel, metrics} from '@opentelemetry/api';
+import {diag, DiagLogLevel, metrics, trace} from '@opentelemetry/api';
 import {logs} from '@opentelemetry/api-logs';
 import {startLogsSdk} from '@opentelemetry/browser-sdk/logs';
 import {startTracesSdk} from '@opentelemetry/browser-sdk/traces';
@@ -13,12 +13,7 @@ import {
     MeterProvider,
     PeriodicExportingMetricReader,
 } from '@opentelemetry/sdk-metrics';
-import {BatchSpanProcessor} from '@opentelemetry/sdk-trace';
-import {OTLPTraceExporter} from '@opentelemetry/exporter-trace-otlp-http';
-import {BatchLogRecordProcessor} from '@opentelemetry/sdk-logs';
-import {OTLPLogExporter} from '@opentelemetry/exporter-logs-otlp-http';
 
-import {registerInstrumentations} from '@opentelemetry/instrumentation';
 import {NavigationInstrumentation} from '@opentelemetry/browser-instrumentation/experimental/navigation';
 import {NavigationTimingInstrumentation} from '@opentelemetry/browser-instrumentation/experimental/navigation-timing';
 import {ResourceTimingInstrumentation} from '@opentelemetry/browser-instrumentation/experimental/resource-timing';
@@ -160,28 +155,27 @@ export function startBrowserSdk(cfg = {}) {
         }
     });
 
-    // To have full control of what's exported we need to build the processor
-    // ourselves with a custom exporter
     const tracesUrl = appendPath(endpointUrl, 'v1/traces').href;
     const spanProcessors = [];
-    const edotSpanProcessor = new BatchSpanProcessor({
-        exporter: new OTLPTraceExporter({
-            url: tracesUrl,
-            headers: config.exportConfig.headers,
-        }),
-    });
+    // By default the Span sampler is allways on
+    /** @type {(...args: any[]) => import('@opentelemetry/sdk-trace').SamplingResult} */
+    let shouldSample = () => ({decision: 2});
 
-    // If session available it we use a processor that controls others based
-    // on session state.
+    // Some of the traces configuration depend if we can provide sessions. If so:
+    // - add a processor to append session attributes
+    // - span sampling is decided by the session sampling
     if (sessionManager) {
         spanProcessors.push(
             new SessionSpanProcessor({
                 manager: sessionManager,
-                processors: [edotSpanProcessor],
             })
         );
-    } else {
-        spanProcessors.push(edotSpanProcessor);
+        shouldSample = () => {
+            if (sessionManager.getSession().sampled) {
+                return {decision: 2};
+            }
+            return {decision: 0};
+        };
     }
 
     // NOTE: export payloads can be seen in DevTools network tab in JSON format
@@ -191,33 +185,57 @@ export function startBrowserSdk(cfg = {}) {
         resourceAttributes,
         contextManager: AsyncApisContextManager.enable(),
         processors: spanProcessors,
+        sampler: {shouldSample},
+        exportConfig: {
+            url: tracesUrl,
+            headers: config.exportConfig.headers,
+        },
     });
+    // this will be used later for instrumentations
+    const tracerProvider = trace.getTracerProvider();
 
     const logsUrl = appendPath(endpointUrl, 'v1/logs').href;
     const logProcessors = [];
-    const edotLogProcessor = new BatchLogRecordProcessor({
-        exporter: new OTLPLogExporter({
-            url: logsUrl,
-            headers: config.exportConfig.headers,
-        }),
-    });
-    // If session available it we use a processor that controls others based
-    // on session state.
+
+    // Some of the logs configuration depend if we can provide sessions. If so:
+    // - add a processor to append session attributes
+    // - add a configurator to enable/disable when session is sampled or not
     if (sessionManager) {
         logProcessors.push(
             new SessionLogRecordProcessor({
                 manager: sessionManager,
-                processors: [edotLogProcessor],
             })
         );
-    } else {
-        logProcessors.push(edotLogProcessor);
     }
     const logsSdk = startLogsSdk({
         logLevel,
         resourceAttributes,
         processors: logProcessors,
+        exportConfig: {
+            url: logsUrl,
+            headers: config.exportConfig.headers,
+        },
     });
+    // this will be used later for instrumentations
+    const loggerProvider = logs.getLoggerProvider();
+
+    // Maybe a better way to control the loggers would be to provide a `LoggerConfigurator`
+    // but the upstream SDK does not offer the option to pass it through.
+    // Solution for now is to wrap the `getLogger` method and patch the `enabled` method
+    // so is aware of the session when called.
+    if (sessionManager) {
+        const loggers = new WeakSet();
+        const loggerFn = loggerProvider.getLogger;
+        loggerProvider.getLogger = function (name, version, options) {
+            const logger = loggerFn.call(this, name, version, options);
+            if (loggers.has(logger)) {
+                return logger;
+            }
+            loggers.add(logger);
+            logger.enabled = () => sessionManager.getSession().sampled;
+            return logger;
+        };
+    }
 
     // metrics signal configuration
     // possible `startMetricsSdk` function
@@ -234,7 +252,19 @@ export function startBrowserSdk(cfg = {}) {
     });
     metrics.setGlobalMeterProvider(meterProvider);
 
-    // Resgister instrumentations. The `registerInstrumentations` enabled all of them
+    // NOTE: metrics is different in semantics. depending on the user's inent:
+    // - there could be metrics that outlive session limits
+    // - there could be metrics attached to a session (sampled)
+    //
+    // The 1st type of metics are allways collected and exported with no session attributes and
+    // the 2nd should have session attributes and should be reset/recreated whenever
+    // a session starts. Also collection and export is tied to the sampling decision.
+    // By doing nothing we have the 1st type of metrics. We should check how
+    // to provide the 2nd type. A possible implementation could be to have API to create
+    // proxy instruments that inject the session attributes and recretes on each new session
+    // (proposed in https://github.com/open-telemetry/opentelemetry-browser/discussions/265)
+
+    // Register instrumentations. The `registerInstrumentations` enabled all of them
     // regardless of the configuration so EDOT only add the ones that are not disabled
     // by configuration
     /** @type {Record<keyof InstrumentationsConfigMap, (cfg: any) => any>} */
@@ -259,6 +289,7 @@ export function startBrowserSdk(cfg = {}) {
         'web-vitals': (cfg) => new WebVitalsInstrumentation(cfg),
     };
 
+    // TODO: setup instrumentations ourselves and remove `registerInstrumentations`
     const instrumentations = config.instrumentations || {};
 
     /** @type {Array<keyof InstrumentationsConfigMap>} */
@@ -271,18 +302,19 @@ export function startBrowserSdk(cfg = {}) {
         const config = instrumentations[key];
         return instrFactories[key](config);
     });
-    // register them (which enables all performing any required patching)
-    const disableInstrumentations = registerInstrumentations({
-        instrumentations: instrumentationInstances,
-    });
 
-    // Disable the ones with { enabled: false } in configuration
-    instrumentationInstances.forEach((instr) => {
+    // Does the same as `registerInstrumentations` form upstream at the end
+    // disabling the ones with { enabled: false } in configuration
+    for (const instr of instrumentationInstances) {
         const config = instr.getConfig();
+        instr.setLoggerProvider?.(loggerProvider);
+        instr.setTracerProvider(tracerProvider);
+        instr.setMeterProvider(meterProvider);
+        instr.enable();
         if (config.enabled === false) {
             instr.disable();
         }
-    });
+    }
 
     // Resolve the session eagerly so `session.start` is emitted on load
     // rather than with the first piece of telemetry.
@@ -293,7 +325,7 @@ export function startBrowserSdk(cfg = {}) {
 
     return {
         shutdown() {
-            disableInstrumentations();
+            instrumentationInstances.forEach((i) => i.disable());
             return Promise.allSettled([
                 tracesSdk.shutdown(),
                 logsSdk.shutdown(),
