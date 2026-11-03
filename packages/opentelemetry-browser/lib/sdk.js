@@ -3,9 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import {context, diag, DiagLogLevel, metrics, trace} from '@opentelemetry/api';
+import {diag, DiagLogLevel, metrics, trace} from '@opentelemetry/api';
 import {logs} from '@opentelemetry/api-logs';
-import {suppressTracing} from '@opentelemetry/core';
 import {startLogsSdk} from '@opentelemetry/browser-sdk/logs';
 import {startTracesSdk} from '@opentelemetry/browser-sdk/traces';
 import {OTLPMetricExporter} from '@opentelemetry/exporter-metrics-otlp-http';
@@ -15,7 +14,6 @@ import {
     PeriodicExportingMetricReader,
 } from '@opentelemetry/sdk-metrics';
 
-import {registerInstrumentations} from '@opentelemetry/instrumentation';
 import {NavigationInstrumentation} from '@opentelemetry/browser-instrumentation/experimental/navigation';
 import {NavigationTimingInstrumentation} from '@opentelemetry/browser-instrumentation/experimental/navigation-timing';
 import {ResourceTimingInstrumentation} from '@opentelemetry/browser-instrumentation/experimental/resource-timing';
@@ -157,18 +155,27 @@ export function startBrowserSdk(cfg = {}) {
         }
     });
 
-    // To have full control of what's exported we need to build the processor
-    // ourselves with a custom exporter
     const tracesUrl = appendPath(endpointUrl, 'v1/traces').href;
     const spanProcessors = [];
+    // By default the Span sampler is allways on
+    /** @type {(...args: any[]) => import('@opentelemetry/sdk-trace').SamplingResult} */
+    let shouldSample = () => ({decision: 2});
 
-    // If session available it we use a processor to add the session attributes
+    // Some of the traces configuration depend if we can provide sessions. If so:
+    // - add a processor to append session attributes
+    // - span sampling is decided by the session sampling
     if (sessionManager) {
         spanProcessors.push(
             new SessionSpanProcessor({
                 manager: sessionManager,
             })
         );
+        shouldSample = () => {
+            if (sessionManager.getSession().sampled) {
+                return {decision: 2};
+            }
+            return {decision: 0};
+        };
     }
 
     // NOTE: export payloads can be seen in DevTools network tab in JSON format
@@ -178,11 +185,14 @@ export function startBrowserSdk(cfg = {}) {
         resourceAttributes,
         contextManager: AsyncApisContextManager.enable(),
         processors: spanProcessors,
+        sampler: {shouldSample},
         exportConfig: {
             url: tracesUrl,
             headers: config.exportConfig.headers,
         },
     });
+    // this will be used later for instrumentations
+    const tracerProvider = trace.getTracerProvider();
 
     const logsUrl = appendPath(endpointUrl, 'v1/logs').href;
     const logProcessors = [];
@@ -203,6 +213,8 @@ export function startBrowserSdk(cfg = {}) {
             headers: config.exportConfig.headers,
         },
     });
+    // this will be used later for instrumentations
+    const loggerProvider = logs.getLoggerProvider();
 
     // metrics signal configuration
     // possible `startMetricsSdk` function
@@ -221,30 +233,8 @@ export function startBrowserSdk(cfg = {}) {
 
     // The best way to cut the flow is to not produce any data
     // - loggers to not emit
-    // - tracers to start non recording spans
     // - TODO: meters to reset/recreate?
     if (sessionManager) {
-        const tracerProvider = trace.getTracerProvider();
-        const tracerFn = tracerProvider.getTracer;
-        tracerProvider.getTracer = function (name, version, options) {
-            const tracer = tracerFn.call(this, name, version, options);
-            const startSpanFn = tracer.startSpan;
-
-            // If session is sampled out we mark the context to suppres tracing
-            // making the tracer to retunr nonrecording Spans which will be dropped
-            // by the BatchSpan processor.
-            // NOTE: `startActiveSpan` uses this method to create the Span so is not necessary to patch
-            tracer.startSpan = function (name, options, ctx) {
-                const session = sessionManager.getSession();
-                const sessCtx = session.sampled
-                    ? ctx
-                    : suppressTracing(ctx || context.active());
-                return startSpanFn.call(this, name, options, sessCtx);
-            };
-            return tracer;
-        };
-
-        const loggerProvider = logs.getLoggerProvider();
         const loggerFn = loggerProvider.getLogger;
         loggerProvider.getLogger = function (name, version, options) {
             const logger = loggerFn.call(this, name, version, options);
@@ -299,6 +289,7 @@ export function startBrowserSdk(cfg = {}) {
         'web-vitals': (cfg) => new WebVitalsInstrumentation(cfg),
     };
 
+    // TODO: setup instrumentations ourselves and remove `registerInstrumentations`
     const instrumentations = config.instrumentations || {};
 
     /** @type {Array<keyof InstrumentationsConfigMap>} */
@@ -311,18 +302,19 @@ export function startBrowserSdk(cfg = {}) {
         const config = instrumentations[key];
         return instrFactories[key](config);
     });
-    // register them (which enables all performing any required patching)
-    const disableInstrumentations = registerInstrumentations({
-        instrumentations: instrumentationInstances,
-    });
 
-    // Disable the ones with { enabled: false } in configuration
-    instrumentationInstances.forEach((instr) => {
+    // Does the same as `registerInstrumentations` form upstream at the end
+    // disabling the ones with { enabled: false } in configuration
+    for (const instr of instrumentationInstances) {
         const config = instr.getConfig();
+        instr.setLoggerProvider?.(loggerProvider);
+        instr.setTracerProvider(tracerProvider);
+        instr.setMeterProvider(meterProvider);
+        instr.enable();
         if (config.enabled === false) {
             instr.disable();
         }
-    });
+    }
 
     // Resolve the session eagerly so `session.start` is emitted on load
     // rather than with the first piece of telemetry.
@@ -333,7 +325,7 @@ export function startBrowserSdk(cfg = {}) {
 
     return {
         shutdown() {
-            disableInstrumentations();
+            instrumentationInstances.forEach((i) => i.disable());
             return Promise.allSettled([
                 tracesSdk.shutdown(),
                 logsSdk.shutdown(),
