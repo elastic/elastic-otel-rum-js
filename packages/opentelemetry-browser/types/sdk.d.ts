@@ -2,11 +2,15 @@
  * @param {BrowserSdkConfiguration} cfg
  * @returns {{
  *      shutdown: () => Promise<void>;
+ *      setUser: import('./user.js').UserApi['setUser'];
+ *      clearUser: import('./user.js').UserApi['clearUser'];
  *      session: import('./session.js').SessionApi;
  * }}
  */
 export function startBrowserSdk(cfg?: BrowserSdkConfiguration): {
     shutdown: () => Promise<void>;
+    setUser: import("./user.js").UserApi["setUser"];
+    clearUser: import("./user.js").UserApi["clearUser"];
     session: import("./session.js").SessionApi;
 };
 export type InstrumentationsConfigMap = {

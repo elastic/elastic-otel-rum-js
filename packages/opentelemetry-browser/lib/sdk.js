@@ -44,6 +44,12 @@ import {
     SessionSpanProcessor,
     trackUserActivity,
 } from './session.js';
+import {
+    createUserApi,
+    UserLogRecordProcessor,
+    UserManager,
+    UserSpanProcessor,
+} from './user.js';
 import {EDOT_VERSION} from './version.js';
 
 /**
@@ -82,9 +88,14 @@ import {EDOT_VERSION} from './version.js';
 
 const EDOT_SCOPE_NAME = '@elastic/opentelemetry-browser';
 
+// Module scoped so a handle from a second `startBrowserSdk` call, which gets
+// the no-op SDK, still sets the user of the SDK that is running.
+const userManager = new UserManager();
+
 // SDK returned when invalid config or some error happens at start
 const NOOP_SDK = {
     shutdown: () => Promise.resolve(),
+    ...createUserApi(userManager),
     session: createSessionApi(undefined),
 };
 
@@ -106,6 +117,8 @@ const defaultConfig = {
  * @param {BrowserSdkConfiguration} cfg
  * @returns {{
  *      shutdown: () => Promise<void>;
+ *      setUser: import('./user.js').UserApi['setUser'];
+ *      clearUser: import('./user.js').UserApi['clearUser'];
  *      session: import('./session.js').SessionApi;
  * }}
  */
@@ -201,7 +214,7 @@ export function startBrowserSdk(cfg = {}) {
         logLevel,
         resourceAttributes,
         contextManager: AsyncApisContextManager.enable(),
-        processors: spanProcessors,
+        processors: [new UserSpanProcessor(userManager), ...spanProcessors],
     });
 
     const logsUrl = appendPath(endpointUrl, 'v1/logs').href;
@@ -227,7 +240,7 @@ export function startBrowserSdk(cfg = {}) {
     const logsSdk = startLogsSdk({
         logLevel,
         resourceAttributes,
-        processors: logProcessors,
+        processors: [new UserLogRecordProcessor(userManager), ...logProcessors],
     });
     // Start eagerly so `session.start` is emitted on load rather than with
     // the first piece of telemetry.
@@ -308,6 +321,7 @@ export function startBrowserSdk(cfg = {}) {
     sdkStarted = true;
 
     return {
+        ...createUserApi(userManager),
         session: createSessionApi(sessionManager),
         shutdown() {
             stopActivityTracking?.();
