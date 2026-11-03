@@ -10,22 +10,21 @@ pipeline (elastic/observability-dev#6140) implement it; the player and ingest
 routing read it.
 
 There is no OTel semantic convention for session replay. Everything below is an
-Elastic extension, so all new names live under `co.elastic.replay.*`. EDOT
-prefixes names that semantic conventions do not define with Elastic's reverse
-domain, `co.elastic.`, as the
-[OTel naming guide](https://github.com/open-telemetry/semantic-conventions/blob/main/docs/general/naming.md)
-recommends. We rename once the Browser SIG defines replay, and this document is
-the mapping we migrate from.
+Elastic extension, so all new names live under `elastic.replay.*`. EDOT
+prefixes names that semantic conventions do not define with `elastic.`, as
+`elastic.user.account` and `elastic.user.attributes.*` already do. We rename once
+the Browser SIG defines replay, and this document is the mapping we migrate
+from.
 
 ## Summary
 
 - Each rrweb event becomes one OTLP log record (or several when it is large)
-  with `eventName` `co.elastic.replay.event`, emitted by the instrumentation scope
+  with `eventName` `elastic.replay.event`, emitted by the instrumentation scope
   `@elastic/opentelemetry-browser/replay`. The body is the rrweb event JSON.
 - Events are ordered within a **segment**: one recorder run in one tab for one
   session, normally one page load. Every segment starts at sequence `0` with a
   rrweb Meta and FullSnapshot, so it plays on its own.
-- When a segment starts recording, the SDK emits one `co.elastic.replay.start` log
+- When a segment starts recording, the SDK emits one `elastic.replay.start` log
   record on the regular EDOT logs pipeline. Backends use it to know a session has
   a replay. There is no `rum.has_replay` attribute.
 - `replay.sampleRate` and `replay.errorSampleRate` are 0..1 rates applied to
@@ -39,7 +38,7 @@ the mapping we migrate from.
 | --- | --- |
 | Instrumentation scope name | `@elastic/opentelemetry-browser/replay` |
 | Instrumentation scope version | EDOT Browser version |
-| `eventName` | `co.elastic.replay.event` |
+| `eventName` | `elastic.replay.event` |
 | `timestamp` | rrweb `event.timestamp` (ms, converted to ns) |
 | `observedTimestamp` | time the SDK emitted the record |
 | `severityNumber` | unset |
@@ -57,18 +56,18 @@ Set on every replay record:
 | --- | --- | --- |
 | `session.id` | string | Added by the session log processor, like on every other EDOT signal. |
 | `browser.tab.id` | string | Added by the session log processor. |
-| `co.elastic.replay.segment.id` | string | UUID v4, new for each segment. |
-| `co.elastic.replay.sequence` | int | Position of the rrweb event in its segment. Starts at `0`, increases by 1 per event. All chunks of an event share it. |
-| `co.elastic.replay.event.type` | int | rrweb `EventType`: 0 DomContentLoaded, 1 Load, 2 FullSnapshot, 3 IncrementalSnapshot, 4 Meta, 5 Custom, 6 Plugin. |
+| `elastic.replay.segment.id` | string | UUID v4, new for each segment. |
+| `elastic.replay.sequence` | int | Position of the rrweb event in its segment. Starts at `0`, increases by 1 per event. All chunks of an event share it. |
+| `elastic.replay.event.type` | int | rrweb `EventType`: 0 DomContentLoaded, 1 Load, 2 FullSnapshot, 3 IncrementalSnapshot, 4 Meta, 5 Custom, 6 Plugin. |
 
 Set only when the value differs from the default. A missing attribute means
 the default:
 
 | Attribute | Type | Default | Description |
 | --- | --- | --- | --- |
-| `co.elastic.replay.chunk.index` | int | `0` | 0-based index of this chunk. |
-| `co.elastic.replay.chunk.count` | int | `1` | Number of chunks for this event. |
-| `co.elastic.replay.packed` | boolean | `false` | `true` when the body is `@rrweb/packer` output instead of plain JSON. |
+| `elastic.replay.chunk.index` | int | `0` | 0-based index of this chunk. |
+| `elastic.replay.chunk.count` | int | `1` | Number of chunks for this event. |
+| `elastic.replay.packed` | boolean | `false` | `true` when the body is `@rrweb/packer` output instead of plain JSON. |
 
 Most records are small incremental events that are neither split nor packed, so
 leaving these out keeps them about 20% smaller in OTLP/JSON. The browser
@@ -80,13 +79,13 @@ they are. A split event sets both chunk attributes on every chunk, including
 session processor adds them. Records carry no URL attributes: the rrweb Meta
 event has the page URL, and the player takes navigations from the OTel data.
 
-The chunk attributes (`co.elastic.replay.chunk.*`, `co.elastic.replay.packed`) are
+The chunk attributes (`elastic.replay.chunk.*`, `elastic.replay.packed`) are
 shared with elastic/observability-dev#6140.
 
 ### Segments and ordering
 
 A segment is the event stream of one recorder run in one tab for one session.
-The SDK starts a new segment, with a new `co.elastic.replay.segment.id`, a
+The SDK starts a new segment, with a new `elastic.replay.segment.id`, a
 sequence reset to `0`, and a Meta and FullSnapshot as its first events, when:
 
 - a page loads and recording starts (a full navigation or reload starts a new
@@ -105,11 +104,11 @@ lives in memory, never collides, and a gap in it means a record was lost.
 
 How a player reads a session:
 
-1. List the session's segments: the `co.elastic.replay.start` records for the
+1. List the session's segments: the `elastic.replay.start` records for the
    `session.id` (see below), or a terms aggregation on
-   `co.elastic.replay.segment.id` in the replay data.
-2. Fetch each segment's records sorted by `co.elastic.replay.sequence`, then
-   `co.elastic.replay.chunk.index` with missing values first (`missing: "_first"`).
+   `elastic.replay.segment.id` in the replay data.
+2. Fetch each segment's records sorted by `elastic.replay.sequence`, then
+   `elastic.replay.chunk.index` with missing values first (`missing: "_first"`).
    Page with `search_after` on those two fields.
 3. Reassemble chunks, unpack packed events, and play.
 4. Segments of the same `browser.tab.id` are sequential page loads. Order them by
@@ -128,13 +127,13 @@ rrweb FullSnapshots can exceed 1 MB, more than many OTLP endpoints accept per
 request. The SDK serializes the event (and packs it when packing is on), then
 splits the string into UTF-8-safe pieces of at most `replay.maxChunkBytes` bytes
 (default 256 KiB). Each piece is its own log record with the same attributes,
-except `co.elastic.replay.chunk.index`. Events that fit in one record carry no
+except `elastic.replay.chunk.index`. Events that fit in one record carry no
 chunk attributes.
 
-To reassemble: group by `co.elastic.replay.segment.id` and
-`co.elastic.replay.sequence`, read `chunk.count` (default `1`), check that all
+To reassemble: group by `elastic.replay.segment.id` and
+`elastic.replay.sequence`, read `chunk.count` (default `1`), check that all
 pieces are present, concatenate the bodies in `chunk.index` order (default `0`),
-then `JSON.parse` the result (or `unpack` it when `co.elastic.replay.packed` is
+then `JSON.parse` the result (or `unpack` it when `elastic.replay.packed` is
 `true`). Drop events with missing chunks.
 
 Producers never emit more than 256 chunks for one event and drop larger events
@@ -149,14 +148,14 @@ replay data stream.
 
 | Field | Value |
 | --- | --- |
-| `eventName` | `co.elastic.replay.start` |
+| `eventName` | `elastic.replay.start` |
 | `timestamp` | timestamp of the segment's first rrweb event |
 | `session.id`, `browser.tab.id` | added by the session log processor |
-| `co.elastic.replay.segment.id` | the segment it starts |
-| `co.elastic.replay.trigger` | `sampled` (recorded from the start) or `error` (started by `errorSampleRate`) |
-| `co.elastic.replay.format` | `rrweb/2`: body format and its major version |
+| `elastic.replay.segment.id` | the segment it starts |
+| `elastic.replay.trigger` | `sampled` (recorded from the start) or `error` (started by `errorSampleRate`) |
+| `elastic.replay.format` | `rrweb/2`: body format and its major version |
 
-A session has a replay when at least one `co.elastic.replay.start` record exists
+A session has a replay when at least one `elastic.replay.start` record exists
 for its `session.id`. The sessions transform can set `has_replay` from that and
 the player can list segments from the same records.
 
@@ -180,14 +179,14 @@ A small event in OTLP/JSON (resource and scope omitted):
 {
     "timeUnixNano": "1793551234567000000",
     "observedTimeUnixNano": "1793551234570000000",
-    "eventName": "co.elastic.replay.event",
+    "eventName": "elastic.replay.event",
     "body": {"stringValue": "{\"type\":3,\"data\":{\"source\":2,\"type\":2,\"id\":42,\"x\":310,\"y\":88},\"timestamp\":1793551234567}"},
     "attributes": [
         {"key": "session.id", "value": {"stringValue": "6f1c2e7a-0d3b-4c55-9a8e-2b7f9e0c1d34"}},
         {"key": "browser.tab.id", "value": {"stringValue": "b2e4d7c1-5a6f-4e3b-8c9d-0a1b2c3d4e5f"}},
-        {"key": "co.elastic.replay.segment.id", "value": {"stringValue": "9d8c7b6a-5e4f-4a3b-9c2d-1e0f9a8b7c6d"}},
-        {"key": "co.elastic.replay.sequence", "value": {"intValue": "57"}},
-        {"key": "co.elastic.replay.event.type", "value": {"intValue": "3"}}
+        {"key": "elastic.replay.segment.id", "value": {"stringValue": "9d8c7b6a-5e4f-4a3b-9c2d-1e0f9a8b7c6d"}},
+        {"key": "elastic.replay.sequence", "value": {"intValue": "57"}},
+        {"key": "elastic.replay.event.type", "value": {"intValue": "3"}}
     ]
 }
 ```
@@ -195,21 +194,21 @@ A small event in OTLP/JSON (resource and scope omitted):
 It is neither split nor packed, so it has no chunk or `packed` attributes.
 
 A FullSnapshot of 600 KiB with the default chunk size becomes three records
-with `co.elastic.replay.sequence` `1`, `co.elastic.replay.event.type` `2`,
-`co.elastic.replay.chunk.count` `3` and `co.elastic.replay.chunk.index` `0`, `1`, `2`.
+with `elastic.replay.sequence` `1`, `elastic.replay.event.type` `2`,
+`elastic.replay.chunk.count` `3` and `elastic.replay.chunk.index` `0`, `1`, `2`.
 
 The start record for the same segment:
 
 ```json
 {
     "timeUnixNano": "1793551230001000000",
-    "eventName": "co.elastic.replay.start",
+    "eventName": "elastic.replay.start",
     "attributes": [
         {"key": "session.id", "value": {"stringValue": "6f1c2e7a-0d3b-4c55-9a8e-2b7f9e0c1d34"}},
         {"key": "browser.tab.id", "value": {"stringValue": "b2e4d7c1-5a6f-4e3b-8c9d-0a1b2c3d4e5f"}},
-        {"key": "co.elastic.replay.segment.id", "value": {"stringValue": "9d8c7b6a-5e4f-4a3b-9c2d-1e0f9a8b7c6d"}},
-        {"key": "co.elastic.replay.trigger", "value": {"stringValue": "sampled"}},
-        {"key": "co.elastic.replay.format", "value": {"stringValue": "rrweb/2"}}
+        {"key": "elastic.replay.segment.id", "value": {"stringValue": "9d8c7b6a-5e4f-4a3b-9c2d-1e0f9a8b7c6d"}},
+        {"key": "elastic.replay.trigger", "value": {"stringValue": "sampled"}},
+        {"key": "elastic.replay.format", "value": {"stringValue": "rrweb/2"}}
     ]
 }
 ```
@@ -219,16 +218,16 @@ The start record for the same segment:
 For elastic/observability-dev#6293:
 
 - Route on the scope name `@elastic/opentelemetry-browser/replay` and set
-  `data_stream.dataset` to `rum.replay`. The `co.elastic.replay.start` records use
+  `data_stream.dataset` to `rum.replay`. The `elastic.replay.start` records use
   the main EDOT scope and stay with the other logs.
 - The Elasticsearch exporter in `otel` mode appends `.otel` to the dataset, so the
   index is `logs-rum.replay.otel-<namespace>`. The POC index pattern
   `logs-rum.replay-*` does not match it; the player should query
   `logs-rum.replay*` or the routing should use a dataset that matches.
 - Mappings: `body` stored but not indexed for full text; `session.id`,
-  `browser.tab.id` and `co.elastic.replay.segment.id` as `keyword`;
-  `co.elastic.replay.sequence`, `chunk.index`, `chunk.count` and `event.type` as
-  `long`; `co.elastic.replay.packed` as `boolean`. Map the optional fields
+  `browser.tab.id` and `elastic.replay.segment.id` as `keyword`;
+  `elastic.replay.sequence`, `chunk.index`, `chunk.count` and `event.type` as
+  `long`; `elastic.replay.packed` as `boolean`. Map the optional fields
   explicitly so queries and sorts work before the first split or packed event
   arrives.
 
@@ -336,22 +335,22 @@ Only blocking can. Privacy settings take precedence over `quality.recordCanvas`:
 | `recordCanvas` | boolean | `false` | Record `<canvas>` content. Large, and it cannot be masked, only blocked (see [Canvas](#canvas)), so off by default. |
 | `sampling` | object | `{mousemove: 50, scroll: 150, input: 'last', canvas: 2}` | rrweb event sampling; ms intervals, and frames per second for `canvas`. |
 | `checkoutIntervalMs` | number | `300000` | Take a new FullSnapshot this often while recording live. |
-| `packEvents` | boolean | `false` | Compress each event with `@rrweb/packer` and set `co.elastic.replay.packed`. |
+| `packEvents` | boolean | `false` | Compress each event with `@rrweb/packer` and set `elastic.replay.packed`. |
 
 ## Migration from the POC
 
 | POC (#78) | This document |
 | --- | --- |
 | scope `elastic-rrweb` | scope `@elastic/opentelemetry-browser/replay` |
-| `elastic.rum.log.type: replay` | `eventName: co.elastic.replay.event` |
+| `elastic.rum.log.type: replay` | `eventName: elastic.replay.event` |
 | `rum.sessionId` | removed, `session.id` only |
-| `rr-web.event`, `rr-web.offset` (session-wide, sessionStorage) | `co.elastic.replay.segment.id` + `co.elastic.replay.sequence` |
-| `rrweb.type` | `co.elastic.replay.event.type` |
-| `rr-web.chunk` (1-based), `rr-web.total-chunks`, on every record | `co.elastic.replay.chunk.index` (0-based), `co.elastic.replay.chunk.count`, only on split events |
-| `rrweb.packed` (0/1), on every record | `co.elastic.replay.packed` (boolean), only when `true` |
+| `rr-web.event`, `rr-web.offset` (session-wide, sessionStorage) | `elastic.replay.segment.id` + `elastic.replay.sequence` |
+| `rrweb.type` | `elastic.replay.event.type` |
+| `rr-web.chunk` (1-based), `rr-web.total-chunks`, on every record | `elastic.replay.chunk.index` (0-based), `elastic.replay.chunk.count`, only on split events |
+| `rrweb.packed` (0/1), on every record | `elastic.replay.packed` (boolean), only when `true` |
 | `page.url`, `page.url.path` on every record | removed |
-| custom body `{type: 99, data: {name: 'replay-started'}}` | `co.elastic.replay.start` log record |
-| `rum.has_replay` on all signals | `co.elastic.replay.start` log record |
+| custom body `{type: 99, data: {name: 'replay-started'}}` | `elastic.replay.start` log record |
+| `rum.has_replay` on all signals | `elastic.replay.start` log record |
 | `samplingRate: 10`, `errorSamplingRate: 100` (percent) | `sampleRate: 0.1`, `errorSampleRate: 1` |
 | `quality.maxChunkBytes` | `replay.maxChunkBytes` |
 | `recordCanvas` default `true` | default `false` |
@@ -363,5 +362,5 @@ Only blocking can. Privacy settings take precedence over `quality.recordCanvas`:
 - Packed bodies are binary strings. Over OTLP/JSON they inflate through escaping,
   which can cancel the compression. We may need a base64 body or to rely on
   transport compression instead; to measure in elastic/observability-dev#6140.
-- Do we need `co.elastic.replay.format` on every replay record, so the replay data is
+- Do we need `elastic.replay.format` on every replay record, so the replay data is
   readable without the start records?
