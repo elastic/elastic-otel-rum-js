@@ -47,7 +47,12 @@ test('should add url.template to spans and logs', async ({page}) => {
         ['http://localhost:3000/cart', '/cart'],
     ]);
     for (const log of logs) {
-        expect(log.attributes['url.template']).toBeDefined();
+        // Resource timings describe a request, like client spans
+        if (log.eventName === 'browser.resource_timing') {
+            expect(log.attributes['url.template']).toBeUndefined();
+        } else {
+            expect(log.attributes['url.template']).toBeDefined();
+        }
     }
 
     const spans = await collector.getSpans();

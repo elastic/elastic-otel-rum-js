@@ -8,12 +8,13 @@ export function resolvePageRouteConfig(pageRoute: PageRouteResolver | false | un
 /**
  * Infers a route from the URL by replacing ID-like path segments (numbers,
  * UUIDs, hashes and ULIDs) with `{id}`. The query string is dropped. The
- * route of hash-based routers (`#/cart/123`) is kept.
+ * route of hash-based routers (`#/cart/123`) is kept. Returns `undefined`
+ * for strings that are not valid URLs.
  * @example inferPageRoute(new URL('https://shop.test/product/123?ref=ad')) // '/product/{id}'
  * @param {URL | string} url
- * @returns {string}
+ * @returns {string | undefined}
  */
-export function inferPageRoute(url: URL | string): string;
+export function inferPageRoute(url: URL | string): string | undefined;
 /**
  * Keeps the route of the current page. A route set with `setRoute` applies
  * until the page path changes, after that the resolver is used.
@@ -77,15 +78,18 @@ export class PageRouteSpanProcessor implements SpanProcessor {
     shutdown(): Promise<void>;
 }
 /**
- * Adds the page route on log emit. Must be registered before exporting
- * processors since records become read-only after all `onEmit` calls.
+ * Adds the page route on log emit, except on resource timings that describe
+ * a request. Must be registered before exporting processors since records
+ * become read-only after all `onEmit` calls.
  */
 export class PageRouteLogRecordProcessor {
     /** @param {PageRouteManager} manager */
     constructor(manager: PageRouteManager);
     _manager: PageRouteManager;
-    /** @param {Signal} logRecord */
-    onEmit(logRecord: Signal): void;
+    /** @param {Signal & {eventName?: string}} logRecord */
+    onEmit(logRecord: Signal & {
+        eventName?: string;
+    }): void;
     forceFlush(): Promise<void>;
     shutdown(): Promise<void>;
 }
@@ -98,7 +102,7 @@ export type Signal = {
  * `/product/{id}`), or `undefined` to omit it. `inferPageRoute` is passed so
  * resolvers can fall back to it for the URLs they don't handle.
  */
-export type PageRouteResolver = (url: URL, inferPageRoute: (url: URL | string) => string) => string | undefined;
+export type PageRouteResolver = (url: URL, inferPageRoute: (url: URL | string) => string | undefined) => string | undefined;
 export type PageRouteManagerOptions = {
     /**
      * returns the current page URL

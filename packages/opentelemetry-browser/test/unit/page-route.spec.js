@@ -42,7 +42,7 @@ function createSignal(attributes = {}) {
     };
 }
 
-test('inferPageRoute', async (t) => {
+test('inferPageRoute', (t) => {
     /** @type {Array<[string, string]>} */
     const cases = [
         ['https://shop.test/', '/'],
@@ -62,11 +62,14 @@ test('inferPageRoute', async (t) => {
         ['https://shop.test/app/#!/cart/42', '/app/#!/cart/{id}'],
     ];
     for (const [href, expected] of cases) {
-        await t.test(href, () => {
+        t.test(href, () => {
             assert.strictEqual(inferPageRoute(new URL(href)), expected);
             assert.strictEqual(inferPageRoute(href), expected);
         });
     }
+    t.test('invalid URL', () => {
+        assert.strictEqual(inferPageRoute('not a URL'), undefined);
+    });
 });
 
 test('resolvePageRouteConfig', () => {
@@ -82,13 +85,13 @@ test('resolvePageRouteConfig', () => {
     assert.strictEqual(resolvePageRouteConfig(true), inferPageRoute);
 });
 
-test('PageRouteManager', async (t) => {
-    await t.test('returns undefined without resolver or route', () => {
+test('PageRouteManager', (t) => {
+    t.test('returns undefined without resolver or route', () => {
         const {manager} = setup('https://shop.test/product/1');
         assert.strictEqual(manager.getRoute(), undefined);
     });
 
-    await t.test('resolves once per URL', () => {
+    t.test('resolves once per URL', () => {
         const {page, manager, resolved, resolver} = setup(
             'https://shop.test/product/1'
         );
@@ -109,7 +112,7 @@ test('PageRouteManager', async (t) => {
         ]);
     });
 
-    await t.test('passes inferPageRoute to the resolver as fallback', () => {
+    t.test('passes inferPageRoute to the resolver as fallback', () => {
         const {page, manager} = setup('https://shop.test/blog/my-post');
         manager.setResolver((url, infer) =>
             url.pathname.startsWith('/blog/') ? '/blog/{slug}' : infer(url)
@@ -120,7 +123,7 @@ test('PageRouteManager', async (t) => {
         assert.strictEqual(manager.getRoute(), '/product/{id}');
     });
 
-    await t.test('ignores invalid resolvers and results', () => {
+    t.test('ignores invalid resolvers and results', () => {
         const {manager} = setup('https://shop.test/product/1');
 
         // @ts-expect-error - testing invalid output
@@ -136,17 +139,18 @@ test('PageRouteManager', async (t) => {
         assert.strictEqual(manager.getRoute(), undefined);
     });
 
-    await t.test('set route wins over the resolver', () => {
+    t.test('set route wins over the resolver', () => {
         const {manager, resolver} = setup('https://shop.test/product/1');
         manager.setResolver(resolver);
         manager.setRoute('/product/:productId');
+        assert.strictEqual(manager.getRoute(), '/product/:productId');
         assert.strictEqual(manager.getRoute(), '/product/:productId');
 
         manager.setRoute(undefined);
         assert.strictEqual(manager.getRoute(), '/product/{id}');
     });
 
-    await t.test('set route survives query and anchor changes', () => {
+    t.test('set route survives query and anchor changes', () => {
         const {page, manager} = setup('https://shop.test/search');
         manager.setRoute('/search');
 
@@ -156,7 +160,7 @@ test('PageRouteManager', async (t) => {
         assert.strictEqual(manager.getRoute(), '/search');
     });
 
-    await t.test('set route is dropped when the page changes', () => {
+    t.test('set route is dropped when the page changes', () => {
         const {page, manager, resolver} = setup('https://shop.test/cart');
         manager.setResolver(resolver);
         manager.setRoute('/cart');
@@ -169,7 +173,7 @@ test('PageRouteManager', async (t) => {
         assert.strictEqual(manager.getRoute(), undefined);
     });
 
-    await t.test('set route is dropped when the hash route changes', () => {
+    t.test('set route is dropped when the hash route changes', () => {
         const {page, manager} = setup('https://shop.test/#/cart');
         manager.setRoute('/#/cart');
 
@@ -179,7 +183,7 @@ test('PageRouteManager', async (t) => {
         assert.strictEqual(manager.getRoute(), undefined);
     });
 
-    await t.test('ignores invalid routes', () => {
+    t.test('ignores invalid routes', () => {
         const {manager} = setup('https://shop.test/cart');
         manager.setRoute('/cart');
 
@@ -212,6 +216,20 @@ test('processors add url.template', () => {
         process(createSignal({'url.template': '/api/items/{id}'})),
         {'url.template': '/api/items/{id}'}
     );
+});
+
+test('log processor skips resource timings', () => {
+    const {manager} = setup('https://shop.test/cart');
+    manager.setRoute('/cart');
+    const processor = new PageRouteLogRecordProcessor(manager);
+
+    const timing = {...createSignal(), eventName: 'browser.resource_timing'};
+    processor.onEmit(timing);
+    assert.deepStrictEqual(timing.attributes, {});
+
+    const vital = {...createSignal(), eventName: 'browser.web_vital'};
+    processor.onEmit(vital);
+    assert.deepStrictEqual(vital.attributes, {'url.template': '/cart'});
 });
 
 test('span processor skips client spans', () => {

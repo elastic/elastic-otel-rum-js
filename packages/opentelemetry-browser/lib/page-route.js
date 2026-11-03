@@ -11,7 +11,7 @@ import {ATTR_URL_TEMPLATE} from './semconv.js';
  * Returns the low-cardinality route of the page at the given URL (e.g.
  * `/product/{id}`), or `undefined` to omit it. `inferPageRoute` is passed so
  * resolvers can fall back to it for the URLs they don't handle.
- * @typedef {(url: URL, inferPageRoute: (url: URL | string) => string) => string | undefined} PageRouteResolver
+ * @typedef {(url: URL, inferPageRoute: (url: URL | string) => string | undefined) => string | undefined} PageRouteResolver
  */
 
 /**
@@ -22,6 +22,9 @@ import {ATTR_URL_TEMPLATE} from './semconv.js';
 // Matches the route part of hash-based routers (`#/cart` or `#!/cart`), so
 // plain in-page anchors (`#section`) are not treated as routes.
 const HASH_ROUTE_RE = /^#!?\//;
+// Log records of the resource-timing instrumentation describe a request, not
+// the page, like client spans.
+const EVENT_RESOURCE_TIMING = 'browser.resource_timing';
 const ID_SEGMENT_RES = [
     // numeric
     /^\d+$/,
@@ -68,7 +71,9 @@ export class PageRouteManager {
             return;
         }
         if (typeof route !== 'string') {
-            diag.warn(`Invalid page route: ${route}. It must be a string.`);
+            diag.warn(
+                `Invalid page route: ${route}. It must be a non-empty string or undefined.`
+            );
             return;
         }
         this._override = {pageKey: this._getPageKey(this._getHref()), route};
@@ -141,13 +146,20 @@ export function resolvePageRouteConfig(pageRoute) {
 /**
  * Infers a route from the URL by replacing ID-like path segments (numbers,
  * UUIDs, hashes and ULIDs) with `{id}`. The query string is dropped. The
- * route of hash-based routers (`#/cart/123`) is kept.
+ * route of hash-based routers (`#/cart/123`) is kept. Returns `undefined`
+ * for strings that are not valid URLs.
  * @example inferPageRoute(new URL('https://shop.test/product/123?ref=ad')) // '/product/{id}'
  * @param {URL | string} url
- * @returns {string}
+ * @returns {string | undefined}
  */
 export function inferPageRoute(url) {
-    const {pathname, hash} = typeof url === 'string' ? new URL(url) : url;
+    let parsed;
+    try {
+        parsed = typeof url === 'string' ? new URL(url) : url;
+    } catch {
+        return undefined;
+    }
+    const {pathname, hash} = parsed;
     return templatePath(pathname) + templatePath(getHashRoute(hash));
 }
 
@@ -180,17 +192,20 @@ export class PageRouteSpanProcessor {
 }
 
 /**
- * Adds the page route on log emit. Must be registered before exporting
- * processors since records become read-only after all `onEmit` calls.
+ * Adds the page route on log emit, except on resource timings that describe
+ * a request. Must be registered before exporting processors since records
+ * become read-only after all `onEmit` calls.
  */
 export class PageRouteLogRecordProcessor {
     /** @param {PageRouteManager} manager */
     constructor(manager) {
         this._manager = manager;
     }
-    /** @param {Signal} logRecord */
+    /** @param {Signal & {eventName?: string}} logRecord */
     onEmit(logRecord) {
-        addRoute(logRecord, this._manager);
+        if (logRecord.eventName !== EVENT_RESOURCE_TIMING) {
+            addRoute(logRecord, this._manager);
+        }
     }
     forceFlush() {
         return Promise.resolve();

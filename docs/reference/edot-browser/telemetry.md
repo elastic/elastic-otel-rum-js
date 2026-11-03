@@ -142,9 +142,9 @@ Page routes are not added to metrics to avoid high-cardinality attributes.
 
 ### Known limitations of page routes [page-routes-limitations]
 
-- The route is the one of the page displayed when the span starts or the log record is emitted. Telemetry reported after an in-page navigation, such as Core Web Vitals or resource timings, gets the route of the new page.
+- The route is the one of the page displayed when the span starts or the log record is emitted. Telemetry reported after an in-page navigation, such as Core Web Vitals, gets the route of the new page.
 - Inferred routes only replace numbers, UUIDs, hashes, and ULIDs. Other dynamic segments such as slugs are kept, and segments such as years are replaced with `{id}`.
-- Spans that already have a `url.template` attribute keep their value. Client spans, such as `fetch` and `XMLHttpRequest` requests, don't get the page route, since on them `url.template` is the template of the request URL.
+- Spans that already have a `url.template` attribute keep their value. Client spans, such as `fetch` and `XMLHttpRequest` requests, don't get the page route, since on them `url.template` is the template of the request URL. Resource timing log records (`browser.resource_timing`) don't get it either, since they also describe a request.
 - A route passed to `setPageRoute` before the router updates the URL is discarded when the path changes.
 - `setPageRoute` is only available after EDOT Browser starts. The route of the page where it starts comes from the `pageRoute` configuration.
 
