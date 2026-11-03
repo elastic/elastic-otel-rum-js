@@ -245,7 +245,6 @@ export function startBrowserSdk(cfg = {}) {
             logger.emit = function (record) {
                 const session = sessionManager.getSession();
                 if (session.sampled) {
-                    console.log('emit', record);
                     emitLogFn.call(this, record);
                 }
             };
