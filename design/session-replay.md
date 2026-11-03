@@ -25,8 +25,9 @@ from.
   session, normally one page load. Every segment starts at sequence `0` with a
   rrweb Meta and FullSnapshot, so it plays on its own.
 - When a segment starts recording, the SDK emits one `elastic.replay.start` log
-  record on the regular EDOT logs pipeline. Backends use it to know a session has
-  a replay. There is no `rum.has_replay` attribute.
+  record with the replay records, so it shares their data stream and retention.
+  Backends use it to know a session has a replay. There is no `rum.has_replay`
+  attribute.
 - `replay.sampleRate` and `replay.errorSampleRate` are 0..1 rates applied to
   sessions that `session.sampleRate` already kept, decided once per session.
 
@@ -142,12 +143,17 @@ with a diagnostic. Consumers may reject `chunk.count` above 256.
 ### Replay start record
 
 When a segment starts recording live, the SDK emits one record through the
-regular EDOT logger (scope `@elastic/opentelemetry-browser`, the same as
-`session.start`), so it lands with the session's other logs and not in the
-replay data stream.
+replay logger (scope `@elastic/opentelemetry-browser/replay`), so it lands in
+the replay data stream next to the events it describes.
+
+Keeping it there ties its lifetime to the replay data. In the regular logs
+stream it would follow a different retention: a session could keep showing a
+replay after the replay data aged out, or lose its replay marker while the data
+still exists.
 
 | Field | Value |
 | --- | --- |
+| Instrumentation scope | `@elastic/opentelemetry-browser/replay` |
 | `eventName` | `elastic.replay.start` |
 | `timestamp` | timestamp of the segment's first rrweb event |
 | `session.id`, `browser.tab.id` | added by the session log processor |
@@ -157,7 +163,17 @@ replay data stream.
 
 A session has a replay when at least one `elastic.replay.start` record exists
 for its `session.id`. The sessions transform can set `has_replay` from that and
-the player can list segments from the same records.
+the player can list segments from the same records. Both query the replay data
+stream filtered on `event_name: elastic.replay.start`, which matches one record
+per segment.
+
+A `has_replay` value stored by a transform is a snapshot: it means the session
+had a replay when the transform ran. The player checks that the data still
+exists when it opens and shows its past-retention state otherwise.
+
+Retention deletes whole backing indices, oldest first. A segment that spans two
+backing indices can lose its start record and first FullSnapshot while later
+events remain; the player then starts at the segment's next FullSnapshot.
 
 We chose this over a `rum.has_replay` attribute on all signals because:
 
@@ -218,12 +234,15 @@ The start record for the same segment:
 For elastic/observability-dev#6293:
 
 - Route on the scope name `@elastic/opentelemetry-browser/replay` and set
-  `data_stream.dataset` to `rum.replay`. The `elastic.replay.start` records use
-  the main EDOT scope and stay with the other logs.
+  `data_stream.dataset` to `rum.replay`. This also routes the
+  `elastic.replay.start` records, so they get the same retention as the events.
 - The Elasticsearch exporter in `otel` mode appends `.otel` to the dataset, so the
   index is `logs-rum.replay.otel-<namespace>`. The POC index pattern
   `logs-rum.replay-*` does not match it; the player should query
   `logs-rum.replay*` or the routing should use a dataset that matches.
+- `logs-rum.replay.otel-*` also matches `logs-*.otel-*`. Views that read RUM
+  logs with that pattern (Overview, Sessions) must exclude `logs-rum.replay*`,
+  or every query also scans the replay data.
 - Mappings: `body` stored but not indexed for full text; `session.id`,
   `browser.tab.id` and `elastic.replay.segment.id` as `keyword`;
   `elastic.replay.sequence`, `chunk.index`, `chunk.count` and `event.type` as
