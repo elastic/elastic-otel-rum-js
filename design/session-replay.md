@@ -313,6 +313,19 @@ The selectors `[data-elastic-replay="mask"]`, `[data-elastic-replay="block"]`
 and `[data-elastic-replay="ignore"]` always apply, so markup can opt out without
 config. Configured selectors add to them.
 
+#### Canvas
+
+A `<canvas>` is recorded as image frames or drawing calls (including the
+strings passed to `fillText`), not as DOM text, so masking cannot apply to it.
+Only blocking can. Privacy settings take precedence over `quality.recordCanvas`:
+
+- With `maskAllText: true`, no canvas is recorded, even when `recordCanvas` is
+  `true`. The SDK logs a warning when both are set.
+- A canvas that matches `maskTextSelector` or `[data-elastic-replay="mask"]`,
+  or sits inside an element that does, is blocked instead of recorded.
+- A canvas that matches `blockSelector` or `[data-elastic-replay="block"]` is
+  blocked, as any other element.
+
 ### `quality`
 
 | Option | Type | Default | Description |
@@ -320,7 +333,7 @@ config. Configured selectors add to them.
 | `slimDOM` | boolean | `true` | Drop scripts, comments and head noise from snapshots. |
 | `inlineStylesheet` | boolean | `true` | Inline stylesheets so playback does not depend on the site's CSS URLs. |
 | `collectFonts` | boolean | `false` | Record web fonts. |
-| `recordCanvas` | boolean | `false` | Record `<canvas>` content. Large, so off by default. |
+| `recordCanvas` | boolean | `false` | Record `<canvas>` content. Large, and it cannot be masked, only blocked (see [Canvas](#canvas)), so off by default. |
 | `sampling` | object | `{mousemove: 50, scroll: 150, input: 'last', canvas: 2}` | rrweb event sampling; ms intervals, and frames per second for `canvas`. |
 | `checkoutIntervalMs` | number | `300000` | Take a new FullSnapshot this often while recording live. |
 | `packEvents` | boolean | `false` | Compress each event with `@rrweb/packer` and set `co.elastic.replay.packed`. |
