@@ -251,7 +251,7 @@ export function startBrowserSdk(cfg = {}) {
             };
             return logger;
         };
-        // NOTE: metrics is different in semantics. dependinh on the user's inent:
+        // NOTE: metrics is different in semantics. depending on the user's inent:
         // - there could be metrics that outlive session limits
         // - there could be metrics attached to a session (sampled)
         //
