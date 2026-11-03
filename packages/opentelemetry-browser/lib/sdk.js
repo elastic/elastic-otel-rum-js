@@ -196,7 +196,10 @@ export function startBrowserSdk(cfg = {}) {
 
     const logsUrl = appendPath(endpointUrl, 'v1/logs').href;
     const logProcessors = [];
-    // If session available it we use a processor to add the session attributes
+
+    // Some of the logs configuration depend if we can provide sessions. If so:
+    // - add a processor to append session attributes
+    // - add a configurator to enable/disable when session is sampled or not
     if (sessionManager) {
         logProcessors.push(
             new SessionLogRecordProcessor({
@@ -216,6 +219,24 @@ export function startBrowserSdk(cfg = {}) {
     // this will be used later for instrumentations
     const loggerProvider = logs.getLoggerProvider();
 
+    // Maybe a better way to control the loggers would be to provide a `LoggerConfigurator`
+    // but the upstream SDK does not offer the option to pass it through.
+    // Solution for now is to wrap the `getLogger` method and patch the `enabled` method
+    // so is aware of the session when called.
+    if (sessionManager) {
+        const loggers = new WeakSet();
+        const loggerFn = loggerProvider.getLogger;
+        loggerProvider.getLogger = function (name, version, options) {
+            const logger = loggerFn.call(this, name, version, options);
+            if (loggers.has(logger)) {
+                return logger;
+            }
+            loggers.add(logger);
+            logger.enabled = () => sessionManager.getSession().sampled;
+            return logger;
+        };
+    }
+
     // metrics signal configuration
     // possible `startMetricsSdk` function
     const metricsUrl = appendPath(endpointUrl, 'v1/metrics').href;
@@ -231,37 +252,17 @@ export function startBrowserSdk(cfg = {}) {
     });
     metrics.setGlobalMeterProvider(meterProvider);
 
-    // The best way to cut the flow is to not produce any data
-    // - loggers to not emit
-    // - TODO: meters to reset/recreate?
-    if (sessionManager) {
-        const loggerFn = loggerProvider.getLogger;
-        loggerProvider.getLogger = function (name, version, options) {
-            const logger = loggerFn.call(this, name, version, options);
-            const emitLogFn = logger.emit;
-
-            // If session is sampled out we do not actually emit so nothing gets
-            // processed or exported
-            logger.emit = function (record) {
-                const session = sessionManager.getSession();
-                if (session.sampled) {
-                    emitLogFn.call(this, record);
-                }
-            };
-            return logger;
-        };
-        // NOTE: metrics is different in semantics. depending on the user's inent:
-        // - there could be metrics that outlive session limits
-        // - there could be metrics attached to a session (sampled)
-        //
-        // The 1st type of metics are allways collected and exported with no session attributes and
-        // the 2nd should have session attributes and should be reset/recreated whenever
-        // a session starts. Also collection and export is tied to the sampling decision.
-        // By doing nothing we have the 1st type of metrics. We should check how
-        // to provide the 2nd type. A possible implementation could be to have API to create
-        // proxy instruments that inject the session attributes and recretes on each new session
-        // (proposed in https://github.com/open-telemetry/opentelemetry-browser/discussions/265)
-    }
+    // NOTE: metrics is different in semantics. depending on the user's inent:
+    // - there could be metrics that outlive session limits
+    // - there could be metrics attached to a session (sampled)
+    //
+    // The 1st type of metics are allways collected and exported with no session attributes and
+    // the 2nd should have session attributes and should be reset/recreated whenever
+    // a session starts. Also collection and export is tied to the sampling decision.
+    // By doing nothing we have the 1st type of metrics. We should check how
+    // to provide the 2nd type. A possible implementation could be to have API to create
+    // proxy instruments that inject the session attributes and recretes on each new session
+    // (proposed in https://github.com/open-telemetry/opentelemetry-browser/discussions/265)
 
     // Register instrumentations. The `registerInstrumentations` enabled all of them
     // regardless of the configuration so EDOT only add the ones that are not disabled
