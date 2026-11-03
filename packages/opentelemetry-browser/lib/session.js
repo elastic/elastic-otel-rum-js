@@ -398,6 +398,7 @@ export class SessionSpanProcessor {
 /**
  * Adds session attributes on log emit. Must be registered before exporting
  * processors since records become read-only after all `onEmit` calls.
+ * @implements {LogRecordProcessor}
  */
 export class SessionLogRecordProcessor {
     /** @param {SessionLogRecordProcessorOptions} options */
