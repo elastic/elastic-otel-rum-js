@@ -32,12 +32,14 @@ export type SdkConfig = {
  */
 export type EdotConfig = {
     instrumentations?: Partial<InstrumentationsConfigMap> | undefined;
-    session?: import("./session.js").SessionConfig | undefined;
+    session?: import("./session/config.js").SessionConfig | undefined;
     pageRoute?: false | import("./page-route.js").PageRouteResolver | undefined;
 };
 export type BrowserSdkConfiguration = SdkConfig & EdotConfig;
 export type BrowserSdk = {
     shutdown: () => Promise<void>;
+    setUser: import("./user.js").UserApi["setUser"];
+    clearUser: import("./user.js").UserApi["clearUser"];
     session: import("./session.js").SessionApi;
     /**
      * Sets the

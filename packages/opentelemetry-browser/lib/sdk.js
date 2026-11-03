@@ -50,6 +50,12 @@ import {
     SessionSpanProcessor,
     trackUserActivity,
 } from './session.js';
+import {
+    createUserApi,
+    UserLogRecordProcessor,
+    UserManager,
+    UserSpanProcessor,
+} from './user.js';
 import {EDOT_VERSION} from './version.js';
 
 /**
@@ -92,6 +98,8 @@ const EDOT_SCOPE_NAME = '@elastic/opentelemetry-browser';
 /**
  * @typedef {Object} BrowserSdk
  * @property {() => Promise<void>} shutdown
+ * @property {import('./user.js').UserApi['setUser']} setUser
+ * @property {import('./user.js').UserApi['clearUser']} clearUser
  * @property {import('./session.js').SessionApi} session
  * @property {(route: string | undefined) => void} setPageRoute Sets the
  *  low-cardinality route of the current page (e.g. `/product/{id}`), added as
@@ -100,10 +108,15 @@ const EDOT_SCOPE_NAME = '@elastic/opentelemetry-browser';
  *  `undefined` falls back to the `pageRoute` configuration.
  */
 
+// Module scoped so a handle from a second `startBrowserSdk` call, which gets
+// the no-op SDK, still sets the user of the SDK that is running.
+const userManager = new UserManager();
+
 // SDK returned when invalid config or some error happens at start
 /** @type {BrowserSdk} */
 const NOOP_SDK = {
     shutdown: () => Promise.resolve(),
+    ...createUserApi(userManager),
     session: createSessionApi(undefined),
     setPageRoute() {},
 };
@@ -223,6 +236,7 @@ export function startBrowserSdk(cfg = {}) {
         resourceAttributes,
         contextManager: AsyncApisContextManager.enable(),
         processors: [
+            new UserSpanProcessor(userManager),
             new PageRouteSpanProcessor(pageRouteManager),
             ...spanProcessors,
         ],
@@ -252,6 +266,7 @@ export function startBrowserSdk(cfg = {}) {
         logLevel,
         resourceAttributes,
         processors: [
+            new UserLogRecordProcessor(userManager),
             new PageRouteLogRecordProcessor(pageRouteManager),
             ...logProcessors,
         ],
@@ -335,6 +350,7 @@ export function startBrowserSdk(cfg = {}) {
     sdkStarted = true;
 
     return {
+        ...createUserApi(userManager),
         session: createSessionApi(sessionManager),
         shutdown() {
             pageRouteManager.setResolver(undefined);
