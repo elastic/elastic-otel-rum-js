@@ -41,7 +41,8 @@
                 headers: otelEnv.exportHeaders || {},
             },
             session: {
-                sampleRate: 0.5,
+                // modify this value to reduce traffic to your OTLP endpoint
+                sampleRate: 1,
             }
         });
     </script>
