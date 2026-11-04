@@ -67,6 +67,7 @@ import {EDOT_VERSION} from './version.js';
  * @typedef {Object} EdotConfig
  * @property {Partial<InstrumentationsConfigMap>} [instrumentations]
  * @property {import('./session.js').SessionConfig} [session]
+ * @property {Array<string | RegExp>} [ignoreFetchUrls]
  */
 /**
  * @typedef {SdkConfig & EdotConfig} BrowserSdkConfiguration
@@ -264,6 +265,16 @@ export function startBrowserSdk(cfg = {}) {
     // proxy instruments that inject the session attributes and recretes on each new session
     // (proposed in https://github.com/open-telemetry/opentelemetry-browser/discussions/265)
 
+    // Construct a list of URLs for HTTP instrumentations to ignore
+    // - the export URLs. We do not want self instrumentation
+    // - the ones configured by the user with `ignoreFetchUrls`
+    const ignoreFetchUrls = [
+        ...(config.ignoreFetchUrls ?? []),
+        tracesUrl,
+        logsUrl,
+        metricsUrl,
+    ];
+
     // Register instrumentations. The `registerInstrumentations` enabled all of them
     // regardless of the configuration so EDOT only add the ones that are not disabled
     // by configuration
@@ -272,19 +283,18 @@ export function startBrowserSdk(cfg = {}) {
         navigation: (cfg) => new NavigationInstrumentation(cfg),
         'navigation-timing': (cfg) => new NavigationTimingInstrumentation(cfg),
         'resource-timing': (cfg) => {
-            // This intrumentation must gnore export URLs.
-            // ref: https://github.com/elastic/elastic-otel-rum-js/issues/108
-            const config = cfg ?? {};
-            if (Array.isArray(config.ignoreUrls)) {
-                config.ignoreUrls.push(tracesUrl, logsUrl, metricsUrl);
-            } else {
-                config.ignoreUrls = [tracesUrl, logsUrl, metricsUrl];
-            }
-            return new ResourceTimingInstrumentation(config);
+            const instrCfg = injectIgnoreUrls(cfg ?? {}, ignoreFetchUrls);
+            return new ResourceTimingInstrumentation(instrCfg);
         },
-        fetch: (cfg) => new FetchInstrumentation(cfg),
+        fetch: (cfg) => {
+            const instrCfg = injectIgnoreUrls(cfg ?? {}, ignoreFetchUrls);
+            return new FetchInstrumentation(instrCfg);
+        },
         'user-action': (cfg) => new UserActionInstrumentation(cfg),
-        xhr: (cfg) => new XhrInstrumentation(cfg),
+        xhr: (cfg) => {
+            const instrCfg = injectIgnoreUrls(cfg ?? {}, ignoreFetchUrls);
+            return new XhrInstrumentation(instrCfg);
+        },
         errors: (cfg) => new ErrorsInstrumentation(cfg),
         'web-vitals': (cfg) => new WebVitalsInstrumentation(cfg),
     };
@@ -344,6 +354,23 @@ export function startBrowserSdk(cfg = {}) {
 }
 
 // -- helper functions
+
+/**
+ *
+ * @param {{ ignoreUrls?: Array<string| RegExp> }} instrConfig
+ * @param {Array<string| RegExp>} ignoreFetchUrls
+ */
+function injectIgnoreUrls(instrConfig, ignoreFetchUrls) {
+    if (Array.isArray(instrConfig.ignoreUrls)) {
+        instrConfig.ignoreUrls = [
+            ...instrConfig.ignoreUrls,
+            ...ignoreFetchUrls,
+        ];
+    } else {
+        instrConfig.ignoreUrls = [...ignoreFetchUrls];
+    }
+    return instrConfig;
+}
 
 /**
  * Returns a new URL with the path appended. Avoiding double slash
