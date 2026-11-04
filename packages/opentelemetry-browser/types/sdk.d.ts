@@ -40,7 +40,9 @@ export type BrowserSdk = {
     shutdown: () => Promise<void>;
     setUser: import("./user.js").UserApi["setUser"];
     clearUser: import("./user.js").UserApi["clearUser"];
-    session: import("./session.js").SessionApi;
+    getSession: import("./session.js").SessionApi["getSession"];
+    addObserver: import("./session.js").SessionApi["addObserver"];
+    endSession: import("./session.js").SessionApi["endSession"];
     /**
      * Sets the
      * low-cardinality route of the current page (e.g. `/product/{id}`), added as

@@ -100,3 +100,16 @@ test('getOrCreateTabId - returns an id when storage throws', () => {
     };
     assert.match(getOrCreateTabId(storage), UUID_V4);
 });
+
+test('SessionStore - keeps the ended flag only when set', () => {
+    const storage = new MemoryStorage();
+    const store = new SessionStore(storage);
+    store.save({...session(), ended: true});
+    assert.strictEqual(new SessionStore(storage).get()?.ended, true);
+
+    storage.setItem(
+        SESSION_STORAGE_KEY,
+        JSON.stringify({...session(), ended: 'yes'})
+    );
+    assert.strictEqual(store.get()?.ended, undefined);
+});

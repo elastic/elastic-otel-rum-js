@@ -64,6 +64,12 @@ export class SessionManager {
         renew?: boolean;
     }): void;
     /**
+     * Ends the active session in every tab, e.g. on logout. As after an
+     * expiry, the next session starts on the next user activity or page load
+     * and links this one as previous.
+     */
+    endSession(): void;
+    /**
      * Callbacks run synchronously, in registration order. `onSessionEnded`
      * is reported by an expiry timer, or on the next read if the timer was
      * throttled (background tabs) or the session was replaced by another tab.
