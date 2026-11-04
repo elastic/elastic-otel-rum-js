@@ -37,6 +37,8 @@ jobs:
     - uses: actions/setup-node@v7
       with:
         node-version-file: '.nvmrc'
+    - name: Dsiplay package info
+      run: cat package.json
     - name: Install dependencies
       run: npm run ci-all
       working-directory: packages/opentelemetry-browser
