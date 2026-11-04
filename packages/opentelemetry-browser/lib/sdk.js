@@ -74,6 +74,13 @@ import {EDOT_VERSION, OTEL_BROWSER_INSTRUMENTATION_VERSION} from './version.js';
 
 const EDOT_SCOPE_NAME = '@elastic/opentelemetry-browser';
 
+/**
+ * @param {string} version
+ * @returns {string}
+ */
+const instrumentationDocsUrl = (version) =>
+    `https://github.com/open-telemetry/opentelemetry-browser/tree/browser-instrumentation-v${version}/packages/instrumentation#readme`;
+
 // SDK returned when invalid config or some error happens at start
 const NOOP_SDK = {shutdown: () => Promise.resolve()};
 
@@ -291,8 +298,9 @@ export function startBrowserSdk(cfg = {}) {
     // Configuring instrumentations manually has some risks since they are under
     // active development and future releases may break configuration. Let's warn
     if (typeof config.instrumentations !== 'undefined') {
-        const version = OTEL_BROWSER_INSTRUMENTATION_VERSION;
-        const docsUrl = `https://github.com/open-telemetry/opentelemetry-browser/tree/browser-instrumentation-v${version}/packages/instrumentation`;
+        const docsUrl = instrumentationDocsUrl(
+            OTEL_BROWSER_INSTRUMENTATION_VERSION
+        );
         diag.warn(
             `Manual configuration of instrumetations is not recommended. The current options supported are documented in ${docsUrl}`
         );

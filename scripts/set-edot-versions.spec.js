@@ -27,7 +27,8 @@ const fixtureDir = join(scriptsDir, 'fixtures/set-edot-versions');
  */
 function runScript(npmLsOutput) {
     const input =
-        npmLsOutput ?? execSync('npm ci && npm ls', {cwd: edotPath, encoding: 'utf-8'});
+        npmLsOutput ??
+        execSync('npm ci && npm ls', {cwd: edotPath, encoding: 'utf-8'});
     return spawnSync(process.execPath, [script], {
         encoding: 'utf8',
         input,
@@ -68,6 +69,9 @@ test('parses edot version from the first line of npm ls output', () => {
 
     const versions = getVersionsFromNpmLsOutput(npmLsOutput);
 
+    if ('error' in versions) {
+        assert.ok(false, `getVersionsFromNpmLsOutput error: ${versions.error}`);
+    }
     assert.equal(versions.edotVersion, '2.0.0');
     assert.equal(versions.otelInstrVersion, '1.4.5');
 });
