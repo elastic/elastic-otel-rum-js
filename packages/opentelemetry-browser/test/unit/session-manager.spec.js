@@ -19,61 +19,85 @@ import {
 } from '../../lib/session/storage.js';
 import {UUID_V4, MemoryStorage, setup, observe} from './session-utils.js';
 
-test('SessionManager - creates and persists a session', () => {
+test('SessionManager - start creates and persists a session', () => {
     const {create, started, sessionStorage} = setup();
     const manager = create();
+    manager.start();
 
-    const session = manager.getSession();
-    assert.match(String(session.id), UUID_V4);
-    assert.match(String(manager.getTabId()), UUID_V4);
-    assert.strictEqual(session.previousId, undefined);
-    assert.strictEqual(session.samplingRate, 1);
+    const attrs = manager.getAttributes();
+    assert.match(String(attrs['session.id']), UUID_V4);
+    assert.match(String(attrs['browser.tab.id']), UUID_V4);
+    assert.strictEqual(attrs['session.previous_id'], undefined);
     assert.strictEqual(started.length, 1);
 
     const stored = JSON.parse(
         sessionStorage.getItem(SESSION_STORAGE_KEY) ?? ''
     );
-    assert.strictEqual(stored.id, session.id);
+    assert.strictEqual(stored.id, attrs['session.id']);
 });
 
 test('SessionManager - reuses the session across reloads and tabs', () => {
-    const {create, started} = setup();
-    const firstManager = create();
-    const firstSession = firstManager.getSession();
+    const {createStarted, started} = setup();
+    const first = createStarted().getAttributes();
 
-    const reloadedManager = create();
-    const reloadedSession = reloadedManager.getSession();
-    assert.strictEqual(reloadedSession['id'], firstSession['id']);
-    assert.strictEqual(reloadedManager.getTabId(), firstManager.getTabId());
-    assert.strictEqual(
-        reloadedSession['samplingRate'],
-        firstSession['samplingRate']
-    );
+    const reloaded = createStarted().getAttributes();
+    assert.strictEqual(reloaded['session.id'], first['session.id']);
+    assert.strictEqual(reloaded['browser.tab.id'], first['browser.tab.id']);
 
-    const otherTabManager = create(new MemoryStorage());
-    const otherTabSession = otherTabManager.getSession();
-    assert.strictEqual(otherTabSession['id'], firstSession['id']);
-    assert.notStrictEqual(otherTabManager.getTabId(), firstManager.getTabId());
-    assert.strictEqual(
-        otherTabSession['samplingRate'],
-        firstSession['samplingRate']
-    );
+    const otherTab = createStarted(new MemoryStorage()).getAttributes();
+    assert.strictEqual(otherTab['session.id'], first['session.id']);
+    assert.notStrictEqual(otherTab['browser.tab.id'], first['browser.tab.id']);
 
     assert.strictEqual(started.length, 1);
 });
 
-test('SessionManager - rotates after inactivity and keeps previous id', () => {
-    const {create, clock, started} = setup();
-    const manager = create();
+test('SessionManager - start renews an expired session and keeps previous id', () => {
+    const {create, clock} = setup();
+    const first = create().getSession();
+
+    clock.now += 61_000;
+    const reloaded = create();
+    reloaded.start();
+
+    const second = reloaded.getSession();
+    assert.notStrictEqual(second?.id, first?.id);
+    assert.strictEqual(second?.previousId, first?.id);
+});
+
+test('SessionManager - an expired session is not renewed by telemetry', () => {
+    const {createStarted, clock, started, sessionStorage} = setup();
+    const manager = createStarted();
+    const first = manager.getSession();
+    const stored = sessionStorage.getItem(SESSION_STORAGE_KEY);
+
+    clock.now += 61_000;
+
+    assert.strictEqual(manager.getSession(), undefined);
+    assert.strictEqual(manager.getSessionId(), null);
+    const attrs = manager.getAttributes();
+    assert.strictEqual(attrs['session.id'], undefined);
+    assert.strictEqual(attrs['session.previous_id'], undefined);
+    assert.match(String(attrs['browser.tab.id']), UUID_V4);
+    assert.strictEqual(started.length, 1);
+    assert.strictEqual(sessionStorage.getItem(SESSION_STORAGE_KEY), stored);
+    assert.ok(first);
+});
+
+test('SessionManager - user activity renews an expired session', () => {
+    const {createStarted, clock, started} = setup();
+    const manager = createStarted();
     const first = manager.getSession();
 
-    clock.now += 59_000;
-    assert.strictEqual(manager.getSession().id, first.id);
+    clock.now += 61_000;
+    manager.recordActivity();
 
-    clock.now += 60_000;
     const second = manager.getSession();
-    assert.notStrictEqual(second.id, first.id);
-    assert.strictEqual(second.previousId, first.id);
+    assert.notStrictEqual(second?.id, first?.id);
+    assert.strictEqual(second?.previousId, first?.id);
+    assert.strictEqual(
+        manager.getAttributes()['session.previous_id'],
+        first?.id
+    );
     assert.strictEqual(started.length, 2);
 });
 
@@ -83,23 +107,84 @@ test('SessionManager - drops previous id older than 24 hours', () => {
     manager.getSession();
 
     clock.now += 24 * 60 * 60 * 1000;
-    const session = manager.getSession();
-    assert.strictEqual(session.previousId, undefined);
+    manager.recordActivity();
+
+    assert.strictEqual(manager.getSession()?.previousId, undefined);
+    assert.strictEqual(
+        manager.getAttributes()['session.previous_id'],
+        undefined
+    );
 });
 
-test('SessionManager - activity extends the session until max duration', () => {
-    const {create, clock} = setup();
-    const manager = create();
+test('SessionManager - user activity extends the session until max duration', () => {
+    const {createStarted, clock} = setup();
+    const manager = createStarted();
     const first = manager.getSession();
 
     // active every 30s for just under 10 minutes
     for (let i = 0; i < 19; i++) {
         clock.now += 30_000;
-        assert.strictEqual(manager.getSession().id, first.id);
+        manager.recordActivity();
+        assert.strictEqual(manager.getSession()?.id, first?.id);
     }
 
     clock.now += 30_000;
-    assert.notStrictEqual(manager.getSession().id, first.id);
+    manager.recordActivity();
+    assert.notStrictEqual(manager.getSession()?.id, first?.id);
+});
+
+test('SessionManager - telemetry does not extend the session', () => {
+    const {create, clock} = setup();
+    const manager = create();
+    manager.getSession();
+
+    clock.now += 40_000;
+    manager.getAttributes();
+    clock.now += 40_000;
+
+    assert.strictEqual(manager.getSession(), undefined);
+});
+
+test('SessionManager - presence extends an active session but never renews', () => {
+    const {create, clock} = setup();
+    const manager = create();
+    const first = manager.getSession();
+
+    clock.now += 40_000;
+    manager.recordActivity({renew: false});
+    clock.now += 40_000;
+    assert.strictEqual(manager.getSession()?.id, first?.id);
+
+    clock.now += 61_000;
+    manager.recordActivity({renew: false});
+    assert.strictEqual(manager.getSession(), undefined);
+});
+
+test('SessionManager - activity in another tab keeps the session alive', () => {
+    const {createStarted, clock} = setup();
+    const tabA = createStarted();
+    const tabB = createStarted(new MemoryStorage());
+    const first = tabA.getSession();
+
+    clock.now += 40_000;
+    tabB.recordActivity();
+    clock.now += 40_000;
+
+    assert.strictEqual(tabA.getSession()?.id, first?.id);
+});
+
+test('SessionManager - ignores activity bursts within the write throttle', () => {
+    const {create, clock, sessionStorage} = setup();
+    const manager = create();
+    manager.getSession();
+    clock.now += 10_000;
+    manager.recordActivity();
+    const writes = sessionStorage.getItem(SESSION_STORAGE_KEY);
+
+    clock.now += 1_000;
+    manager.recordActivity();
+
+    assert.strictEqual(sessionStorage.getItem(SESSION_STORAGE_KEY), writes);
 });
 
 test('SessionManager - adopts a session rotated by another tab', () => {
@@ -107,7 +192,6 @@ test('SessionManager - adopts a session rotated by another tab', () => {
     const tabA = create();
     tabA.getSession();
 
-    /** @type {import('../../lib/session.js').SessionState} */
     const rotated = {
         id: generateUUID(),
         startTimestamp: 1_000_000,
@@ -120,19 +204,49 @@ test('SessionManager - adopts a session rotated by another tab', () => {
     assert.strictEqual(tabA.getSessionId(), rotated.id);
 });
 
+test('SessionManager - only the tab creating a session reports its start', () => {
+    const {create, started, sessionStorage} = setup();
+    const tabA = create();
+    tabA.start();
+    const first = tabA.getSessionId();
+    // Joining an existing session does not start one
+    const tabB = create(new MemoryStorage());
+    tabB.start();
+    assert.strictEqual(tabB.getSessionId(), first);
+
+    // Neither does adopting a session rotated by another tab
+    const rotated = {
+        id: generateUUID(),
+        startTimestamp: 1_000_000,
+        lastActivityTimestamp: 1_000_000,
+        sampled: true,
+        samplingRate: 1,
+    };
+    sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(rotated));
+    tabA.recordActivity();
+    tabB.getSession();
+    assert.strictEqual(tabA.getSessionId(), rotated.id);
+    assert.strictEqual(tabB.getSessionId(), rotated.id);
+
+    assert.deepStrictEqual(
+        started.map((s) => s.id),
+        [first]
+    );
+});
+
 test('SessionManager - ignores malformed stored data', () => {
-    const {create, sessionStorage} = setup();
+    const {createStarted, sessionStorage} = setup();
     sessionStorage.setItem(SESSION_STORAGE_KEY, '{"id": 42}');
-    const id = create().getSessionId();
-    assert.match(id, UUID_V4);
+    const id = createStarted().getSessionId();
+    assert.match(String(id), UUID_V4);
 
     sessionStorage.setItem(SESSION_STORAGE_KEY, 'not json');
-    assert.match(create().getSessionId(), UUID_V4);
+    assert.match(String(createStarted().getSessionId()), UUID_V4);
 });
 
 test('SessionManager - keeps the session in memory when storage writes fail', () => {
-    const {create, sessionStorage, started} = setup();
-    const manager = create();
+    const {createStarted, sessionStorage, started} = setup();
+    const manager = createStarted();
     sessionStorage.failWrites = true;
 
     const id = manager.getSessionId();
