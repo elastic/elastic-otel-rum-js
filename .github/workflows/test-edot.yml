@@ -40,7 +40,7 @@ jobs:
     - name: Dsiplay package info
       run: cat package.json
     - name: Install dependencies
-      run: npm run ci-all
+      run: npm ci && npm run ci-all
       working-directory: packages/opentelemetry-browser
     - name: Install Playwright Browsers
       run: npx playwright install --with-deps
