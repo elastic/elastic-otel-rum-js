@@ -27,8 +27,7 @@ const fixtureDir = join(scriptsDir, 'fixtures/set-edot-versions');
  */
 function runScript(npmLsOutput) {
     const input =
-        npmLsOutput ??
-        execSync('npm ls', {cwd: edotPath, encoding: 'utf-8'});
+        npmLsOutput ?? execSync('npm ls', {cwd: edotPath, encoding: 'utf-8'});
     return spawnSync(process.execPath, [script], {
         encoding: 'utf8',
         input,
