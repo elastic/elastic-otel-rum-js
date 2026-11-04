@@ -264,7 +264,7 @@ export function startBrowserSdk(cfg = {}) {
     // proxy instruments that inject the session attributes and recretes on each new session
     // (proposed in https://github.com/open-telemetry/opentelemetry-browser/discussions/265)
 
-    // Factory functions for each intrumentation so it can resolve 1st which configuration
+    // Factory functions for each instrumentation so it can resolve 1st which configuration
     // goes to which instrumentation
     /** @type {Record<keyof InstrumentationsConfigMap, (cfg: any) => any>} */
     const instrFactories = {
