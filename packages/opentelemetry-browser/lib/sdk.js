@@ -36,7 +36,7 @@ import {
     SessionLogRecordProcessor,
     SessionSpanProcessor,
 } from './session.js';
-import {EDOT_VERSION} from './version.js';
+import {EDOT_VERSION, OTEL_BROWSER_INSTRUMENTATION_VERSION} from './version.js';
 
 /**
  * @typedef {{
@@ -74,6 +74,13 @@ import {EDOT_VERSION} from './version.js';
  */
 
 const EDOT_SCOPE_NAME = '@elastic/opentelemetry-browser';
+
+/**
+ * @param {string} version
+ * @returns {string}
+ */
+const instrumentationDocsUrl = (version) =>
+    `https://github.com/open-telemetry/opentelemetry-browser/tree/browser-instrumentation-v${version}/packages/instrumentation#readme`;
 
 // SDK returned when invalid config or some error happens at start
 const NOOP_SDK = {shutdown: () => Promise.resolve()};
@@ -265,6 +272,8 @@ export function startBrowserSdk(cfg = {}) {
     // proxy instruments that inject the session attributes and recretes on each new session
     // (proposed in https://github.com/open-telemetry/opentelemetry-browser/discussions/265)
 
+    // Instrumentations configuration & enablement
+
     // Construct a list of URLs for HTTP instrumentations to ignore
     // - the export URLs. We do not want self instrumentation
     // - the ones configured by the user with `ignoreFetchUrls`
@@ -275,9 +284,8 @@ export function startBrowserSdk(cfg = {}) {
         metricsUrl,
     ];
 
-    // Register instrumentations. The `registerInstrumentations` enabled all of them
-    // regardless of the configuration so EDOT only add the ones that are not disabled
-    // by configuration
+    // Factory functions for each instrumentation so it can resolve 1st which configuration
+    // goes to which instrumentation
     /** @type {Record<keyof InstrumentationsConfigMap, (cfg: any) => any>} */
     const instrFactories = {
         navigation: (cfg) => new NavigationInstrumentation(cfg),
@@ -299,7 +307,16 @@ export function startBrowserSdk(cfg = {}) {
         'web-vitals': (cfg) => new WebVitalsInstrumentation(cfg),
     };
 
-    // TODO: setup instrumentations ourselves and remove `registerInstrumentations`
+    // Configuring instrumentations manually has some risks since they are under
+    // active development and future releases may break configuration. Let's warn
+    if (typeof config.instrumentations !== 'undefined') {
+        const docsUrl = instrumentationDocsUrl(
+            OTEL_BROWSER_INSTRUMENTATION_VERSION
+        );
+        diag.warn(
+            `Manual configuration of instrumetations is not recommended. The current options supported are documented in ${docsUrl}`
+        );
+    }
     const instrumentations = config.instrumentations || {};
 
     /** @type {Array<keyof InstrumentationsConfigMap>} */
