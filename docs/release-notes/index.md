@@ -36,7 +36,7 @@ To check for security updates, go to [Security announcements for the Elastic sta
 
 ### Features and enhancements [edot-browser-X.X.X-features-enhancements]
 
-*
+* Add `ignoreFetchUrls` to exclude URLs from fetch, XMLHttpRequest, and resource timing instrumentation. Strings and regular expressions are supported; OTLP export URLs are always ignored.
 
 ### Fixes [edot-browser-X.X.X-fixes]
 
@@ -44,7 +44,7 @@ To check for security updates, go to [Security announcements for the Elastic sta
 
 ### Chores [edot-browser-X.X.X-chores]
 
-* Emit a message when `istrumentations` configuration option is used to warn users the upstream configuratios are unstable.
+* Emit a message when `instrumentations` configuration option is used to warn users the upstream configuratios are unstable.
   Ref: https://github.com/elastic/elastic-otel-rum-js/issues/152
 
 ## 0.4.0 [edot-browser-0.4.0-release-notes]
