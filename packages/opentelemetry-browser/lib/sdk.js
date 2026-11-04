@@ -32,6 +32,12 @@ import {AsyncApisContextManager} from './context.js';
 import {createLogger} from './logging.js';
 import {detectResource} from './detector.js';
 import {
+    PageRouteLogRecordProcessor,
+    PageRouteManager,
+    PageRouteSpanProcessor,
+    resolvePageRouteConfig,
+} from './page-route.js';
+import {
     ATTR_SESSION_ID,
     ATTR_SESSION_PREVIOUS_ID,
     EVENT_SESSION_START,
@@ -81,6 +87,7 @@ import {EDOT_VERSION} from './version.js';
  * @typedef {Object} EdotConfig
  * @property {Partial<InstrumentationsConfigMap>} [instrumentations]
  * @property {import('./session.js').SessionConfig} [session]
+ * @property {import('./page-route.js').PageRouteResolver | false} [pageRoute] // defaults to `inferPageRoute`
  */
 /**
  * @typedef {SdkConfig & EdotConfig} BrowserSdkConfiguration
@@ -88,15 +95,30 @@ import {EDOT_VERSION} from './version.js';
 
 const EDOT_SCOPE_NAME = '@elastic/opentelemetry-browser';
 
+/**
+ * @typedef {Object} BrowserSdk
+ * @property {() => Promise<void>} shutdown
+ * @property {import('./user.js').UserApi['setUser']} setUser
+ * @property {import('./user.js').UserApi['clearUser']} clearUser
+ * @property {import('./session.js').SessionApi} session
+ * @property {(route: string | undefined) => void} setPageRoute Sets the
+ *  low-cardinality route of the current page (e.g. `/product/{id}`), added as
+ *  `url.template` to spans and log records. The route applies until the page
+ *  path changes, so call it after your router updates the URL. Passing
+ *  `undefined` falls back to the `pageRoute` configuration.
+ */
+
 // Module scoped so a handle from a second `startBrowserSdk` call, which gets
 // the no-op SDK, still sets the user of the SDK that is running.
 const userManager = new UserManager();
 
 // SDK returned when invalid config or some error happens at start
+/** @type {BrowserSdk} */
 const NOOP_SDK = {
     shutdown: () => Promise.resolve(),
     ...createUserApi(userManager),
     session: createSessionApi(undefined),
+    setPageRoute() {},
 };
 
 // To control multiple calls to `startBrowserSdk`
@@ -115,12 +137,7 @@ const defaultConfig = {
 
 /**
  * @param {BrowserSdkConfiguration} cfg
- * @returns {{
- *      shutdown: () => Promise<void>;
- *      setUser: import('./user.js').UserApi['setUser'];
- *      clearUser: import('./user.js').UserApi['clearUser'];
- *      session: import('./session.js').SessionApi;
- * }}
+ * @returns {BrowserSdk}
  */
 export function startBrowserSdk(cfg = {}) {
     if (sdkStarted || cfg.disabled) {
@@ -159,13 +176,17 @@ export function startBrowserSdk(cfg = {}) {
         serviceVersion
     );
 
+    // Before disabling our logger so their config warnings are shown
+    const pageRouteManager = new PageRouteManager();
+    pageRouteManager.setResolver(resolvePageRouteConfig(config.pageRoute));
+    const sessionManager = createSessionManager(config.session);
+
     // Disable our logger to let the upstream take its place
     // TODO: if upstream exports its method to register a logger
     // we could get rid of this
     diag.disable();
 
     const edotLogger = logs.getLogger(EDOT_SCOPE_NAME, EDOT_VERSION);
-    const sessionManager = createSessionManager(config.session);
     sessionManager?.addObserver({
         onSessionStarted(session) {
             // Tabs sharing the session are told too, only its creator reports it
@@ -214,7 +235,11 @@ export function startBrowserSdk(cfg = {}) {
         logLevel,
         resourceAttributes,
         contextManager: AsyncApisContextManager.enable(),
-        processors: [new UserSpanProcessor(userManager), ...spanProcessors],
+        processors: [
+            new UserSpanProcessor(userManager),
+            new PageRouteSpanProcessor(pageRouteManager),
+            ...spanProcessors,
+        ],
     });
 
     const logsUrl = appendPath(endpointUrl, 'v1/logs').href;
@@ -240,7 +265,11 @@ export function startBrowserSdk(cfg = {}) {
     const logsSdk = startLogsSdk({
         logLevel,
         resourceAttributes,
-        processors: [new UserLogRecordProcessor(userManager), ...logProcessors],
+        processors: [
+            new UserLogRecordProcessor(userManager),
+            new PageRouteLogRecordProcessor(pageRouteManager),
+            ...logProcessors,
+        ],
     });
     // Start eagerly so `session.start` is emitted on load rather than with
     // the first piece of telemetry.
@@ -324,6 +353,7 @@ export function startBrowserSdk(cfg = {}) {
         ...createUserApi(userManager),
         session: createSessionApi(sessionManager),
         shutdown() {
+            pageRouteManager.setResolver(undefined);
             stopActivityTracking?.();
             sessionManager?.shutdown();
             disableInstrumentations();
@@ -340,6 +370,9 @@ export function startBrowserSdk(cfg = {}) {
                     }
                 }
             });
+        },
+        setPageRoute(route) {
+            pageRouteManager.setRoute(route);
         },
     };
 }

@@ -1,18 +1,8 @@
 /**
  * @param {BrowserSdkConfiguration} cfg
- * @returns {{
- *      shutdown: () => Promise<void>;
- *      setUser: import('./user.js').UserApi['setUser'];
- *      clearUser: import('./user.js').UserApi['clearUser'];
- *      session: import('./session.js').SessionApi;
- * }}
+ * @returns {BrowserSdk}
  */
-export function startBrowserSdk(cfg?: BrowserSdkConfiguration): {
-    shutdown: () => Promise<void>;
-    setUser: import("./user.js").UserApi["setUser"];
-    clearUser: import("./user.js").UserApi["clearUser"];
-    session: import("./session.js").SessionApi;
-};
+export function startBrowserSdk(cfg?: BrowserSdkConfiguration): BrowserSdk;
 export type InstrumentationsConfigMap = {
     "navigation": import("@opentelemetry/browser-instrumentation/experimental/navigation").NavigationInstrumentationConfig;
     "navigation-timing": import("@opentelemetry/browser-instrumentation/experimental/navigation-timing").NavigationTimingInstrumentationConfig;
@@ -43,6 +33,21 @@ export type SdkConfig = {
 export type EdotConfig = {
     instrumentations?: Partial<InstrumentationsConfigMap> | undefined;
     session?: import("./session/config.js").SessionConfig | undefined;
+    pageRoute?: false | import("./page-route.js").PageRouteResolver | undefined;
 };
 export type BrowserSdkConfiguration = SdkConfig & EdotConfig;
+export type BrowserSdk = {
+    shutdown: () => Promise<void>;
+    setUser: import("./user.js").UserApi["setUser"];
+    clearUser: import("./user.js").UserApi["clearUser"];
+    session: import("./session.js").SessionApi;
+    /**
+     * Sets the
+     * low-cardinality route of the current page (e.g. `/product/{id}`), added as
+     * `url.template` to spans and log records. The route applies until the page
+     * path changes, so call it after your router updates the URL. Passing
+     * `undefined` falls back to the `pageRoute` configuration.
+     */
+    setPageRoute: (route: string | undefined) => void;
+};
 export type DefaultConfigProps = "logLevel" | "serviceName" | "resourceAttributes" | "exportConfig";

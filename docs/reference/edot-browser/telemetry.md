@@ -132,6 +132,22 @@ Session attributes are not added to metrics to avoid high-cardinality attributes
 - Sampled-out sessions do not export automatic instrumentation data. Metrics emitted through the OpenTelemetry API in application code are not gated by session sampling.
 - When `session.sampleRate` is below `1` and there is no active session (it expired and the user has not interacted since), spans and logs are not exported, because there is no sampling decision for them.
 
+## Page routes [page-routes]
+
+Full URLs are a poor way to group pages: `/product/123` and `/product/456?ref=ad` are the same page for your users. EDOT Browser adds the route of the current page to spans and log records as the `url.template` attribute (for example `/product/{id}`), so you can aggregate telemetry such as Core Web Vitals, errors, or navigations per page.
+
+By default, the route is inferred from the URL by replacing ID-like path segments with `{id}` and dropping the query string. Use the `pageRoute` configuration or the `setPageRoute` method of the SDK to provide the routes your application knows. Refer to [page route details](configuration.md#otel_browser_page-route-details).
+
+Page routes are not added to metrics to avoid high-cardinality attributes.
+
+### Known limitations of page routes [page-routes-limitations]
+
+- The route is the one of the page displayed when the span starts or the log record is emitted. Telemetry reported after an in-page navigation, such as Core Web Vitals, gets the route of the new page.
+- Inferred routes only replace numbers, UUIDs, hashes, and ULIDs. Other dynamic segments such as slugs are kept, and segments such as years are replaced with `{id}`.
+- Spans that already have a `url.template` attribute keep their value. Client spans, such as `fetch` and `XMLHttpRequest` requests, don't get the page route, since on them `url.template` is the template of the request URL. Resource timing log records (`browser.resource_timing`) don't get it either, since they also describe a request.
+- A route passed to `setPageRoute` before the router updates the URL is discarded when the path changes.
+- `setPageRoute` is only available after EDOT Browser starts. The route of the page where it starts comes from the `pageRoute` configuration.
+
 ## User identity [user-identity]
 
 Spans and log records can carry the identity of the signed-in user. Call `setUser` on the object returned by `startBrowserSdk` to identify the user, and `clearUser` to remove the identity, for example on logout:
