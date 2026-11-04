@@ -88,6 +88,13 @@ test('isExpired - tolerates up to 5 minutes of clock skew', () => {
     );
 });
 
+test('isExpired - an ended session is expired right away', () => {
+    assert.strictEqual(
+        isExpired({...session(0), ended: true}, 0, limits),
+        true
+    );
+});
+
 test('getExpiryTime - returns the earliest of both limits', () => {
     assert.strictEqual(getExpiryTime(session(0, HOUR), limits), 90 * MINUTE);
     assert.strictEqual(

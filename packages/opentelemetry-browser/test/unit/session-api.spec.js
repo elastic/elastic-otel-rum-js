@@ -83,4 +83,16 @@ test('createSessionApi - is a no-op without a session manager', () => {
     const api = createSessionApi(undefined);
     assert.strictEqual(api.getSession(), undefined);
     assert.doesNotThrow(() => api.addObserver({})());
+    assert.doesNotThrow(() => api.endSession());
+});
+
+test('createSessionApi - ends the session', () => {
+    const {createStarted} = setup();
+    const manager = createStarted();
+    const api = createSessionApi(manager);
+
+    api.endSession();
+
+    assert.strictEqual(api.getSession(), undefined);
+    assert.strictEqual(manager.getSession(), undefined);
 });

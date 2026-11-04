@@ -178,6 +178,20 @@ startBrowserSdk({
 });
 ```
 
+### `ignoreFetchUrls` details [otel_browser_ignorefetchurls-details]
+
+`ignoreFetchUrls` lists URLs that EDOT Browser should not instrument. The SDK always ignores OTLP export URLs (traces, logs, and metrics) to prevent self-instrumentation. When you set `instrumentations`, per-instrumentation `ignoreUrls` values are merged with this list for fetch, XMLHttpRequest, and resource timing.
+
+**Matching rules**
+
+- **Strings** must exactly match the full absolute request URL, including scheme, host, path, and query string. A path-only value such as `/api/health` does not match.
+- **`RegExp` values** are partial matches against the URL, consistent with upstream fetch and XHR `ignoreUrls`.
+
+**What is suppressed**
+
+- **Fetch and XHR:** ignored requests produce no spans and do not receive a `traceparent` header, so trace context is not propagated to those endpoints and downstream services are not linked from the browser trace.
+- **Resource timing:** ignored URLs are filtered from resource timing log records for every resource type (scripts, stylesheets, images, fonts, and others), not only fetch and XHR. For example, ignoring a URL pattern that matches `analytics.js` also omits resource timing telemetry for that script load.
+
 ### `session` details [otel_browser_session-details]
 
 EDOT Browser adds `session.id`, `session.previous_id` (after a session rotates), `session.sampling_rate`, and `browser.tab.id` attributes to spans and log records for **sampled** sessions. Refer to [Sessions](telemetry.md#sessions) for details.
@@ -202,23 +216,51 @@ To stop automatic RUM export while keeping session machinery active, set `sessio
 
 Metrics your application emits through the OpenTelemetry API are not gated by session sampling today. Refer to [Sessions](telemetry.md#sessions) for signal-specific behavior.
 
-### `ignoreFetchUrls` details [otel_browser_ignorefetchurls-details]
-
-`ignoreFetchUrls` lists URLs that EDOT Browser should not instrument. The SDK always ignores OTLP export URLs (traces, logs, and metrics) to prevent self-instrumentation. When you set `instrumentations`, per-instrumentation `ignoreUrls` values are merged with this list for fetch, XMLHttpRequest, and resource timing.
-
-**Matching rules**
-
-- **Strings** must exactly match the full absolute request URL, including scheme, host, path, and query string. A path-only value such as `/api/health` does not match.
-- **`RegExp` values** are partial matches against the URL, consistent with upstream fetch and XHR `ignoreUrls`.
-
-**What is suppressed**
-
-- **Fetch and XHR:** ignored requests produce no spans and do not receive a `traceparent` header, so trace context is not propagated to those endpoints and downstream services are not linked from the browser trace.
-- **Resource timing:** ignored URLs are filtered from resource timing log records for every resource type (scripts, stylesheets, images, fonts, and others), not only fetch and XHR. For example, ignoring a URL pattern that matches `analytics.js` also omits resource timing telemetry for that script load.
-
 ```js
 import { startBrowserSdk } from '@elastic/opentelemetry-browser';
 
+sdk.getSession(); // { id, previousId, startTimestamp, sampled }, or undefined when no session is active
+
+const unsubscribe = sdk.addObserver({
+  onSessionStarted(session, previous) {
+    console.log('Session started', session.id, 'after', previous?.id);
+  },
+  onSessionEnded(session) {
+    console.log('Session ended', session.id);
+  },
+});
+```
+
+Both callbacks are optional and run synchronously. The observer has the same shape as the upstream `@opentelemetry/browser-sdk/session` one.
+
+- `onSessionEnded` is called when the session expires, when the application ends it with `endSession()`, when another tab replaces the session, and when `localStorage` is cleared. Expiry calls it even if the application produces no telemetry.
+- `onSessionStarted` is called when this tab starts a session or adopts one started by another tab. `previous` is set only when this tab sees the preceding session end. Observers added after `startBrowserSdk` returns do not receive the initial session. Use `getSession()` to read it.
+- Browsers throttle timers in background tabs, so `onSessionEnded` can be delayed until the tab is used again.
+
+#### End a session [otel_browser_session-end]
+
+Call `endSession()` to end the current session before it expires, for example when the user logs out, so the next user does not share the same `session.id`:
+
+```js
+function logout() {
+  sdk.endSession();
+  // ...
+}
+```
+
+The session ends in every tab of the application and observers get `onSessionEnded`. As after an expiry, telemetry has no `session.id` until the next user interaction or page load starts a new session, which has the ended session as `session.previous_id`. Calling it when no session is active has no effect.
+
+When web storage is unavailable or after `sdk.shutdown()`, `getSession()` returns `undefined`, and `addObserver()` and `endSession()` have no effect.
+
+### `pageRoute` details [otel_browser_page-route-details]
+
+EDOT Browser adds a `url.template` attribute with the route of the current page (for example `/product/{id}`) to spans and log records. Refer to [Page routes](telemetry.md#page-routes) for details.
+
+By default, EDOT Browser infers the route from the URL with `inferPageRoute`. It replaces ID-like path segments (numbers, UUIDs, hashes, and ULIDs) with `{id}`, drops the query string, and keeps the route of hash-based routers. For example, `/product/123?ref=ad` becomes `/product/{id}` and `/#/cart/42` becomes `/#/cart/{id}`.
+
+Inferred routes keep other path segments as they are, so URLs with slugs (for example `/blog/my-first-post`) still produce one route per page. To control the routes, set `pageRoute` to a function that receives the URL of the current page and returns its route, or `undefined` to omit the attribute. EDOT Browser calls it once per URL, including after in-page (SPA) navigations. The function also receives `inferPageRoute` as second argument, so you can fall back to it for URLs you don't handle. The following example doesn't depend on any framework:
+
+```js
 startBrowserSdk({
   serviceName: 'my-web-app',
   exportConfig: {
