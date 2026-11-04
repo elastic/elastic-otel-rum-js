@@ -253,10 +253,14 @@ For elastic/observability-dev#6293:
 ## Configuration
 
 ```js
+import {startBrowserSdk} from '@elastic/opentelemetry-browser';
+import {replayRecorder} from '@elastic/opentelemetry-browser/replay';
+
 startBrowserSdk({
     session: {sampleRate: 0.5},
     replay: {
         enabled: true,
+        recorder: replayRecorder,
         sampleRate: 0.1,
         errorSampleRate: 1,
         privacy: {
@@ -273,14 +277,36 @@ startBrowserSdk({
 });
 ```
 
-Replay is off unless `replay.enabled` is `true`. The recorder is loaded with a
-dynamic `import()`, so apps that leave replay off do not download it.
+Replay is off unless `replay.enabled` is `true` and a recorder is available.
+
+### Packaging
+
+Core never imports rrweb. It owns the `replay` config, the sampling decision and
+the replay logger. The recorder (rrweb, segments, chunking) is a separate entry
+point that the app hands to core, so there is one config and no second init.
+Tracked in #154.
+
+- **npm:** the recorder is exported from the `@elastic/opentelemetry-browser/replay`
+  subpath and passed as `replay.recorder`. Apps that do not import it have no
+  rrweb in their bundle. Apps that want it only for recorded sessions can pass a
+  loader instead: `recorder: () => import('@elastic/opentelemetry-browser/replay')`.
+  Core calls it only when the session is picked for replay.
+- **CDN:** two IIFE builds from the same source. `elastic-otel-browser.min.js`
+  has no recorder. `elastic-otel-browser-replay.min.js` includes rrweb with the
+  recorder already wired in, so `recorder` is left out. Both expose the same
+  `startBrowserSdk` and take the same config.
+
+Loading the recorder on demand from the CDN is left out for now: the IIFE build
+cannot code-split, sites would host two version-matched files and allow the
+second one in CSP `script-src`, and error mode would start buffering late. The
+`recorder` option lets us add it later without an API change.
 
 ### Top level
 
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
 | `enabled` | boolean | `false` | Turns replay on. |
+| `recorder` | recorder, or function returning a promise of one | none, built in for the CDN replay build | The replay recorder from `@elastic/opentelemetry-browser/replay`. When missing, the SDK logs a warning and records nothing. |
 | `sampleRate` | number, 0..1 | `0` | Share of sampled sessions recorded from the start. |
 | `errorSampleRate` | number, 0..1 | `0` | Share of the remaining sampled sessions recorded from their first error. |
 | `privacy` | object | see below | Masking and blocking. |
