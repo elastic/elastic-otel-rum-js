@@ -100,6 +100,6 @@ if (isMain) {
         );
         process.exit(1);
     } else {
-        console.log(`${result.content}`);
+        process.stdout.write(result.content);
     }
 }
