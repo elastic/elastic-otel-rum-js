@@ -32,6 +32,21 @@ To check for security updates, go to [Security announcements for the Elastic sta
 % ### Chores [edot-browser-X.X.X-chores]
 % *
 
+## version.next [edot-browser-X.X.X-release-notes]
+
+### Features and enhancements [edot-browser-X.X.X-features-enhancements]
+
+*
+
+### Fixes [edot-browser-X.X.X-fixes]
+
+*
+
+### Chores [edot-browser-X.X.X-chores]
+
+* Emit a message when `istrumentations` configuration option is used to warn users the upstream configuratios are unstable.
+  Ref: https://github.com/elastic/elastic-otel-rum-js/issues/152
+
 ## 0.4.0 [edot-browser-0.4.0-release-notes]
 
 ### Features and enhancements [edot-browser-0.4.0-features-enhancements]
