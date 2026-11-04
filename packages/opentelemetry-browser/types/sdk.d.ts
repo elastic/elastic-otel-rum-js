@@ -22,7 +22,7 @@ export type InstrumentationsConfigMap = {
  */
 export type SdkConfig = {
     disabled?: boolean | undefined;
-    logLevel?: "warn" | "none" | "error" | "info" | "debug" | "verbose" | "all" | undefined;
+    logLevel?: "warn" | "error" | "none" | "info" | "debug" | "verbose" | "all" | undefined;
     serviceName?: string | undefined;
     serviceVersion?: string | undefined;
     resourceAttributes?: import("@opentelemetry/api").Attributes | undefined;

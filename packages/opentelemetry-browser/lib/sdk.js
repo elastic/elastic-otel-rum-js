@@ -33,8 +33,10 @@ import {
 } from './semconv.js';
 import {
     createSessionManager,
+    resolveActivityEvents,
     SessionLogRecordProcessor,
     SessionSpanProcessor,
+    trackUserActivity,
 } from './session.js';
 import {EDOT_VERSION, OTEL_BROWSER_INSTRUMENTATION_VERSION} from './version.js';
 
@@ -148,8 +150,12 @@ export function startBrowserSdk(cfg = {}) {
 
     const edotLogger = logs.getLogger(EDOT_SCOPE_NAME, EDOT_VERSION);
     const sessionManager = createSessionManager(config.session);
-    sessionManager?.observe('session:start', (session) => {
-        if (session.sampled) {
+    sessionManager?.addObserver({
+        onSessionStarted(session) {
+            // Tabs sharing the session are told too, only its creator reports it
+            if (!session.sampled || !sessionManager.isCreatedHere(session.id)) {
+                return;
+            }
             /** @type {import('@opentelemetry/api').Attributes} */
             const attributes = {[ATTR_SESSION_ID]: session.id};
             if (session.previousId) {
@@ -159,7 +165,7 @@ export function startBrowserSdk(cfg = {}) {
                 eventName: EVENT_SESSION_START,
                 attributes,
             });
-        }
+        },
     });
 
     const tracesUrl = appendPath(endpointUrl, 'v1/traces').href;
@@ -178,7 +184,7 @@ export function startBrowserSdk(cfg = {}) {
             })
         );
         shouldSample = () => {
-            if (sessionManager.getSession().sampled) {
+            if (sessionManager.getSession()?.sampled) {
                 return {decision: 2};
             }
             return {decision: 0};
@@ -239,7 +245,7 @@ export function startBrowserSdk(cfg = {}) {
                 return logger;
             }
             loggers.add(logger);
-            logger.enabled = () => sessionManager.getSession().sampled;
+            logger.enabled = () => !!sessionManager.getSession()?.sampled;
             return logger;
         };
     }
@@ -258,6 +264,16 @@ export function startBrowserSdk(cfg = {}) {
         readers: [metricsReader],
     });
     metrics.setGlobalMeterProvider(meterProvider);
+
+    // Start eagerly so `session.start` is emitted on load rather than with
+    // the first piece of telemetry.
+    sessionManager?.start();
+    const stopActivityTracking =
+        sessionManager &&
+        trackUserActivity(
+            sessionManager,
+            resolveActivityEvents(config.session)
+        );
 
     // NOTE: metrics is different in semantics. depending on the user's inent:
     // - there could be metrics that outlive session limits
@@ -331,15 +347,13 @@ export function startBrowserSdk(cfg = {}) {
         }
     }
 
-    // Resolve the session eagerly so `session.start` is emitted on load
-    // rather than with the first piece of telemetry.
-    sessionManager?.getSession();
-
     // Flag as started
     sdkStarted = true;
 
     return {
         shutdown() {
+            stopActivityTracking?.();
+            sessionManager?.shutdown();
             instrumentationInstances.forEach((i) => i.disable());
             return Promise.allSettled([
                 tracesSdk.shutdown(),

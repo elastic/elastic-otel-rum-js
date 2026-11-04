@@ -1,6 +1,5 @@
 /** @typedef {import('./manager.js').SessionManager} SessionManager */
 /** @typedef {import('@opentelemetry/sdk-trace').SpanProcessor} SpanProcessor */
-/** @typedef {import('@opentelemetry/sdk-logs').LogRecordProcessor} LogRecordProcessor */
 /**
  * @typedef {Object} SessionSpanProcessorOptions
  * @property {SessionManager} manager
@@ -21,6 +20,7 @@ export class SessionSpanProcessor implements SpanProcessor {
     forceFlush(): Promise<void>;
     shutdown(): Promise<void>;
 }
+/** @typedef {import('@opentelemetry/sdk-logs').LogRecordProcessor} LogRecordProcessor */
 /**
  * @typedef {Object} SessionLogRecordProcessorOptions
  * @property {SessionManager} manager
@@ -43,10 +43,10 @@ export class SessionLogRecordProcessor implements LogRecordProcessor {
 }
 export type SessionManager = import("./manager.js").SessionManager;
 export type SpanProcessor = import("@opentelemetry/sdk-trace").SpanProcessor;
-export type LogRecordProcessor = import("@opentelemetry/sdk-logs").LogRecordProcessor;
 export type SessionSpanProcessorOptions = {
     manager: SessionManager;
 };
+export type LogRecordProcessor = import("@opentelemetry/sdk-logs").LogRecordProcessor;
 export type SessionLogRecordProcessorOptions = {
     manager: SessionManager;
 };
