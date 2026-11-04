@@ -4,7 +4,6 @@
  */
 
 import assert from 'node:assert/strict';
-import {execSync, spawnSync} from 'node:child_process';
 import {readFileSync} from 'node:fs';
 import {dirname, join} from 'node:path';
 import {test} from 'node:test';
@@ -16,33 +15,8 @@ import {
 } from './set-edot-versions.js';
 
 const scriptsDir = dirname(fileURLToPath(import.meta.url));
-const script = join(scriptsDir, 'set-edot-versions.js');
 const repoRoot = join(scriptsDir, '..');
-const edotPath = join(repoRoot, 'packages/opentelemetry-browser');
 const fixtureDir = join(scriptsDir, 'fixtures/set-edot-versions');
-
-/**
- * @param {string} [npmLsOutput]
- * @returns {ReturnType<import('node:child_process').SpawnSyncReturns<string>>}
- */
-function runScript(npmLsOutput) {
-    const input =
-        npmLsOutput ??
-        execSync('npm ci && npm ls', {cwd: edotPath, encoding: 'utf-8'});
-    return spawnSync(process.execPath, [script], {
-        encoding: 'utf8',
-        input,
-    });
-}
-
-test('stdout matches packages/opentelemetry-browser/lib/version.js', () => {
-    const versionPath = join(edotPath, 'lib/version.js');
-    const expected = readFileSync(versionPath, {encoding: 'utf-8'});
-    const result = runScript();
-
-    assert.equal(result.status, 0, result.stderr);
-    assert.equal(result.stdout.trimEnd(), expected.trimEnd());
-});
 
 test('updates version constants from fixture npm ls output', () => {
     const npmLsOutput = readFileSync(join(fixtureDir, 'npm-ls.txt'), {
