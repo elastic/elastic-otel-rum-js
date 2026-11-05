@@ -38,6 +38,8 @@ import {EDOT_VERSION} from '../version.js';
  * @property {string} maskTextSelector
  * @property {string} blockSelector
  * @property {string} ignoreSelector
+ * @property {'DOMContentLoaded'} recordAfter
+ * @property {(error: unknown) => boolean} errorHandler
  */
 /**
  * rrweb `record`, injected so tests can run without a DOM.
@@ -58,6 +60,21 @@ const REPLAY_FORMAT = 'rrweb/2';
 const MASK_SELECTOR = '[data-elastic-replay="mask"]';
 const BLOCK_SELECTOR = '[data-elastic-replay="block"]';
 const IGNORE_SELECTOR = '[data-elastic-replay="ignore"]';
+
+// rrweb `EventType` values that carry no data. Skipping them keeps Meta and
+// FullSnapshot at the start of every segment.
+const EVENT_TYPE_DOM_CONTENT_LOADED = 0;
+const EVENT_TYPE_LOAD = 1;
+
+// rrweb masks text nodes only, these attributes often hold the same content
+const TEXT_ATTRIBUTES = [
+    'alt',
+    'aria-description',
+    'aria-label',
+    'aria-valuetext',
+    'placeholder',
+    'title',
+];
 
 /**
  * Starts recording the page into its own logger and batch processor, so large
@@ -97,13 +114,24 @@ export function startReplay(opts) {
     const segmentId = generateUUID();
     let sequence = 0;
 
+    const replacer = config.privacy.maskAllText
+        ? attributesMasker(config.privacy.maskTextFn)
+        : undefined;
+
     /** @param {RecorderEvent} event */
-    const emit = (event) => {
+    const emitEvent = (event) => {
+        if (
+            event.type === EVENT_TYPE_DOM_CONTENT_LOADED ||
+            event.type === EVENT_TYPE_LOAD
+        ) {
+            return;
+        }
         // TODO: rotate the segment with the session (#142)
         // Also drops events between `endSession()` and the next session
         if (!sessionManager.getSession()?.sampled) {
             return;
         }
+        const body = JSON.stringify(event, replacer);
         if (sequence === 0) {
             logger.emit({
                 eventName: EVENT_REPLAY_START,
@@ -118,7 +146,7 @@ export function startReplay(opts) {
         logger.emit({
             eventName: EVENT_REPLAY_EVENT,
             timestamp: event.timestamp,
-            body: JSON.stringify(event),
+            body,
             attributes: {
                 [ATTR_REPLAY_SEGMENT_ID]: segmentId,
                 [ATTR_REPLAY_SEQUENCE]: sequence++,
@@ -127,10 +155,32 @@ export function startReplay(opts) {
         });
     };
 
+    // rrweb calls `emit` inside app code, e.g. patched `insertRule`, so
+    // errors must not reach the app
+    /** @param {unknown} err */
+    const onError = (err) => {
+        diag.debug('Session replay error', err);
+        return true;
+    };
+    /** @param {RecorderEvent} event */
+    const emit = (event) => {
+        try {
+            emitEvent(event);
+        } catch (err) {
+            onError(err);
+        }
+    };
+
     /** @type {(() => void) | undefined} */
     let stop;
     try {
-        stop = record({emit, ...toRecordPrivacyOptions(config.privacy)});
+        stop = record({
+            emit,
+            errorHandler: onError,
+            // Instead of `load`, so slow subresources don't delay recording
+            recordAfter: 'DOMContentLoaded',
+            ...toRecordPrivacyOptions(config.privacy),
+        });
     } catch (err) {
         diag.warn('Session replay failed to start', err);
     }
@@ -152,12 +202,16 @@ export function startReplay(opts) {
  * Maps the privacy config to rrweb options, always including the
  * `data-elastic-replay` selectors.
  * @param {import('./config.js').ResolvedReplayConfig['privacy']} privacy
- * @returns {Omit<RecordOptions, 'emit'>}
+ * @returns {Omit<RecordOptions, 'emit' | 'recordAfter' | 'errorHandler'>}
  */
 export function toRecordPrivacyOptions(privacy) {
     return {
         maskAllInputs: privacy.maskAllInputs,
-        maskInputOptions: privacy.maskInputOptions,
+        // rrweb drops its default password masking when options are given
+        maskInputOptions: privacy.maskInputOptions && {
+            password: true,
+            ...privacy.maskInputOptions,
+        },
         maskInputFn: privacy.maskInputFn,
         maskTextFn: privacy.maskTextFn,
         maskTextSelector: privacy.maskAllText
@@ -169,6 +223,44 @@ export function toRecordPrivacyOptions(privacy) {
 }
 
 // -- helper functions
+
+/**
+ * `JSON.stringify` replacer that masks text-bearing attributes, in snapshots
+ * and in attribute mutations alike.
+ * @param {(text: string, element: HTMLElement | null) => string} [maskTextFn]
+ * @returns {(key: string, value: unknown) => unknown}
+ */
+function attributesMasker(maskTextFn) {
+    const mask = maskTextFn
+        ? (/** @type {string} */ text) => maskTextFn(text, null)
+        : (/** @type {string} */ text) => text.replace(/\S/g, '*');
+    return (key, value) => {
+        if (key !== 'attributes' || !isAttributesMap(value)) {
+            return value;
+        }
+        if (!TEXT_ATTRIBUTES.some((name) => typeof value[name] === 'string')) {
+            return value;
+        }
+        const masked = {...value};
+        for (const name of TEXT_ATTRIBUTES) {
+            const text = masked[name];
+            if (typeof text === 'string') {
+                masked[name] = mask(text);
+            }
+        }
+        return masked;
+    };
+}
+
+/**
+ * rrweb serializes element attributes as a plain object, and attribute
+ * mutations as an array of `{id, attributes}`.
+ * @param {unknown} value
+ * @returns {value is Record<string, unknown>}
+ */
+function isAttributesMap(value) {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
 
 /**
  * @param {string} builtin

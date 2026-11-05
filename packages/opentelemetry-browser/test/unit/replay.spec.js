@@ -170,10 +170,6 @@ test('resolveReplayConfig - falls back to defaults on invalid values', (t) => {
                 privacy: {
                     maskAllInputs: 0,
                     maskAllText: 'no',
-                    maskInputOptions: ['password'],
-                    maskTextSelector: '',
-                    blockSelector: 42,
-                    ignoreSelector: null,
                     maskInputFn: 'fn',
                     maskTextFn: {},
                 },
@@ -182,7 +178,45 @@ test('resolveReplayConfig - falls back to defaults on invalid values', (t) => {
         ),
         {enabled: true, privacy: DEFAULT_PRIVACY}
     );
-    assert.strictEqual(warnings.length, 11);
+    assert.strictEqual(warnings.length, 7);
+});
+
+test('resolveReplayConfig - disables replay on invalid selectors or input options', (t) => {
+    const warnings = captureWarnings(t);
+    const invalid = [
+        {maskInputOptions: ['password']},
+        {maskTextSelector: ''},
+        {blockSelector: 42},
+        {ignoreSelector: null},
+    ];
+    for (const privacy of invalid) {
+        const resolved = resolveReplayConfig({enabled: true, privacy}, true);
+        assert.strictEqual(resolved.enabled, false, JSON.stringify(privacy));
+    }
+    assert.strictEqual(warnings.length, invalid.length);
+});
+
+test('resolveReplayConfig - disables replay on selectors the DOM rejects', (t) => {
+    const warnings = captureWarnings(t);
+    // Minimal DOM stand in: commas at the end are a syntax error
+    globalThis.document = /** @type {any} */ ({
+        createDocumentFragment: () => ({
+            querySelector: (/** @type {string} */ sel) => {
+                if (sel.trim().endsWith(',')) {
+                    throw new SyntaxError(sel);
+                }
+                return null;
+            },
+        }),
+    });
+    t.after(() => {
+        delete globalThis.document;
+    });
+    const config = (/** @type {string} */ blockSelector) =>
+        resolveReplayConfig({enabled: true, privacy: {blockSelector}}, true);
+    assert.strictEqual(config('.payment-form').enabled, true);
+    assert.strictEqual(config('.payment-form,').enabled, false);
+    assert.strictEqual(warnings.length, 1);
 });
 
 test('toRecordPrivacyOptions - masks all text by default', () => {
@@ -200,6 +234,20 @@ test('toRecordPrivacyOptions - masks all text by default', () => {
         maskTextSelector: '.name',
     });
     assert.strictEqual(options.maskTextSelector, '*');
+});
+
+test('toRecordPrivacyOptions - keeps password masking with maskInputOptions', () => {
+    const options = (/** @type {Record<string, boolean>} */ opts) =>
+        toRecordPrivacyOptions({
+            ...DEFAULT_PRIVACY,
+            maskAllInputs: false,
+            maskInputOptions: opts,
+        }).maskInputOptions;
+    assert.deepStrictEqual(options({email: true}), {
+        password: true,
+        email: true,
+    });
+    assert.deepStrictEqual(options({password: false}), {password: false});
 });
 
 test('toRecordPrivacyOptions - always applies the data-elastic-replay selectors', () => {
@@ -366,4 +414,104 @@ test('startReplay - gives up when the recorder does not start', (t) => {
     });
     assert.strictEqual(start(), undefined);
     assert.strictEqual(warnings.length, 1);
+});
+
+test('startReplay - contains recorder errors and starts at DOMContentLoaded', () => {
+    const {start, record} = setup();
+    start();
+    const options = record.mock.calls[0].arguments[0];
+    assert.strictEqual(options.recordAfter, 'DOMContentLoaded');
+    assert.strictEqual(options.errorHandler(new Error('boom')), true);
+});
+
+test('startReplay - skips DomContentLoaded and Load so segments start with Meta', async () => {
+    const {start, emit, exported} = setup();
+    const replay = start();
+    emit({type: 0, data: {}, timestamp: 1});
+    emit({type: 1, data: {}, timestamp: 2});
+    emit({type: 4, data: {}, timestamp: 3});
+    await replay?.shutdown();
+
+    const events = exported.filter(
+        (r) => r.eventName === 'elastic.replay.event'
+    );
+    assert.strictEqual(events.length, 1);
+    assert.strictEqual(events[0].attributes['elastic.replay.event.type'], 4);
+    assert.strictEqual(events[0].attributes['elastic.replay.sequence'], 0);
+});
+
+test('startReplay - never throws from emit into the page', async () => {
+    const {start, emit, exported} = setup();
+    const replay = start();
+    /** @type {any} */
+    const circular = {type: 5, data: {}, timestamp: 1};
+    circular.data.self = circular;
+    assert.doesNotThrow(() => emit(circular));
+    emit({type: 4, data: {}, timestamp: 2});
+    await replay?.shutdown();
+
+    const events = exported.filter(
+        (r) => r.eventName === 'elastic.replay.event'
+    );
+    assert.deepStrictEqual(
+        events.map((r) => r.attributes['elastic.replay.sequence']),
+        [0]
+    );
+});
+
+test('startReplay - masks text attributes when maskAllText is on', async () => {
+    const snapshot = {
+        type: 2,
+        timestamp: 1,
+        data: {
+            node: {
+                type: 2,
+                tagName: 'input',
+                attributes: {
+                    placeholder: 'Jane Doe',
+                    title: 'jane@example.com',
+                    class: 'name',
+                },
+                childNodes: [],
+            },
+        },
+    };
+    const mutation = {
+        type: 3,
+        timestamp: 2,
+        data: {
+            source: 0,
+            attributes: [{id: 7, attributes: {'aria-label': 'Jane', id: 'x'}}],
+        },
+    };
+    /** @param {boolean} maskAllText */
+    const bodies = async (maskAllText) => {
+        const {start, emit, exported} = setup();
+        const replay = start({privacy: {...DEFAULT_PRIVACY, maskAllText}});
+        emit(snapshot);
+        emit(mutation);
+        await replay?.shutdown();
+        return exported
+            .filter((r) => r.eventName === 'elastic.replay.event')
+            .map((r) => JSON.parse(String(r.body)));
+    };
+
+    const [masked, maskedMutation] = await bodies(true);
+    assert.deepStrictEqual(masked.data.node.attributes, {
+        placeholder: '**** ***',
+        title: '****************',
+        class: 'name',
+    });
+    assert.deepStrictEqual(maskedMutation.data.attributes[0].attributes, {
+        'aria-label': '****',
+        id: 'x',
+    });
+    // The event passed by the recorder is left untouched
+    assert.strictEqual(snapshot.data.node.attributes.placeholder, 'Jane Doe');
+
+    const [clear] = await bodies(false);
+    assert.deepStrictEqual(
+        clear.data.node.attributes,
+        snapshot.data.node.attributes
+    );
 });

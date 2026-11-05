@@ -60,7 +60,7 @@ Set on every replay record:
 | `browser.tab.id` | string | Added by the session log processor. |
 | `elastic.replay.segment.id` | string | UUID v4, new for each segment. |
 | `elastic.replay.sequence` | int | Position of the rrweb event in its segment. Starts at `0`, increases by 1 per event. All chunks of an event share it. |
-| `elastic.replay.event.type` | int | rrweb [`EventType`](https://github.com/rrweb-io/rrweb/blob/master/packages/types/src/index.ts): 0 DomContentLoaded, 1 Load, 2 FullSnapshot, 3 IncrementalSnapshot, 4 Meta, 5 Custom (from `rrweb.record.addCustomEvent`), 6 Plugin (from rrweb record plugins such as console recording, data is `{plugin, payload}`), 7 Asset, 8 Annotation. New rrweb types are passed through as they are. |
+| `elastic.replay.event.type` | int | rrweb [`EventType`](https://github.com/rrweb-io/rrweb/blob/master/packages/types/src/index.ts): 0 DomContentLoaded, 1 Load, 2 FullSnapshot, 3 IncrementalSnapshot, 4 Meta, 5 Custom (from `rrweb.record.addCustomEvent`), 6 Plugin (from rrweb record plugins such as console recording, data is `{plugin, payload}`), 7 Asset, 8 Annotation. DomContentLoaded and Load carry no data and are not sent. New rrweb types are passed through as they are. |
 
 Set only when the value differs from the default. A missing attribute means
 the default:
@@ -90,8 +90,8 @@ A segment is the event stream of one recorder run in one tab for one session.
 The SDK starts a new segment, with a new `elastic.replay.segment.id`, a
 sequence reset to `0`, and a Meta and FullSnapshot as its first events, when:
 
-- a page loads and recording starts (a full navigation or reload starts a new
-  JS context and a new segment),
+- a page loads and recording starts, at `DOMContentLoaded` (a full navigation
+  or reload starts a new JS context and a new segment),
 - the session rotates while the page is open (idle timeout or max duration),
 - recording starts again after `stopReplay()`.
 
@@ -356,8 +356,8 @@ belong to elastic/observability-dev#6141.
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
 | `maskAllInputs` | boolean | `true` | Replace the value of every input with `*`. |
-| `maskAllText` | boolean | `true` | Replace all text content with `*`. |
-| `maskInputOptions` | object | | Per input type masking, as in rrweb, when `maskAllInputs` is `false`. |
+| `maskAllText` | boolean | `true` | Replace all text content with `*`, including the `alt`, `aria-description`, `aria-label`, `aria-valuetext`, `placeholder` and `title` attributes. |
+| `maskInputOptions` | object | | Per input type masking, as in rrweb, when `maskAllInputs` is `false`. Password inputs stay masked unless it sets `password: false`. |
 | `maskTextSelector` | string | | CSS selector whose text is masked when `maskAllText` is `false`. |
 | `blockSelector` | string | | CSS selector whose elements are replaced by an empty box of the same size. |
 | `ignoreSelector` | string | | CSS selector whose input events are not recorded. |
@@ -367,6 +367,10 @@ belong to elastic/observability-dev#6141.
 The selectors `[data-elastic-replay="mask"]`, `[data-elastic-replay="block"]`
 and `[data-elastic-replay="ignore"]` always apply, so markup can opt out without
 config. Configured selectors add to them.
+
+An invalid selector or `maskInputOptions` value disables replay with a warning.
+Ignoring it would record what it was meant to hide, and with rrweb one bad
+selector also turns off the `data-elastic-replay` selectors it is joined with.
 
 Text and inputs are masked by default, so a replay shows layout and interactions
 but no page content until the app opts out. Sentry, Datadog and Splunk mask text

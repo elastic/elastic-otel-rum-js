@@ -49,7 +49,8 @@ const FUNCTION_KEYS = ['maskInputFn', 'maskTextFn'];
 
 /**
  * Invalid values fall back to defaults with a warning, so a bad config never
- * turns replay on nor relaxes masking.
+ * turns replay on nor relaxes masking. Invalid selectors or input options
+ * disable replay, since dropping them would record what they should hide.
  * @param {unknown} config the `replay` key of the SDK config
  * @param {boolean} hasRecorder whether the SDK was started from the replay entry point
  * @returns {ResolvedReplayConfig}
@@ -100,15 +101,20 @@ export function resolveReplayConfig(config, hasRecorder) {
         if (isObject(privacy.maskInputOptions)) {
             resolved.privacy.maskInputOptions = {...privacy.maskInputOptions};
         } else {
-            warnIgnored('privacy.maskInputOptions', privacy.maskInputOptions);
+            resolved.enabled = false;
+            warnDisabled('privacy.maskInputOptions', privacy.maskInputOptions);
         }
     }
     for (const key of SELECTOR_KEYS) {
         const value = privacy[key];
-        if (typeof value === 'string' && value.trim()) {
+        if (value === undefined) {
+            continue;
+        }
+        if (isValidSelector(value)) {
             resolved.privacy[key] = value;
-        } else if (value !== undefined) {
-            warnIgnored(`privacy.${key}`, value);
+        } else {
+            resolved.enabled = false;
+            warnDisabled(`privacy.${key}`, value);
         }
     }
     for (const key of FUNCTION_KEYS) {
@@ -149,6 +155,36 @@ function resolveBoolean(name, value, defaultValue) {
         return defaultValue;
     }
     return value;
+}
+
+/**
+ * Without a DOM (unit tests) only the type is checked.
+ * @param {unknown} value
+ * @returns {value is string}
+ */
+function isValidSelector(value) {
+    if (typeof value !== 'string' || !value.trim()) {
+        return false;
+    }
+    if (typeof document === 'undefined') {
+        return true;
+    }
+    try {
+        document.createDocumentFragment().querySelector(value);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+/**
+ * @param {string} name
+ * @param {unknown} value
+ */
+function warnDisabled(name, value) {
+    diag.warn(
+        `Invalid "replay.${name}" value: ${value}. Replay is disabled so it doesn't record what this setting should hide.`
+    );
 }
 
 /**

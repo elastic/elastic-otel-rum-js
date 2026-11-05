@@ -12,10 +12,11 @@ const REPLAY_SCOPE = '@elastic/opentelemetry-browser/replay';
 /**
  * @param {Record<string, any>} config
  * @param {string} [bundle]
+ * @param {boolean} [sync] load the SDK from `<head>`, before the DOM is parsed
  */
-function fixtureUrl(config, bundle = 'replay') {
+function fixtureUrl(config, bundle = 'replay', sync = false) {
     const cfg = encodeURIComponent(JSON.stringify(config));
-    return `${FIXTURE}?config=${cfg}&bundle=${bundle}`;
+    return `${FIXTURE}?config=${cfg}&bundle=${bundle}&sync=${sync}`;
 }
 
 /**
@@ -37,7 +38,7 @@ test('should export replay records with session attributes when enabled', async 
     page,
 }) => {
     const collector = createCollector(page);
-    await page.goto(fixtureUrl({replay: {enabled: true}}));
+    await page.goto(fixtureUrl({replay: {enabled: true}}, 'replay', true));
     await page.fill('#secret', 'hunter2');
     await page.click('#action');
 
@@ -103,6 +104,7 @@ test('should export replay records with session attributes when enabled', async 
     const bodies = events.map(bodyOf).join('\n');
     expect(bodies).toContain('*******');
     expect(bodies).not.toContain('Session Replay Test');
+    expect(bodies).not.toContain('placeholder-text');
     expect(bodies).not.toContain('hunter2');
     expect(bodies).not.toContain('masked-text');
     expect(bodies).not.toContain('blocked-text');
@@ -130,6 +132,7 @@ test('should record text when maskAllText is false, except opted out markup', as
         .toBe(true);
 
     expect(bodies).toContain('Session Replay Test');
+    expect(bodies).toContain('placeholder-text');
     expect(bodies).not.toContain('masked-text');
     expect(bodies).not.toContain('blocked-text');
 });
@@ -160,4 +163,54 @@ test('should warn and not record with the core bundle', async ({page}) => {
             m.includes('@elastic/opentelemetry-browser/replay')
         )
     ).toBe(true);
+});
+
+test('should release recorded DOM nodes on shutdown', async ({page}) => {
+    const collector = createCollector(page);
+    await page.goto(fixtureUrl({replay: {enabled: true}}));
+    await page.evaluate(() => {
+        const box = document.createElement('section');
+        box.id = 'nodes';
+        for (let i = 0; i < 300; i++) {
+            box.appendChild(document.createElement('article'));
+        }
+        document.body.appendChild(box);
+    });
+    // Wait until the recorder has seen the new nodes
+    await expect
+        .poll(async () =>
+            replayLogs(await collector.getLogs()).some((l) =>
+                bodyOf(l).includes('"tagName":"article"')
+            )
+        )
+        .toBe(true);
+
+    await page.evaluate(async () => {
+        await globalThis.edotBrowser.shutdown();
+        document.getElementById('nodes')?.remove();
+    });
+
+    const cdp = await page.context().newCDPSession(page);
+    await cdp.send('HeapProfiler.collectGarbage');
+    const {result: proto} = await cdp.send('Runtime.evaluate', {
+        expression: 'HTMLElement.prototype',
+    });
+    const {objects} = await cdp.send('Runtime.queryObjects', {
+        prototypeObjectId: String(proto.objectId),
+    });
+    const {result} = await cdp.send('Runtime.callFunctionOn', {
+        objectId: String(objects.objectId),
+        // The query also returns prototypes, whose getters throw
+        functionDeclaration: `function () {
+            return this.filter((el) => {
+                try {
+                    return el.localName === 'article';
+                } catch {
+                    return false;
+                }
+            }).length;
+        }`,
+        returnByValue: true,
+    });
+    expect(result.value).toStrictEqual(0);
 });

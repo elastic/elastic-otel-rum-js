@@ -11,9 +11,9 @@ export function startReplay(opts: StartReplayOptions): {
  * Maps the privacy config to rrweb options, always including the
  * `data-elastic-replay` selectors.
  * @param {import('./config.js').ResolvedReplayConfig['privacy']} privacy
- * @returns {Omit<RecordOptions, 'emit'>}
+ * @returns {Omit<RecordOptions, 'emit' | 'recordAfter' | 'errorHandler'>}
  */
-export function toRecordPrivacyOptions(privacy: import("./config.js").ResolvedReplayConfig["privacy"]): Omit<RecordOptions, "emit">;
+export function toRecordPrivacyOptions(privacy: import("./config.js").ResolvedReplayConfig["privacy"]): Omit<RecordOptions, "emit" | "recordAfter" | "errorHandler">;
 /**
  * The subset of an rrweb event this module reads.
  * @typedef {{type: number; timestamp: number}} RecorderEvent
@@ -29,6 +29,8 @@ export function toRecordPrivacyOptions(privacy: import("./config.js").ResolvedRe
  * @property {string} maskTextSelector
  * @property {string} blockSelector
  * @property {string} ignoreSelector
+ * @property {'DOMContentLoaded'} recordAfter
+ * @property {(error: unknown) => boolean} errorHandler
  */
 /**
  * rrweb `record`, injected so tests can run without a DOM.
@@ -60,6 +62,8 @@ export type RecordOptions = {
     maskTextSelector: string;
     blockSelector: string;
     ignoreSelector: string;
+    recordAfter: "DOMContentLoaded";
+    errorHandler: (error: unknown) => boolean;
 };
 /**
  * rrweb `record`, injected so tests can run without a DOM.

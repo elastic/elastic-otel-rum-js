@@ -1,6 +1,7 @@
 /**
  * Invalid values fall back to defaults with a warning, so a bad config never
- * turns replay on nor relaxes masking.
+ * turns replay on nor relaxes masking. Invalid selectors or input options
+ * disable replay, since dropping them would record what they should hide.
  * @param {unknown} config the `replay` key of the SDK config
  * @param {boolean} hasRecorder whether the SDK was started from the replay entry point
  * @returns {ResolvedReplayConfig}

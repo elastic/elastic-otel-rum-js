@@ -17,6 +17,23 @@ import {startReplay} from './recorder.js';
  */
 export function startBrowserSdk(cfg = {}) {
     return startSdk(cfg, {
-        startReplay: (opts) => startReplay({...opts, record}),
+        startReplay: (opts) => startReplay({...opts, record: recordAndReset}),
     });
+}
+
+/**
+ * rrweb keeps its node mirror at module level and only resets it when
+ * recording starts, so after `stop()` it would keep every recorded DOM node
+ * alive, including nodes the page removed later.
+ * @type {import('./recorder.js').RecordFn}
+ */
+function recordAndReset(options) {
+    const stop = record(options);
+    return (
+        stop &&
+        (() => {
+            stop();
+            record.mirror.reset();
+        })
+    );
 }
