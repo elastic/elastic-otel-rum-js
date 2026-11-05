@@ -2,9 +2,9 @@
 navigation_title: Proxy and CORS
 description: Configure a reverse proxy and CORS for EDOT Browser telemetry export.
 applies_to:
-  stack: ga
+  stack:
   serverless:
-    observability: ga
+    observability:
   product:
     edot_browser: preview
 products:

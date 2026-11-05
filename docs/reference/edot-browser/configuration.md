@@ -2,9 +2,9 @@
 navigation_title: Configuration
 description: Configure the Elastic Distribution of OpenTelemetry Browser (EDOT Browser).
 applies_to:
-  stack: ga
+  stack:
   serverless:
-    observability: ga
+    observability:
   product:
     edot_browser: preview
 products:
@@ -18,6 +18,10 @@ products:
 This page explains how to configure EDOT Browser, which settings are supported, and what's required to start exporting browser telemetry.
 
 EDOT Browser follows OpenTelemetry configuration conventions where possible. Like the upstream OpenTelemetry Browser SDK, it uses explicit configuration at initialization rather than environment variables, which are not available in the browser.
+
+:::{important}
+In 0.4 and later, several configuration keys changed to align with the upstream OpenTelemetry Browser SDK. For example, `otlpEndpoint` and `exportHeaders` moved to `exportConfig.url` and `exportConfig.headers`, the top-level `sampleRate` option moved to `session.sampleRate`, and instrumentation keys use short names such as `fetch` and `user-action`. If you're upgrading, refer to [EDOT Browser breaking changes](../../release-notes/breaking-changes.md) for the full list of changes and migration steps.
+:::
 
 ## Configuration model in the browser [configuration-model-in-the-browser]
 
@@ -72,7 +76,7 @@ Configuration is passed as an object to `startBrowserSdk`. The following options
 | `logLevel` | `"none" \| "error" \| "warn" \| "info" \| "debug" \| "verbose" \| "all"` | Diagnostic log level for the SDK internal logger. Defaults to `info`. Values are lowercase; the SDK accepts them case-insensitively. |
 | `resourceAttributes`  | `Record<string, any>`    | Optional resource attributes to attach to telemetry. For example: `{ 'deployment.environment.name': 'production' }`. |
 | `disabled`            | `boolean`                | If `true`, the SDK does not start. |
-| `instrumentations`    | `Record<string, Object>` | Per-instrumentation config. Set `{ enabled: false }` for a key to turn off that instrumentation. Refer to [instrumentations details](#otel_browser_instrumentations-details) for more information. |
+| `instrumentations`    | `Record<string, Object>` | **Not recommended.** Advanced per-instrumentation config passed through to upstream OpenTelemetry Browser instrumentations. EDOT Browser logs a warning when this option is set. Refer to [instrumentations details](#otel_browser_instrumentations-details). |
 | `session`             | `{ sampleRate?: number; inactivityTimeout?: number; maxDuration?: number; activityEvents?: string[] }` | Session tracking and session-level sampling. Refer to [session details](#otel_browser_session-details) for more information. |
 | `pageRoute`           | `((url: URL, inferPageRoute: (url: URL \| string) => string \| undefined) => string \| undefined) \| false` | Function that returns the low-cardinality route of a page, added as `url.template` to spans and log records. Defaults to `inferPageRoute`. Set to `false` to only use routes passed to `setPageRoute`. Refer to [page route details](#otel_browser_page-route-details) for more information. |
 | `exportConfig`    | `{ url?: string; headers?: Record<string, string>}` | Configuration for exporters of the different signals. |
@@ -115,6 +119,12 @@ Diagnostic logs are written to the browser console. For more information on usin
 This section provides additional details about configuration settings that require further explanation or behave differently in EDOT Browser compared to OpenTelemetry JS.
 
 ### `instrumentations` details [otel_browser_instrumentations-details]
+
+:::{warning}
+Using `instrumentations` is not recommended for most applications. EDOT Browser aims to provide a stable configuration surface, but the upstream OpenTelemetry Browser instrumentations are still in active development and their configuration can change in ways that break your initialization options on upgrade.
+
+If you set `instrumentations`, EDOT Browser prints a warning in the browser console to remind you that this option is unstable and that future EDOT or instrumentation updates may require changes on your side. For advanced use only, review the `@opentelemetry/browser-instrumentation` version bundled with your EDOT Browser release when you upgrade. Stable, EDOT-specific options for common instrumentation settings are planned separately from this passthrough. For background, refer to [elastic-otel-rum-js#152](https://github.com/elastic/elastic-otel-rum-js/issues/152).
+:::
 
 An object whose keys are the configuration keys of the available instrumentations in EDOT and whose values are the corresponding configuration objects. The scope name is the instrumentation identifier attached to exported telemetry.
 

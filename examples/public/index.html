@@ -39,6 +39,10 @@
             exportConfig: {
                 url: otelEnv.otlpEndpoint || `${location.protocol}//${location.host}`,
                 headers: otelEnv.exportHeaders || {},
+            },
+            session: {
+                // modify this value to reduce traffic to your OTLP endpoint
+                sampleRate: 1,
             }
         });
     </script>

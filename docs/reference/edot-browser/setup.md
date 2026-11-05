@@ -2,9 +2,9 @@
 navigation_title: Setup
 description: Set up the Elastic Distribution of OpenTelemetry Browser (EDOT Browser).
 applies_to:
-  stack: ga
+  stack:
   serverless:
-    observability: ga
+    observability:
   product:
     edot_browser: preview
 products:
@@ -60,10 +60,10 @@ After EDOT Browser is sending telemetry to {{product.observability}}, your brows
 - **{{product.apm}} Service Inventory**: Your browser app appears as a service.
 - **{{product.apm}} trace view**: Distributed traces including browser spans are visible.
 - **Service Maps**: Frontend-to-backend service dependencies are shown when your backend services are also instrumented and reporting telemetry to {{product.observability}}.
-- **Discover**: Traces, metrics, and logs (if emitted by your application) are indexed and queryable.
+- **Discover**: Traces, metrics, and logs are indexed and queryable.
 
   :::{note}
-  Logs are only present in **Discover** if your application uses the OpenTelemetry Logs API to emit them. Refer to [Logs](telemetry.md#logs) for more information on what EDOT Browser emits and how to configure log export.
+  EDOT Browser emits log records automatically for user actions, navigation, page and resource timing, Core Web Vitals, and errors. Your application can emit additional log records using the OpenTelemetry Logs API. Refer to [Logs](telemetry.md#logs) for details on each record type.
   :::
 
 The **User Experience** app currently shows only data from classic Elastic {{product.apm}} Browser agents and does not display EDOT Browser data. For RUM-style dashboards compatible with EDOT Browser, install the [RUM OpenTelemetry Assets](https://github.com/elastic/integrations/tree/main/packages/otel_rum_dashboards) integration from the {{kib}} Integrations catalog. The integration is currently in preview, requires {{kib}} 9.2.1 or later, and on the Integrations page you must turn on **Display beta integrations** to find it.
