@@ -22,8 +22,9 @@ from.
   with `eventName` `elastic.replay.event`, emitted by the instrumentation scope
   `@elastic/opentelemetry-browser/replay`. The body is the rrweb event JSON.
 - Events are ordered within a **segment**: one recorder run in one tab for one
-  session, normally one page load. Every segment starts at sequence `0` with a
-  rrweb Meta and FullSnapshot, so it plays on its own.
+  session, normally one page load. A reload or full navigation starts a new
+  segment. Every segment starts at sequence `0` with a rrweb Meta and
+  FullSnapshot, so it plays on its own.
 - When a segment starts recording, the SDK emits one `elastic.replay.start` log
   record with the replay records, so it shares their data stream and retention.
   Backends use it to know a session has a replay. There is no `rum.has_replay`
@@ -59,7 +60,7 @@ Set on every replay record:
 | `browser.tab.id` | string | Added by the session log processor. |
 | `elastic.replay.segment.id` | string | UUID v4, new for each segment. |
 | `elastic.replay.sequence` | int | Position of the rrweb event in its segment. Starts at `0`, increases by 1 per event. All chunks of an event share it. |
-| `elastic.replay.event.type` | int | rrweb `EventType`: 0 DomContentLoaded, 1 Load, 2 FullSnapshot, 3 IncrementalSnapshot, 4 Meta, 5 Custom, 6 Plugin. |
+| `elastic.replay.event.type` | int | rrweb [`EventType`](https://github.com/rrweb-io/rrweb/blob/master/packages/types/src/index.ts): 0 DomContentLoaded, 1 Load, 2 FullSnapshot, 3 IncrementalSnapshot, 4 Meta, 5 Custom (from `rrweb.record.addCustomEvent`), 6 Plugin (from rrweb record plugins such as console recording, data is `{plugin, payload}`), 7 Asset, 8 Annotation. New rrweb types are passed through as they are. |
 
 Set only when the value differs from the default. A missing attribute means
 the default:
@@ -161,8 +162,9 @@ still exists.
 | `elastic.replay.trigger` | `sampled` (recorded from the start) or `error` (started by `errorSampleRate`) |
 | `elastic.replay.format` | `rrweb/2`: body format and its major version |
 
-A session has a replay when at least one `elastic.replay.start` record exists
-for its `session.id`. The sessions transform can set `has_replay` from that and
+Each segment emits its own start record, so a session that reloads or
+navigates has several: one per page load and per tab. A session has a replay
+when at least one `elastic.replay.start` record exists for its `session.id`. The sessions transform can set `has_replay` from that and
 the player can list segments from the same records. Both query the replay data
 stream filtered on `event_name: elastic.replay.start`, which matches one record
 per segment.
@@ -253,14 +255,12 @@ For elastic/observability-dev#6293:
 ## Configuration
 
 ```js
-import {startBrowserSdk} from '@elastic/opentelemetry-browser';
-import {replayRecorder} from '@elastic/opentelemetry-browser/replay';
+import {startBrowserSdk} from '@elastic/opentelemetry-browser/replay';
 
 startBrowserSdk({
     session: {sampleRate: 0.5},
     replay: {
         enabled: true,
-        recorder: replayRecorder,
         sampleRate: 0.1,
         errorSampleRate: 1,
         privacy: {
@@ -277,36 +277,35 @@ startBrowserSdk({
 });
 ```
 
-Replay is off unless `replay.enabled` is `true` and a recorder is available.
+Replay is off unless `replay.enabled` is `true` and the SDK was started from a
+replay entry point (see [Packaging](#packaging)).
 
 ### Packaging
 
-Core never imports rrweb. It owns the `replay` config, the sampling decision and
-the replay logger. The recorder (rrweb, segments, chunking) is a separate entry
-point that the app hands to core, so there is one config and no second init.
-Tracked in #154.
+The core entry point never imports rrweb. Replay ships as a second entry point
+that exports the same `startBrowserSdk` with the recorder (rrweb, segments,
+chunking) built in. Both take the same config, and core still owns the `replay`
+config, the sampling decision and the replay logger. There is no option to pass
+a recorder, so users cannot plug in their own. Tracked in #154.
 
-- **npm:** the recorder is exported from the `@elastic/opentelemetry-browser/replay`
-  subpath and passed as `replay.recorder`. Apps that do not import it have no
-  rrweb in their bundle. Apps that want it only for recorded sessions can pass a
-  loader instead: `recorder: () => import('@elastic/opentelemetry-browser/replay')`.
-  Core calls it only when the session is picked for replay.
-- **CDN:** two IIFE builds from the same source. `elastic-otel-browser.min.js`
-  has no recorder. `elastic-otel-browser-replay.min.js` includes rrweb with the
-  recorder already wired in, so `recorder` is left out. Both expose the same
-  `startBrowserSdk` and take the same config.
+| | Without replay | With replay |
+| --- | --- | --- |
+| npm | `@elastic/opentelemetry-browser` | `@elastic/opentelemetry-browser/replay` |
+| CDN | `elastic-otel-browser.min.js` | `elastic-otel-browser-replay.min.js` |
 
-Loading the recorder on demand from the CDN is left out for now: the IIFE build
-cannot code-split, sites would host two version-matched files and allow the
-second one in CSP `script-src`, and error mode would start buffering late. The
-`recorder` option lets us add it later without an API change.
+Apps that never import `/replay` have no rrweb in their bundle. A `replay`
+config passed to the core entry point logs a warning and records nothing.
+
+Loading the recorder on demand, only for sessions picked for replay, is left out
+for now. On the CDN the IIFE build cannot code-split, sites would host two
+version-matched files and allow the second one in CSP `script-src`, and error
+mode would start buffering late. It can be added later behind the same config.
 
 ### Top level
 
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
 | `enabled` | boolean | `false` | Turns replay on. |
-| `recorder` | recorder, or function returning a promise of one | none, built in for the CDN replay build | The replay recorder from `@elastic/opentelemetry-browser/replay`. When missing, the SDK logs a warning and records nothing. |
 | `sampleRate` | number, 0..1 | `0` | Share of sampled sessions recorded from the start. |
 | `errorSampleRate` | number, 0..1 | `0` | Share of the remaining sampled sessions recorded from their first error. |
 | `privacy` | object | see below | Masking and blocking. |
@@ -321,6 +320,12 @@ with a warning, out-of-range values are clamped, four decimal places.
 
 Replay only runs for sessions that `session.sampleRate` kept, so the share of
 all sessions recorded from the start is `session.sampleRate * replay.sampleRate`.
+
+`errorSampleRate` exists to get replays of the sessions that hit an error
+without recording every session. The SDK keeps a short buffer in memory and only
+sends it when an error happens, so the replay shows what led up to it. Sessions
+without errors send nothing. Sentry's `replaysOnErrorSampleRate` works the same
+way.
 
 The decision is made once per session and is the same in every tab and on every
 page load. The POC drew `Math.random()` on each page load, so a session could
