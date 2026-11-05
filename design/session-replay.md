@@ -265,6 +265,7 @@ startBrowserSdk({
         errorSampleRate: 1,
         privacy: {
             maskAllInputs: true,
+            // Text is masked by default. Opt out, then mask what needs it.
             maskAllText: false,
             maskTextSelector: '.customer-name',
             blockSelector: '.payment-form',
@@ -355,9 +356,9 @@ belong to elastic/observability-dev#6141.
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
 | `maskAllInputs` | boolean | `true` | Replace the value of every input with `*`. |
-| `maskAllText` | boolean | `false` | Replace all text content with `*`. |
+| `maskAllText` | boolean | `true` | Replace all text content with `*`. |
 | `maskInputOptions` | object | | Per input type masking, as in rrweb, when `maskAllInputs` is `false`. |
-| `maskTextSelector` | string | | CSS selector whose text is masked. |
+| `maskTextSelector` | string | | CSS selector whose text is masked when `maskAllText` is `false`. |
 | `blockSelector` | string | | CSS selector whose elements are replaced by an empty box of the same size. |
 | `ignoreSelector` | string | | CSS selector whose input events are not recorded. |
 | `maskInputFn` | function | | Custom input masking. |
@@ -367,13 +368,18 @@ The selectors `[data-elastic-replay="mask"]`, `[data-elastic-replay="block"]`
 and `[data-elastic-replay="ignore"]` always apply, so markup can opt out without
 config. Configured selectors add to them.
 
+Text and inputs are masked by default, so a replay shows layout and interactions
+but no page content until the app opts out. Sentry, Datadog and Splunk mask text
+by default too. Masking too much is fixed by a config change; recorded personal
+data cannot be taken back once it is exported.
+
 #### Canvas
 
 A `<canvas>` is recorded as image frames or drawing calls (including the
 strings passed to `fillText`), not as DOM text, so masking cannot apply to it.
 Only blocking can. Privacy settings take precedence over `quality.recordCanvas`:
 
-- With `maskAllText: true`, no canvas is recorded, even when `recordCanvas` is
+- With `maskAllText: true` (the default), no canvas is recorded, even when `recordCanvas` is
   `true`. The SDK logs a warning when both are set.
 - A canvas that matches `maskTextSelector` or `[data-elastic-replay="mask"]`,
   or sits inside an element that does, is blocked instead of recorded.
@@ -412,8 +418,9 @@ Only blocking can. Privacy settings take precedence over `quality.recordCanvas`:
 
 ## Open questions
 
-- Is `maskAllText: false` the right default, or should replay mask all text until
-  the app opts out? This needs a privacy review.
+- With `maskAllText: true` an app can only unmask all text. Do we add a
+  `[data-elastic-replay="unmask"]` selector to show chosen elements, like
+  Sentry's `unmask` and Datadog's `data-dd-privacy="allow"`?
 - Packed bodies are binary strings. Over OTLP/JSON they inflate through escaping,
   which can cancel the compression. We may need a base64 body or to rely on
   transport compression instead; to measure in elastic/observability-dev#6140.

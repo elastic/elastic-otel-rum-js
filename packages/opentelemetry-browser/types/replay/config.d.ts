@@ -12,7 +12,7 @@ export type ReplayPrivacyConfig = {
      */
     maskAllInputs?: boolean | undefined;
     /**
-     * replace all text content with `*`, default false
+     * replace all text content with `*`, default true
      */
     maskAllText?: boolean | undefined;
     /**
@@ -20,7 +20,7 @@ export type ReplayPrivacyConfig = {
      */
     maskInputOptions?: Record<string, boolean> | undefined;
     /**
-     * CSS selector whose text is masked
+     * CSS selector whose text is masked when `maskAllText` is false
      */
     maskTextSelector?: string | undefined;
     /**

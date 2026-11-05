@@ -8,9 +8,9 @@ import {diag} from '@opentelemetry/api';
 /**
  * @typedef {Object} ReplayPrivacyConfig
  * @property {boolean} [maskAllInputs] replace every input value with `*`, default true
- * @property {boolean} [maskAllText] replace all text content with `*`, default false
+ * @property {boolean} [maskAllText] replace all text content with `*`, default true
  * @property {Record<string, boolean>} [maskInputOptions] per input type masking, as in rrweb
- * @property {string} [maskTextSelector] CSS selector whose text is masked
+ * @property {string} [maskTextSelector] CSS selector whose text is masked when `maskAllText` is false
  * @property {string} [blockSelector] CSS selector whose elements are replaced by an empty box
  * @property {string} [ignoreSelector] CSS selector whose input events are not recorded
  * @property {(text: string, element: HTMLElement) => string} [maskInputFn]
@@ -58,7 +58,7 @@ export function resolveReplayConfig(config, hasRecorder) {
     /** @type {ResolvedReplayConfig} */
     const resolved = {
         enabled: false,
-        privacy: {maskAllInputs: true, maskAllText: false},
+        privacy: {maskAllInputs: true, maskAllText: true},
     };
     if (config === undefined) {
         return resolved;
@@ -94,7 +94,7 @@ export function resolveReplayConfig(config, hasRecorder) {
     resolved.privacy.maskAllText = resolveBoolean(
         'privacy.maskAllText',
         privacy.maskAllText,
-        false
+        true
     );
     if (privacy.maskInputOptions !== undefined) {
         if (isObject(privacy.maskInputOptions)) {

@@ -99,11 +99,37 @@ test('should export replay records with session attributes when enabled', async 
         );
     }
 
-    // Privacy defaults: inputs masked, data-elastic-replay selectors applied
+    // Privacy defaults: all text and inputs masked, blocked content dropped
     const bodies = events.map(bodyOf).join('\n');
-    expect(bodies).toContain('Session Replay Test');
     expect(bodies).toContain('*******');
+    expect(bodies).not.toContain('Session Replay Test');
     expect(bodies).not.toContain('hunter2');
+    expect(bodies).not.toContain('masked-text');
+    expect(bodies).not.toContain('blocked-text');
+});
+
+test('should record text when maskAllText is false, except opted out markup', async ({
+    page,
+}) => {
+    const collector = createCollector(page);
+    await page.goto(
+        fixtureUrl({replay: {enabled: true, privacy: {maskAllText: false}}})
+    );
+
+    /** @type {string} */
+    let bodies = '';
+    // Wait for the FullSnapshot
+    await expect
+        .poll(async () => {
+            const logs = replayLogs(await collector.getLogs());
+            bodies = logs.map(bodyOf).join('\n');
+            return logs.some(
+                (l) => l.attributes['elastic.replay.event.type'] === 2
+            );
+        })
+        .toBe(true);
+
+    expect(bodies).toContain('Session Replay Test');
     expect(bodies).not.toContain('masked-text');
     expect(bodies).not.toContain('blocked-text');
 });

@@ -18,7 +18,7 @@ import {EDOT_VERSION} from '../../lib/version.js';
 
 const UUID_V4 =
     /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
-const DEFAULT_PRIVACY = {maskAllInputs: true, maskAllText: false};
+const DEFAULT_PRIVACY = {maskAllInputs: true, maskAllText: true};
 
 /**
  * @param {import('node:test').TestContext} t
@@ -126,7 +126,7 @@ test('resolveReplayConfig - keeps valid values', (t) => {
             enabled: true,
             privacy: {
                 maskAllInputs: false,
-                maskAllText: true,
+                maskAllText: false,
                 maskInputOptions: {password: true, email: true},
                 maskTextSelector: '.name',
                 blockSelector: '.payment',
@@ -141,7 +141,7 @@ test('resolveReplayConfig - keeps valid values', (t) => {
         enabled: true,
         privacy: {
             maskAllInputs: false,
-            maskAllText: true,
+            maskAllText: false,
             maskInputOptions: {password: true, email: true},
             maskTextSelector: '.name',
             blockSelector: '.payment',
@@ -185,18 +185,39 @@ test('resolveReplayConfig - falls back to defaults on invalid values', (t) => {
     assert.strictEqual(warnings.length, 11);
 });
 
-test('toRecordPrivacyOptions - always applies the data-elastic-replay selectors', () => {
+test('toRecordPrivacyOptions - masks all text by default', () => {
     assert.deepStrictEqual(toRecordPrivacyOptions(DEFAULT_PRIVACY), {
         maskAllInputs: true,
         maskInputOptions: undefined,
         maskInputFn: undefined,
         maskTextFn: undefined,
-        maskTextSelector: '[data-elastic-replay="mask"]',
+        maskTextSelector: '*',
         blockSelector: '[data-elastic-replay="block"]',
         ignoreSelector: '[data-elastic-replay="ignore"]',
     });
     const options = toRecordPrivacyOptions({
         ...DEFAULT_PRIVACY,
+        maskTextSelector: '.name',
+    });
+    assert.strictEqual(options.maskTextSelector, '*');
+});
+
+test('toRecordPrivacyOptions - always applies the data-elastic-replay selectors', () => {
+    assert.deepStrictEqual(
+        toRecordPrivacyOptions({...DEFAULT_PRIVACY, maskAllText: false}),
+        {
+            maskAllInputs: true,
+            maskInputOptions: undefined,
+            maskInputFn: undefined,
+            maskTextFn: undefined,
+            maskTextSelector: '[data-elastic-replay="mask"]',
+            blockSelector: '[data-elastic-replay="block"]',
+            ignoreSelector: '[data-elastic-replay="ignore"]',
+        }
+    );
+    const options = toRecordPrivacyOptions({
+        ...DEFAULT_PRIVACY,
+        maskAllText: false,
         maskTextSelector: '.name',
         blockSelector: '.payment',
         ignoreSelector: '.search',
@@ -213,15 +234,6 @@ test('toRecordPrivacyOptions - always applies the data-elastic-replay selectors'
         options.ignoreSelector,
         '[data-elastic-replay="ignore"], .search'
     );
-});
-
-test('toRecordPrivacyOptions - masks all text with maskAllText', () => {
-    const options = toRecordPrivacyOptions({
-        ...DEFAULT_PRIVACY,
-        maskAllText: true,
-        maskTextSelector: '.name',
-    });
-    assert.strictEqual(options.maskTextSelector, '*');
 });
 
 test('startReplay - never starts the recorder when disabled', () => {
