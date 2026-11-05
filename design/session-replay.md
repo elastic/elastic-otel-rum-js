@@ -282,18 +282,23 @@ replay entry point (see [Packaging](#packaging)).
 
 ### Packaging
 
-The core entry point never imports rrweb. Replay ships as a second entry point
-that exports the same `startBrowserSdk` with the recorder (rrweb, segments,
-chunking) built in. Both take the same config, and core still owns the `replay`
+Replay ships in the same npm package, `@elastic/opentelemetry-browser`, as a
+second import path (a subpath export), not as a separate package. The core
+entry point never imports rrweb. The `/replay` entry point exports the same
+`startBrowserSdk` with the recorder (rrweb, segments, chunking) built in. Both take the same config, and core still owns the `replay`
 config, the sampling decision and the replay logger. There is no option to pass
 a recorder, so users cannot plug in their own. Tracked in #154.
 
 | | Without replay | With replay |
 | --- | --- | --- |
-| npm | `@elastic/opentelemetry-browser` | `@elastic/opentelemetry-browser/replay` |
-| CDN | `elastic-otel-browser.min.js` | `elastic-otel-browser-replay.min.js` |
+| npm import path | `@elastic/opentelemetry-browser` | `@elastic/opentelemetry-browser/replay` |
+| CDN file | `elastic-otel-browser.min.js` | `elastic-otel-browser-replay.min.js` |
 
-Apps that never import `/replay` have no rrweb in their bundle. A `replay`
+Both CDN files are built from the package when it is published.
+
+rrweb is a regular dependency of the package, so every install downloads it.
+That only affects install size: bundlers include only what the app imports, so
+apps that never import `/replay` have no rrweb in their bundle. A `replay`
 config passed to the core entry point logs a warning and records nothing.
 
 Loading the recorder on demand, only for sessions picked for replay, is left out
