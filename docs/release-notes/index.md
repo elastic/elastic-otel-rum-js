@@ -32,27 +32,42 @@ To check for security updates, go to [Security announcements for the Elastic sta
 % ### Chores [edot-browser-X.X.X-chores]
 % *
 
-## X.X.X [edot-browser-X.X.X-release-notes]
+## version.next [edot-browser-X.X.X-release-notes]
 
 ### Features and enhancements [edot-browser-X.X.X-features-enhancements]
 
-* Align configuration with the upstream [browser-sdk](https://github.com/open-telemetry/opentelemetry-browser/tree/main/packages/sdk).
-* Add session tracking. Spans and log records include `session.id`, `session.previous_id`, and `browser.tab.id` attributes. A `session.start` event is emitted when a session starts.
 * Add page routes. Spans and log records include the route of the current page in the `url.template` attribute. Routes are inferred from URLs by default and can be provided with the `pageRoute` configuration or the `setPageRoute` method of the object returned by `startBrowserSdk`.
-  Ref: https://github.com/elastic/elastic-otel-rum-js/issues/115
+  Ref: https://github.com/elastic/elastic-otel-rum-js/issues/129
 * Expire sessions based on user activity. Sessions end after 30 minutes without user interaction, or 4 hours in total. Telemetry sent after that has no `session.id` until the next interaction. Set `session.activityEvents` to define what counts as activity.
   Ref: https://github.com/elastic/elastic-otel-rum-js/issues/81
 * Add a session API. The SDK returned by `startBrowserSdk` has `sdk.getSession()` and `sdk.addObserver()` for reading the current session and reacting when sessions start and end.
   Ref: https://github.com/elastic/elastic-otel-rum-js/issues/81
-* Add session-level sampling via `session.sampleRate`. Sampled sessions export automatic RUM telemetry; unsampled sessions disable instrumentations. Spans and logs include `session.sampling_rate` for backend weighting. Refer to [Configure EDOT Browser](../reference/edot-browser/configuration.md#otel_browser_session-sampling).
-  Ref: https://github.com/elastic/elastic-otel-rum-js/pull/128
 * Add a user identity API. `startBrowserSdk` returns `setUser()` and `clearUser()` to add `user.id`, `user.email`,
   `user.full_name`, `elastic.user.account` and custom `elastic.user.attributes.*` attributes to spans and log records.
   Ref: https://github.com/elastic/elastic-otel-rum-js/issues/124
 * Add `sdk.endSession()` to end the current session, for example on logout. The next session starts on the next user interaction.
   Ref: https://github.com/elastic/elastic-otel-rum-js/issues/123
 
+### Fixes [edot-browser-X.X.X-fixes]
+
+*
+
 ### Chores [edot-browser-X.X.X-chores]
+
+* Emit a message when `istrumentations` configuration option is used to warn users the upstream configuratios are unstable.
+  Ref: https://github.com/elastic/elastic-otel-rum-js/issues/152
+
+## 0.4.0 [edot-browser-0.4.0-release-notes]
+
+### Features and enhancements [edot-browser-0.4.0-features-enhancements]
+
+* Align configuration with the upstream [browser-sdk](https://github.com/open-telemetry/opentelemetry-browser/tree/main/packages/sdk).
+* Add session tracking. Spans and log records include `session.id`, `session.previous_id`, and `browser.tab.id` attributes. A `session.start` event is emitted when a session starts.
+  Ref: https://github.com/elastic/elastic-otel-rum-js/issues/115
+* Add session-level sampling via `session.sampleRate`. Sampled sessions export automatic RUM telemetry; unsampled sessions disable instrumentations. Spans and logs include `session.sampling_rate` for backend weighting. Refer to [Configure EDOT Browser](../reference/edot-browser/configuration.md#otel_browser_session-sampling).
+  Ref: https://github.com/elastic/elastic-otel-rum-js/pull/128
+
+### Chores [edot-browser-0.4.0-chores]
 
 * Use the new upstream `@opentelemetry/browser-sdk` package to setup traces and logs signal.
 * Switch to the new upstream `navigation` instrumentation from  `@opentelemetry/browser-sdk` package.
