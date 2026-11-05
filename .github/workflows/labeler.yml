@@ -15,7 +15,9 @@ jobs:
   categorize-issues-and-prs:
     runs-on: ubuntu-24.04
     permissions:
-      id-token: write
+      id-token: write # create-token (vault login via OIDC)
+      issues: write # addLabels with the default token
+      pull-requests: write
     steps:
     - name: Get token
       id: get_token
