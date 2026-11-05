@@ -233,7 +233,7 @@ export function startBrowserSdk(cfg = {}) {
     const loggerProvider = logs.getLoggerProvider();
 
     // Maybe a better way to control the loggers would be to provide a `LoggerConfigurator`
-    // but the upstream SDK does not offer the option to pass it through.
+    // but the `startLogsSdk` function does not offer the option to pass it through.
     // Solution for now is to wrap the `getLogger` method and patch the `enabled` method
     // so is aware of the session when called.
     if (sessionManager) {
@@ -244,8 +244,13 @@ export function startBrowserSdk(cfg = {}) {
             if (loggers.has(logger)) {
                 return logger;
             }
+
+            const enableFn = logger.enabled;
+            logger.enabled = function () {
+                const session = sessionManager.getSession();
+                return session ? session.sampled : enableFn.call(this);
+            };
             loggers.add(logger);
-            logger.enabled = () => !!sessionManager.getSession()?.sampled;
             return logger;
         };
     }
