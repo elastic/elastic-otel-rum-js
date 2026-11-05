@@ -1,4 +1,7 @@
 # Possibly label some incoming issues/PRs.
+# pull_request_target is kept on purpose: it is the only trigger that gives PRs from forks a
+# token that can write labels. No PR code is checked out or run; the job only calls the
+# GitHub API with event metadata (actor, PR number).
 name: "labeler"
 on:
   issues:
@@ -6,11 +9,7 @@ on:
   pull_request_target:
     types: [opened]
 
-# '*: write' permissions for https://docs.github.com/en/rest/issues/labels?apiVersion=2022-11-28#add-labels-to-an-issue
-permissions:
-  contents: read
-  issues: write
-  pull-requests: write
+permissions: {}
 
 jobs:
   categorize-issues-and-prs:
@@ -20,10 +19,10 @@ jobs:
     steps:
     - name: Get token
       id: get_token
-      uses: elastic/oblt-actions/github/create-token@v1
+      uses: elastic/oblt-actions/github/create-token@208d03b3c3dfec874e5f2d73b2c938e493fc6953 # v1.43.0
 
     - id: is_elastic_member
-      uses: elastic/oblt-actions/github/is-member-of@v1
+      uses: elastic/oblt-actions/github/is-member-of@208d03b3c3dfec874e5f2d73b2c938e493fc6953 # v1.43.0
       with:
         github-org: "elastic"
         github-user: ${{ github.actor }}
@@ -31,7 +30,7 @@ jobs:
 
     - name: Add community and triage labels
       if: contains(steps.is_elastic_member.outputs.result, 'false') && github.actor != 'dependabot[bot]' && github.actor != 'elastic-renovate-prod[bot]' && github.actor != 'elastic-observability-automation[bot]'
-      uses: actions/github-script@v8
+      uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
       with:
         script: |
           github.rest.issues.addLabels({
