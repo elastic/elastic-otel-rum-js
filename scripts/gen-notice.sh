@@ -85,6 +85,13 @@ npm ls --omit=dev --all --parseable \
         // do not include one in their install.
         const licFileFromPkgName = {
             "@opentelemetry/browser-instrumentation": "license.apache2.txt",
+            // rrweb packages are published without the license of their repo
+            "@rrweb/record": "license.rrweb.txt",
+            "@rrweb/types": "license.rrweb.txt",
+            "@rrweb/utils": "license.rrweb.txt",
+            "rrweb": "license.rrweb.txt",
+            "rrweb-snapshot": "license.rrweb.txt",
+            "rrdom": "license.rrweb.txt",
         }
         // Packages that have a license, but no "license" entry in package.json.
         const licTypeFromPkgName = {

@@ -138,3 +138,42 @@ export const ATTR_ELASTIC_USER_ATTRIBUTES_PREFIX: "elastic.user.attributes.";
  * @experimental This attribute is experimental and is subject to breaking changes in minor releases of `@opentelemetry/semantic-conventions`.
  */
 export const ATTR_SESSION_SAMPLING_RATE: "session.sampling_rate";
+/**
+ * Session replay names are an Elastic extension, defined in the session replay
+ * wire format (https://github.com/elastic/elastic-otel-rum-js/issues/140).
+ * They move to semantic conventions once the Browser SIG defines replay.
+ */
+/**
+ * Event name of a log record that carries one rrweb event in its body.
+ */
+export const EVENT_REPLAY_EVENT: "elastic.replay.event";
+/**
+ * Event name of the log record emitted when a replay segment starts recording.
+ */
+export const EVENT_REPLAY_START: "elastic.replay.start";
+/**
+ * A unique id for one recorder run in one tab for one session, normally one page load.
+ *
+ * @example 9d8c7b6a-5e4f-4a3b-9c2d-1e0f9a8b7c6d
+ */
+export const ATTR_REPLAY_SEGMENT_ID: "elastic.replay.segment.id";
+/**
+ * Position of the rrweb event in its segment, starting at 0.
+ */
+export const ATTR_REPLAY_SEQUENCE: "elastic.replay.sequence";
+/**
+ * The rrweb `EventType` of the event in the body.
+ *
+ * @example 2
+ */
+export const ATTR_REPLAY_EVENT_TYPE: "elastic.replay.event.type";
+/**
+ * What started the recording of a segment: `sampled` or `error`.
+ */
+export const ATTR_REPLAY_TRIGGER: "elastic.replay.trigger";
+/**
+ * Format of the replay record bodies and its major version.
+ *
+ * @example rrweb/2
+ */
+export const ATTR_REPLAY_FORMAT: "elastic.replay.format";

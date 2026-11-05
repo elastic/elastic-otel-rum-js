@@ -3,6 +3,16 @@
  * @returns {BrowserSdk}
  */
 export function startBrowserSdk(cfg?: BrowserSdkConfiguration): BrowserSdk;
+/**
+ * Start path shared by all entry points. Each one passes in the features it
+ * bundles, so the core entry point never imports the replay recorder.
+ * @param {BrowserSdkConfiguration} cfg
+ * @param {{startReplay?: import('./replay/config.js').StartReplayFn}} [internals]
+ * @returns {BrowserSdk}
+ */
+export function startSdk(cfg?: BrowserSdkConfiguration, internals?: {
+    startReplay?: import("./replay/config.js").StartReplayFn;
+}): BrowserSdk;
 export type InstrumentationsConfigMap = {
     "navigation": import("@opentelemetry/browser-instrumentation/experimental/navigation").NavigationInstrumentationConfig;
     "navigation-timing": import("@opentelemetry/browser-instrumentation/experimental/navigation-timing").NavigationTimingInstrumentationConfig;
@@ -34,6 +44,10 @@ export type EdotConfig = {
     instrumentations?: Partial<InstrumentationsConfigMap> | undefined;
     session?: import("./session/config.js").SessionConfig | undefined;
     pageRoute?: false | import("./page-route.js").PageRouteResolver | undefined;
+    /**
+     * needs the `@elastic/opentelemetry-browser/replay` entry point
+     */
+    replay?: import("./replay/config.js").ReplayConfig | undefined;
 };
 export type BrowserSdkConfiguration = SdkConfig & EdotConfig;
 export type BrowserSdk = {

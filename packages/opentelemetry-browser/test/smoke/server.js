@@ -26,13 +26,18 @@ const server = createServer((req, res) => {
             const origHtml = readFileSync(fileUrl, {encoding: 'utf-8'});
             const config = url.searchParams.get('config') || '{}';
             const jsSync = url.searchParams.get('sync') === 'true';
+            const bundle =
+                url.searchParams.get('bundle') === 'replay'
+                    ? '/assets/elastic-otel-browser-replay.js'
+                    : '/assets/elastic-otel-browser.min.js';
 
             // inject the EDOT with config
             res.end(
                 injectSdk(
                     origHtml,
                     JSON.parse(decodeURIComponent(config)),
-                    jsSync
+                    jsSync,
+                    bundle
                 )
             );
             return;
@@ -89,9 +94,10 @@ console.log(`server listening to http://localhost:3000`);
  * @param {string} html
  * @param {Record<string, any>} config
  * @param {boolean} jsSync
+ * @param {string} bundle
  * @returns
  */
-function injectSdk(html, config, jsSync) {
+function injectSdk(html, config, jsSync, bundle) {
     const placeholder = '<!-- EDOT_PLACEHOLDER (DO NOT REMOVE)-->';
     const codeAsync = `
         <script>
@@ -99,14 +105,14 @@ function injectSdk(html, config, jsSync) {
         ;(function(d, s, c) {
             var j = d.createElement(s),
                 t = d.getElementsByTagName(s)[0];
-            j.src = '/assets/elastic-otel-browser.min.js';
+            j.src = '${bundle}';
             j.onload = function() { globalThis.edotBrowser = startBrowserSdk(c); };
             t.parentNode.insertBefore(j, t);
         })(document, 'script', ${JSON.stringify(config)})
         </script>
     `;
     const codeSync = `
-        <script src="/assets/elastic-otel-browser.min.js"></script>
+        <script src="${bundle}"></script>
         <script>
             globalThis.edotBrowser = startBrowserSdk(${JSON.stringify(config)});
         </script>
