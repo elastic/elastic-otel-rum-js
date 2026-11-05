@@ -339,8 +339,8 @@ export function startBrowserSdk(cfg = {}) {
         return instrFactories[key](config);
     });
 
-    // Does the same as `registerInstrumentations` form upstream at the end
-    // disabling the ones with { enabled: false } in configuration
+    // Does the same as `registerInstrumentations` from upstream. But at the
+    // end disables the ones with { enabled: false } in configuration
     for (const instr of instrumentationInstances) {
         const config = instr.getConfig();
         instr.setLoggerProvider?.(loggerProvider);
