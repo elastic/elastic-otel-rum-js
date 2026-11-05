@@ -110,8 +110,10 @@ How a player reads a session:
    `session.id` (see below), or a terms aggregation on
    `elastic.replay.segment.id` in the replay data.
 2. Fetch each segment's records sorted by `elastic.replay.sequence`, then
-   `elastic.replay.chunk.index` with missing values first (`missing: "_first"`).
-   Page with `search_after` on those two fields.
+   `elastic.replay.chunk.index` with missing values first (`missing: -1`).
+   Page with `search_after` on those two fields. Avoid `missing: "_first"`: it
+   returns `Long.MIN_VALUE` as the sort value, which a JSON number cannot hold
+   exactly, so a JavaScript client sends back a rounded cursor.
 3. Reassemble chunks, unpack packed events, and play.
 4. Segments of the same `browser.tab.id` are sequential page loads. Order them by
    start time and play them back to back as one stream; each starts with a
