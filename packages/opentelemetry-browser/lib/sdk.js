@@ -69,6 +69,7 @@ import {EDOT_VERSION, OTEL_BROWSER_INSTRUMENTATION_VERSION} from './version.js';
  * @property {Partial<InstrumentationsConfigMap>} [instrumentations]
  * @property {import('./session.js').SessionConfig} [session]
  * @property {Array<string | RegExp>} [ignoreFetchUrls]
+ * @property {Array<keyof InstrumentationsConfigMap>} [disableInstrumentations]
  */
 /**
  * @typedef {SdkConfig & EdotConfig} BrowserSdkConfiguration
@@ -305,7 +306,7 @@ export function startBrowserSdk(cfg = {}) {
     // Factory functions for each instrumentation so it can resolve 1st which configuration
     // goes to which instrumentation
     /** @type {Record<keyof InstrumentationsConfigMap, (cfg: any) => any>} */
-    const instrFactories = {
+    const instrFactoriesMap = {
         navigation: (cfg) => new NavigationInstrumentation(cfg),
         'navigation-timing': (cfg) => new NavigationTimingInstrumentation(cfg),
         'resource-timing': (cfg) =>
@@ -317,38 +318,76 @@ export function startBrowserSdk(cfg = {}) {
         'web-vitals': (cfg) => new WebVitalsInstrumentation(cfg),
     };
 
+    /** @type {Set<string>} */
+    const disableInstrumentations = new Set();
+    if (config.disableInstrumentations) {
+        // NOTE: we do not check all the items are valid instrumentation names because
+        // a typo would mean nothing gets disabled. EDOT should do as much as it can
+        if (
+            isValidArray(
+                config.disableInstrumentations,
+                (i) => typeof i === 'string'
+            )
+        ) {
+            config.disableInstrumentations.forEach((name) => {
+                if (Object.hasOwn(instrFactoriesMap, name)) {
+                    disableInstrumentations.add(name);
+                } else {
+                    diag.warn(
+                        `Can't disable instrumentation with name "${name}". It is not in the list of available instrumentations`
+                    );
+                }
+            });
+        } else {
+            diag.warn(
+                `Configuration option "disableInstrumentations" must be an array of strings. Instead found "${config.disableInstrumentations}"`
+            );
+        }
+    }
+
+    const instrConfigType = typeof config.instrumentations;
+    /** @type {Record<string, unknown>} */
+    let instrConfigMap = {};
+
     // Configuring instrumentations manually has some risks since they are under
     // active development and future releases may break configuration. Let's warn
-    if (typeof config.instrumentations !== 'undefined') {
+    if (instrConfigType !== 'undefined') {
         const docsUrl = instrumentationDocsUrl(
             OTEL_BROWSER_INSTRUMENTATION_VERSION
         );
         diag.warn(
-            `Manual configuration of instrumetations is not recommended. The current options supported are documented in ${docsUrl}`
+            `Manual configuration of instrumentations is not recommended. The current options supported are documented in ${docsUrl}`
         );
+        // If user passed the options check the type is correct. Do not check nested properties
+        if (instrConfigType !== 'object') {
+            diag.warn(
+                `Configuration option "instrumentations" must be an object. Instead found "${config.instrumentations}"`
+            );
+        } else {
+            instrConfigMap = {...config.instrumentations};
+        }
     }
-    const instrumentations = config.instrumentations || {};
 
-    /** @type {Array<keyof InstrumentationsConfigMap>} */
-    // @ts-expect-error - the object defined above only has the allowed keys
-    const instrKeys = Object.keys(instrFactories);
-
-    // Create all instrumentations
-    /** @type {Array<import('@opentelemetry/instrumentation').Instrumentation>} */
-    const instrumentationInstances = instrKeys.map((key) => {
-        const config = instrumentations[key];
-        return instrFactories[key](config);
-    });
+    const instrEntries = Object.entries(instrFactoriesMap).map(
+        ([name, factory]) => {
+            const instr = factory(instrConfigMap[name]);
+            return {name, instr};
+        }
+    );
 
     // Does the same as `registerInstrumentations` form upstream at the end
-    // disabling the ones with { enabled: false } in configuration
-    for (const instr of instrumentationInstances) {
-        const config = instr.getConfig();
+    // disabling the ones with { enabled: false } in configuration or present
+    // in `disableInstrumentations`
+    for (const entry of instrEntries) {
+        const {name, instr} = entry;
         instr.setLoggerProvider?.(loggerProvider);
         instr.setTracerProvider(tracerProvider);
         instr.setMeterProvider(meterProvider);
         instr.enable();
-        if (config.enabled === false) {
+        if (
+            disableInstrumentations.has(name) ||
+            instr.getConfig().enabled === false
+        ) {
             instr.disable();
         }
     }
@@ -362,7 +401,7 @@ export function startBrowserSdk(cfg = {}) {
 
     return {
         shutdown() {
-            instrumentationInstances.forEach((i) => i.disable());
+            instrEntries.forEach((e) => e.instr.disable());
             return Promise.allSettled([
                 tracesSdk.shutdown(),
                 logsSdk.shutdown(),

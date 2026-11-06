@@ -77,6 +77,7 @@ Configuration is passed as an object to `startBrowserSdk`. The following options
 | `resourceAttributes`  | `Record<string, any>`    | Optional resource attributes to attach to telemetry. For example: `{ 'deployment.environment.name': 'production' }`. |
 | `disabled`            | `boolean`                | If `true`, the SDK does not start. |
 | `instrumentations`    | `Record<string, Object>` | **Not recommended.** Advanced per-instrumentation config passed through to upstream OpenTelemetry Browser instrumentations. EDOT Browser logs a warning when this option is set. Refer to [instrumentations details](#otel_browser_instrumentations-details). |
+| `disableInstrumentations` | `string[]`            | Optional list of instrumentation keys to turn off. Values must match the keys in [instrumentations details](#otel_browser_instrumentations-details). Refer to [`disableInstrumentations` details](#otel_browser_disableinstrumentations-details). |
 | `session`             | `{ sampleRate?: number; inactivityTimeout?: number; maxDuration?: number }` | Session tracking and session-level sampling. Refer to [session details](#otel_browser_session-details) for more information. |
 | `ignoreFetchUrls`     | `(string \| RegExp)[]`   | URLs to exclude from fetch, XMLHttpRequest, and resource timing instrumentation. OTLP export URLs are always ignored. Refer to [`ignoreFetchUrls` details](#otel_browser_ignorefetchurls-details). Optional; defaults to `[]`. |
 | `exportConfig`    | `{ url?: string; headers?: Record<string, string>}` | Configuration for exporters of the different signals. |
@@ -140,6 +141,26 @@ The following keys are supported:
 | Errors            | `errors`                                         | `@opentelemetry/browser-instrumentation/errors`   | [Reference](https://github.com/open-telemetry/opentelemetry-browser/tree/main/packages/instrumentation#errors) |
 | Web vitals        | `web-vitals`                                     | `@opentelemetry/browser-instrumentation/web-vitals` | [Reference](https://github.com/open-telemetry/opentelemetry-browser/blob/main/packages/instrumentation/README.md#web-vitals) |
 | Navigation        | `navigation`                                     | `@opentelemetry/browser-instrumentation/navigation` | [Reference](https://github.com/open-telemetry/opentelemetry-browser/blob/main/packages/instrumentation/README.md#navigation) |
+
+### `disableInstrumentations` details [otel_browser_disableinstrumentations-details]
+
+Pass an array of instrumentation keys (the same strings as the **Key** column in the table above) to turn off specific instrumentations without using the `instrumentations` object. This option is intended for simple cases such as disabling one or two defaults.
+
+- The value must be an array of strings. Other shapes log a warning in the browser console and are ignored.
+- If a string is not a known instrumentation key, EDOT Browser logs a warning and skips that entry.
+- If you set both `disableInstrumentations` and `instrumentations` for the same key, `disableInstrumentations` takes precedence. For example, `disableInstrumentations: ['resource-timing']` keeps resource timing disabled even when `instrumentations['resource-timing']` sets `enabled: true`.
+
+```js
+import { startBrowserSdk } from '@elastic/opentelemetry-browser';
+
+startBrowserSdk({
+  serviceName: 'my-web-app',
+  exportConfig: {
+    url: 'https://telemetry.example.com',
+  },
+  disableInstrumentations: ['web-vitals', 'resource-timing'],
+});
+```
 
 ### `session` details [otel_browser_session-details]
 
