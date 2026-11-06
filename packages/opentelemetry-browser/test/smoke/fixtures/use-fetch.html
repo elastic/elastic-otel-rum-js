@@ -5,6 +5,26 @@
         <meta name="traceparent" content="00-ab42124a3c573678d4d8b21ba52df3bf-d21f7bc17caa5aba-01">
         <title>Fetch Instrumentation Test</title>
         <!-- EDOT_PLACEHOLDER (DO NOT REMOVE)-->
+        <script>
+            // Define routes for this page and its responses (can be overriden by tests)
+            window.__ROUTES__ = {
+                'api/method': {
+                    status: 200,
+                    contentType: 'text/plain',
+                    body: 'Response for the same origin request',
+                },
+                'http://www.example.com': {
+                    status: 200,
+                    contentType: 'text/plain',
+                    body: 'Response for the different origin request',
+                },
+                'http://www.foobar.com': {
+                    status: 200,
+                    contentType: 'text/plain',
+                    body: 'Response for the different origin request',
+                },
+            }
+        </script>
     </head>
     <body>
         <h1>Fetch Instrumentation Test</h1>
