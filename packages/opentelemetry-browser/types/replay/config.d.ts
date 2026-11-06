@@ -7,6 +7,12 @@
  * @returns {ResolvedReplayConfig}
  */
 export function resolveReplayConfig(config: unknown, hasRecorder: boolean): ResolvedReplayConfig;
+/**
+ * Input types `maskAllInputs` masks: rrweb's list plus `hidden` and `file`,
+ * which rrweb leaves out.
+ */
+export const MASKABLE_INPUT_TYPES: readonly ["color", "date", "datetime-local", "email", "month", "number", "range", "search", "tel", "text", "time", "url", "week", "textarea", "select", "password", "hidden", "file"];
+export type MaskableInputType = (typeof MASKABLE_INPUT_TYPES)[number];
 export type ReplayPrivacyConfig = {
     /**
      * replace every input value with `*`, default true
@@ -17,9 +23,9 @@ export type ReplayPrivacyConfig = {
      */
     maskAllText?: boolean | undefined;
     /**
-     * per input type masking, as in rrweb
+     * per input type masking when `maskAllInputs` is false
      */
-    maskInputOptions?: Record<string, boolean> | undefined;
+    maskInputOptions?: Partial<Record<"number" | "text" | "select" | "hidden" | "color" | "date" | "datetime-local" | "email" | "month" | "range" | "search" | "tel" | "time" | "url" | "week" | "textarea" | "password" | "file", boolean>> | undefined;
     /**
      * CSS selector whose text is masked when `maskAllText` is false
      */
@@ -32,7 +38,13 @@ export type ReplayPrivacyConfig = {
      * CSS selector whose input events are not recorded
      */
     ignoreSelector?: string | undefined;
-    maskInputFn?: ((text: string, element: HTMLElement) => string) | undefined;
+    /**
+     * `element` is null when the SDK cannot look it up
+     */
+    maskInputFn?: ((text: string, element: HTMLElement | null) => string) | undefined;
+    /**
+     * `element` is null when the SDK cannot look it up
+     */
     maskTextFn?: ((text: string, element: HTMLElement | null) => string) | undefined;
 };
 export type ReplayConfig = {

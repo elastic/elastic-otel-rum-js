@@ -40,20 +40,21 @@ test('should export replay records with session attributes when enabled', async 
     const collector = createCollector(page);
     await page.goto(fixtureUrl({replay: {enabled: true}}, 'replay', true));
     await page.fill('#secret', 'hunter2');
+    await page.check('#consent');
     await page.click('#action');
 
     /** @type {import('./test-utils').CollectedLog[]} */
     let logs = [];
-    // Wait for the input event (IncrementalSnapshot with source Input)
+    // Wait for both input events (IncrementalSnapshot with source Input)
     await expect
         .poll(async () => {
             logs = await collector.getLogs();
-            return replayLogs(logs).some((l) => {
+            return replayLogs(logs).filter((l) => {
                 const event = JSON.parse(bodyOf(l) || '{}');
                 return event.type === 3 && event.data?.source === 5;
-            });
+            }).length;
         })
-        .toBe(true);
+        .toBeGreaterThanOrEqual(2);
 
     const sessionStart = logs.find((l) => l.eventName === 'session.start');
     const sessionId = sessionStart?.attributes['session.id'];
@@ -108,6 +109,16 @@ test('should export replay records with session attributes when enabled', async 
     expect(bodies).not.toContain('hunter2');
     expect(bodies).not.toContain('masked-text');
     expect(bodies).not.toContain('blocked-text');
+    // Values rrweb would copy as is
+    for (const value of [
+        'hidden-value',
+        'checkbox-value',
+        'submit-label',
+        'option-value',
+        'option-label',
+    ]) {
+        expect(bodies).not.toContain(value);
+    }
 });
 
 test('should record text when maskAllText is false, except opted out markup', async ({
@@ -133,8 +144,14 @@ test('should record text when maskAllText is false, except opted out markup', as
 
     expect(bodies).toContain('Session Replay Test');
     expect(bodies).toContain('placeholder-text');
+    expect(bodies).toContain('submit-label');
+    expect(bodies).toContain('option-label');
     expect(bodies).not.toContain('masked-text');
     expect(bodies).not.toContain('blocked-text');
+    // Input values still follow maskAllInputs
+    expect(bodies).not.toContain('hidden-value');
+    expect(bodies).not.toContain('checkbox-value');
+    expect(bodies).not.toContain('option-value');
 });
 
 test('should not export replay records when disabled', async ({page}) => {

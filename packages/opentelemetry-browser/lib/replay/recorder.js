@@ -11,6 +11,7 @@ import {
 } from '@opentelemetry/resources';
 import {BatchLogRecordProcessor, LoggerProvider} from '@opentelemetry/sdk-logs';
 
+import {MASKABLE_INPUT_TYPES} from './config.js';
 import {
     ATTR_REPLAY_EVENT_TYPE,
     ATTR_REPLAY_FORMAT,
@@ -33,7 +34,7 @@ import {EDOT_VERSION} from '../version.js';
  * @property {(event: RecorderEvent) => void} emit
  * @property {boolean} maskAllInputs
  * @property {Record<string, boolean>} [maskInputOptions]
- * @property {(text: string, element: HTMLElement) => string} [maskInputFn]
+ * @property {(text: string, element: HTMLElement | null) => string} [maskInputFn]
  * @property {(text: string, element: HTMLElement | null) => string} [maskTextFn]
  * @property {string} maskTextSelector
  * @property {string} blockSelector
@@ -46,8 +47,13 @@ import {EDOT_VERSION} from '../version.js';
  * @typedef {(options: RecordOptions) => (() => void) | undefined} RecordFn
  */
 /**
+ * Looks up the DOM node of an rrweb node id.
+ * @typedef {(id: number) => unknown} GetNodeFn
+ */
+/**
  * @typedef {import('./config.js').ReplayStartOptions & {
  *  record: RecordFn;
+ *  getNode?: GetNodeFn;
  *  exporter?: import('@opentelemetry/sdk-logs').LogRecordExporter;
  * }} StartReplayOptions
  */
@@ -66,15 +72,23 @@ const IGNORE_SELECTOR = '[data-elastic-replay="ignore"]';
 const EVENT_TYPE_DOM_CONTENT_LOADED = 0;
 const EVENT_TYPE_LOAD = 1;
 
+// rrweb `IncrementalSource.Input`
+const INCREMENTAL_SOURCE_INPUT = 5;
+
 // rrweb masks text nodes only, these attributes often hold the same content
 const TEXT_ATTRIBUTES = [
     'alt',
     'aria-description',
     'aria-label',
     'aria-valuetext',
+    'label',
     'placeholder',
     'title',
 ];
+// Inputs whose `value` is their visible label
+const LABEL_INPUT_TYPES = ['button', 'reset', 'submit'];
+// Inputs whose `value` rrweb copies as is, even with `maskAllInputs`
+const CHOICE_INPUT_TYPES = ['checkbox', 'radio'];
 
 /**
  * Starts recording the page into its own logger and batch processor, so large
@@ -113,10 +127,25 @@ export function startReplay(opts) {
 
     const segmentId = generateUUID();
     let sequence = 0;
+    let started = false;
 
-    const replacer = config.privacy.maskAllText
-        ? attributesMasker(config.privacy.maskTextFn)
-        : undefined;
+    // The first error is a warning, since the replay may now be incomplete
+    let warned = false;
+    /** @param {unknown} err */
+    const onError = (err) => {
+        if (warned) {
+            diag.debug('Session replay error', err);
+            return true;
+        }
+        warned = true;
+        diag.warn(
+            'Session replay error, the replay may be incomplete. Further errors are logged at debug level.',
+            err
+        );
+        return true;
+    };
+
+    const replacer = createMasker(config.privacy, opts.getNode, onError);
 
     /** @param {RecorderEvent} event */
     const emitEvent = (event) => {
@@ -126,13 +155,16 @@ export function startReplay(opts) {
         ) {
             return;
         }
+        // Taken before anything can drop the event, so a player sees the gap
+        const eventSequence = sequence++;
         // TODO: rotate the segment with the session (#142)
         // Also drops events between `endSession()` and the next session
         if (!sessionManager.getSession()?.sampled) {
             return;
         }
         const body = JSON.stringify(event, replacer);
-        if (sequence === 0) {
+        if (!started) {
+            started = true;
             logger.emit({
                 eventName: EVENT_REPLAY_START,
                 timestamp: event.timestamp,
@@ -149,7 +181,7 @@ export function startReplay(opts) {
             body,
             attributes: {
                 [ATTR_REPLAY_SEGMENT_ID]: segmentId,
-                [ATTR_REPLAY_SEQUENCE]: sequence++,
+                [ATTR_REPLAY_SEQUENCE]: eventSequence,
                 [ATTR_REPLAY_EVENT_TYPE]: event.type,
             },
         });
@@ -157,11 +189,6 @@ export function startReplay(opts) {
 
     // rrweb calls `emit` inside app code, e.g. patched `insertRule`, so
     // errors must not reach the app
-    /** @param {unknown} err */
-    const onError = (err) => {
-        diag.debug('Session replay error', err);
-        return true;
-    };
     /** @param {RecorderEvent} event */
     const emit = (event) => {
         try {
@@ -206,12 +233,13 @@ export function startReplay(opts) {
  */
 export function toRecordPrivacyOptions(privacy) {
     return {
-        maskAllInputs: privacy.maskAllInputs,
-        // rrweb drops its default password masking when options are given
-        maskInputOptions: privacy.maskInputOptions && {
-            password: true,
-            ...privacy.maskInputOptions,
-        },
+        // rrweb's `maskAllInputs` replaces `maskInputOptions` with a list that
+        // leaves out `hidden` and `file`, so the SDK always passes its own
+        maskAllInputs: false,
+        maskInputOptions: privacy.maskAllInputs
+            ? Object.fromEntries(MASKABLE_INPUT_TYPES.map((t) => [t, true]))
+            : // Hidden inputs are never shown, so masking them costs nothing
+              {password: true, hidden: true, ...privacy.maskInputOptions},
         maskInputFn: privacy.maskInputFn,
         maskTextFn: privacy.maskTextFn,
         maskTextSelector: privacy.maskAllText
@@ -225,31 +253,160 @@ export function toRecordPrivacyOptions(privacy) {
 // -- helper functions
 
 /**
- * `JSON.stringify` replacer that masks text-bearing attributes, in snapshots
- * and in attribute mutations alike.
- * @param {(text: string, element: HTMLElement | null) => string} [maskTextFn]
- * @returns {(key: string, value: unknown) => unknown}
+ * `JSON.stringify` replacer that masks what rrweb copies as is:
+ * - with `maskAllText`, text-bearing attributes and button labels,
+ * - with `maskAllInputs`, checkbox, radio and `<option>` values.
+ * It applies to snapshots, attribute mutations and input events alike.
+ * @param {import('./config.js').ResolvedReplayConfig['privacy']} privacy
+ * @param {GetNodeFn | undefined} getNode
+ * @param {(err: unknown) => void} onError
+ * @returns {((this: unknown, key: string, value: unknown) => unknown) | undefined}
  */
-function attributesMasker(maskTextFn) {
-    const mask = maskTextFn
-        ? (/** @type {string} */ text) => maskTextFn(text, null)
-        : (/** @type {string} */ text) => text.replace(/\S/g, '*');
-    return (key, value) => {
-        if (key !== 'attributes' || !isAttributesMap(value)) {
-            return value;
-        }
-        if (!TEXT_ATTRIBUTES.some((name) => typeof value[name] === 'string')) {
-            return value;
-        }
-        const masked = {...value};
-        for (const name of TEXT_ATTRIBUTES) {
-            const text = masked[name];
-            if (typeof text === 'string') {
-                masked[name] = mask(text);
+function createMasker(privacy, getNode, onError) {
+    const {maskAllText, maskAllInputs} = privacy;
+    if (!maskAllText && !maskAllInputs) {
+        return undefined;
+    }
+    const maskText = safeMask(
+        privacy.maskTextFn,
+        (text) => text.replace(/\S/g, '*'),
+        onError
+    );
+    const maskInput = safeMask(
+        privacy.maskInputFn,
+        (text) => '*'.repeat(text.length),
+        onError
+    );
+
+    /**
+     * @param {Record<string, unknown>} attributes
+     * @param {unknown} holder the serialized node, or the attribute mutation
+     */
+    const maskAttributes = (attributes, holder) => {
+        const element = getElement(holder, getNode);
+        // Serialized nodes have their tag name, mutations only an id
+        const tagName =
+            (isObject(holder) && typeof holder.tagName === 'string'
+                ? holder.tagName
+                : elementTagName(element)) ?? '';
+        const type = String(
+            attributes.type ?? elementType(element) ?? ''
+        ).toLowerCase();
+        /** @type {Record<string, unknown> | undefined} */
+        let masked;
+        /**
+         * @param {string} name
+         * @param {(text: string, node: unknown) => string} mask
+         */
+        const maskAttribute = (name, mask) => {
+            const text = attributes[name];
+            if (typeof text === 'string' && text !== '') {
+                masked ??= {...attributes};
+                masked[name] = mask(text, element);
+            }
+        };
+        if (maskAllText) {
+            TEXT_ATTRIBUTES.forEach((name) => maskAttribute(name, maskText));
+            if (tagName === 'input' && LABEL_INPUT_TYPES.includes(type)) {
+                maskAttribute('value', maskText);
             }
         }
-        return masked;
+        if (
+            maskAllInputs &&
+            (tagName === 'option' ||
+                (tagName === 'input' && CHOICE_INPUT_TYPES.includes(type)))
+        ) {
+            maskAttribute('value', maskInput);
+        }
+        return masked ?? attributes;
     };
+
+    return function (key, value) {
+        if (key === 'attributes' && isObject(value)) {
+            return maskAttributes(value, this);
+        }
+        // rrweb sends checkbox and radio values with their checked state
+        if (
+            maskAllInputs &&
+            key === 'text' &&
+            typeof value === 'string' &&
+            isObject(this) &&
+            this.source === INCREMENTAL_SOURCE_INPUT
+        ) {
+            const element = getElement(this, getNode);
+            if (CHOICE_INPUT_TYPES.includes(elementType(element) ?? '')) {
+                return maskInput(value, element);
+            }
+        }
+        return value;
+    };
+}
+
+/**
+ * Wraps an app mask function, falling back to the default mask when it
+ * throws, e.g. when it reads an element the SDK cannot look up.
+ * @param {((text: string, element: HTMLElement | null) => string) | undefined} fn
+ * @param {(text: string) => string} fallback
+ * @param {(err: unknown) => void} onError
+ * @returns {(text: string, node: unknown) => string}
+ */
+function safeMask(fn, fallback, onError) {
+    if (!fn) {
+        return fallback;
+    }
+    return (text, node) => {
+        try {
+            const masked = fn(text, toHTMLElement(node));
+            if (typeof masked === 'string') {
+                return masked;
+            }
+        } catch (err) {
+            onError(err);
+        }
+        return fallback(text);
+    };
+}
+
+/**
+ * @param {unknown} holder
+ * @param {GetNodeFn | undefined} getNode
+ * @returns {unknown} the element, or null
+ */
+function getElement(holder, getNode) {
+    if (!getNode || !isObject(holder) || typeof holder.id !== 'number') {
+        return null;
+    }
+    return getNode(holder.id) ?? null;
+}
+
+/**
+ * @param {unknown} node
+ * @returns {HTMLElement | null}
+ */
+function toHTMLElement(node) {
+    return typeof HTMLElement !== 'undefined' && node instanceof HTMLElement
+        ? node
+        : null;
+}
+
+/**
+ * @param {unknown} element
+ * @returns {string | undefined}
+ */
+function elementTagName(element) {
+    return isObject(element) && typeof element.tagName === 'string'
+        ? element.tagName.toLowerCase()
+        : undefined;
+}
+
+/**
+ * @param {unknown} element
+ * @returns {string | undefined}
+ */
+function elementType(element) {
+    return isObject(element) && typeof element.type === 'string'
+        ? element.type.toLowerCase()
+        : undefined;
 }
 
 /**
@@ -258,7 +415,7 @@ function attributesMasker(maskTextFn) {
  * @param {unknown} value
  * @returns {value is Record<string, unknown>}
  */
-function isAttributesMap(value) {
+function isObject(value) {
     return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 

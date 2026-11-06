@@ -17,7 +17,12 @@ import {startReplay} from './recorder.js';
  */
 export function startBrowserSdk(cfg = {}) {
     return startSdk(cfg, {
-        startReplay: (opts) => startReplay({...opts, record: recordAndReset}),
+        startReplay: (opts) =>
+            startReplay({
+                ...opts,
+                record: recordAndReset,
+                getNode: (id) => record.mirror.getNode(id),
+            }),
     });
 }
 

@@ -102,7 +102,10 @@ a new one.
 Why not one sequence per session, as in the POC: a session is shared by all tabs
 of an origin (`localStorage`), so tabs write interleaved, colliding counters, and
 the counter has to survive page loads through storage. A per-segment counter
-lives in memory, never collides, and a gap in it means a record was lost.
+lives in memory, never collides, and a gap in it means a record was lost. The
+SDK also leaves a gap for events it drops itself (the session ended, or the
+event could not be serialized), so a player never applies later events to a DOM
+that is missing changes.
 
 How a player reads a session:
 
@@ -324,6 +327,12 @@ mode would start buffering late. It can be added later behind the same config.
 Rates follow `session.sampleRate`: 0..1, invalid values fall back to the default
 with a warning, out-of-range values are clamped, four decimal places.
 
+Options not listed here, and typos, are ignored with a warning.
+
+Until per session sampling ships (#142), `sampleRate` and `errorSampleRate`
+are not supported and `enabled: true` records every session that
+`session.sampleRate` kept. Replay is experimental until then.
+
 ### Sampling
 
 Replay only runs for sessions that `session.sampleRate` kept, so the share of
@@ -357,14 +366,14 @@ belong to elastic/observability-dev#6141.
 
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
-| `maskAllInputs` | boolean | `true` | Replace the value of every input with `*`. |
-| `maskAllText` | boolean | `true` | Replace all text content with `*`, including the `alt`, `aria-description`, `aria-label`, `aria-valuetext`, `placeholder` and `title` attributes. |
-| `maskInputOptions` | object | | Per input type masking, as in rrweb, when `maskAllInputs` is `false`. Password inputs stay masked unless it sets `password: false`. |
+| `maskAllInputs` | boolean | `true` | Replace the value of every input with `*`, including hidden and file inputs, checkbox and radio values, and `<option>` values. |
+| `maskAllText` | boolean | `true` | Replace all text content with `*`, including the `alt`, `aria-description`, `aria-label`, `aria-valuetext`, `label`, `placeholder` and `title` attributes, and the labels of `button`, `reset` and `submit` inputs. |
+| `maskInputOptions` | object | | Per input type masking, as in rrweb, when `maskAllInputs` is `false`. Keys are rrweb's input types plus `hidden` and `file`, values are booleans. Password and hidden inputs stay masked unless it sets `password: false` or `hidden: false`. |
 | `maskTextSelector` | string | | CSS selector whose text is masked when `maskAllText` is `false`. |
 | `blockSelector` | string | | CSS selector whose elements are replaced by an empty box of the same size. |
 | `ignoreSelector` | string | | CSS selector whose input events are not recorded. |
-| `maskInputFn` | function | | Custom input masking. |
-| `maskTextFn` | function | | Custom text masking. |
+| `maskInputFn` | function | | Custom input masking, `(text, element) => string`. |
+| `maskTextFn` | function | | Custom text masking, `(text, element) => string`. |
 
 The selectors `[data-elastic-replay="mask"]`, `[data-elastic-replay="block"]`
 and `[data-elastic-replay="ignore"]` always apply, so markup can opt out without
@@ -373,11 +382,48 @@ config. Configured selectors add to them.
 An invalid selector or `maskInputOptions` value disables replay with a warning.
 Ignoring it would record what it was meant to hide, and with rrweb one bad
 selector also turns off the `data-elastic-replay` selectors it is joined with.
+A typo in a `maskInputOptions` key, or a non boolean value, counts as invalid.
+
+`element` is `null` in `maskInputFn` and `maskTextFn` when the SDK cannot look
+it up. If either function throws, the SDK uses the default mask for that value
+and logs a warning.
 
 Text and inputs are masked by default, so a replay shows layout and interactions
 but no page content until the app opts out. Sentry, Datadog and Splunk mask text
 by default too. Masking too much is fixed by a config change; recorded personal
 data cannot be taken back once it is exported.
+
+#### What a replay contains
+
+A replay is a copy of the page's DOM and of what the user did on it, sent as
+OTLP logs to the same endpoint as the rest of the telemetry. It records:
+
+- the DOM structure, with text masked and blocked elements replaced by an
+  empty box of the same size,
+- element attributes, with the text-bearing ones above masked,
+- the stylesheets the page can read,
+- mouse moves, clicks, scrolls, viewport changes and input events, with input
+  values masked.
+
+The SDK does not mask, with the defaults:
+
+- URLs: the page URL in the Meta event, with its query string and fragment, and
+  every `href`, `src` and `srcset`. The rest of the SDK's telemetry sends the
+  page URL too.
+- Attributes not listed above, such as `data-*`, `value` on elements other than
+  inputs and options, and `class`.
+- With `maskAllText: false`, the text-bearing attributes of elements matched by
+  `maskTextSelector`: only their text is masked.
+- With `maskAllInputs: false`, every input type not set in `maskInputOptions`,
+  including card number and one-time code fields. Only password and hidden
+  inputs stay masked.
+
+Apps keep content out with `blockSelector` or `[data-elastic-replay="block"]`.
+Masking URLs and extra attributes is a follow-up.
+
+Replay never runs unless the app imports the replay entry point and sets
+`enabled: true`. It has no API for the page to read recorded data back, and the
+SDK keeps no replay data in storage.
 
 #### Canvas
 

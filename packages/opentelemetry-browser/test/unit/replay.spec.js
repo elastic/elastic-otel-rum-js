@@ -8,7 +8,10 @@ import {mock, test} from 'node:test';
 
 import {diag, DiagLogLevel} from '@opentelemetry/api';
 
-import {resolveReplayConfig} from '../../lib/replay/config.js';
+import {
+    MASKABLE_INPUT_TYPES,
+    resolveReplayConfig,
+} from '../../lib/replay/config.js';
 import {
     REPLAY_SCOPE_NAME,
     startReplay,
@@ -19,6 +22,9 @@ import {EDOT_VERSION} from '../../lib/version.js';
 const UUID_V4 =
     /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 const DEFAULT_PRIVACY = {maskAllInputs: true, maskAllText: true};
+const ALL_INPUTS_MASKED = Object.fromEntries(
+    MASKABLE_INPUT_TYPES.map((type) => [type, true])
+);
 
 /**
  * @param {import('node:test').TestContext} t
@@ -43,7 +49,7 @@ function captureWarnings(t) {
 }
 
 /**
- * @param {{sampled?: boolean}} [opts]
+ * @param {{sampled?: boolean; nodes?: Record<number, unknown>}} [opts]
  */
 function setup(opts = {}) {
     const session = {
@@ -85,6 +91,7 @@ function setup(opts = {}) {
             resourceAttributes: {'service.name': 'replay-test'},
             exportConfig: {url: 'http://localhost:4318/v1/logs'},
             record,
+            getNode: (id) => opts.nodes?.[id] ?? null,
             exporter,
         });
     return {
@@ -115,6 +122,48 @@ test('resolveReplayConfig - warns and disables replay on the core entry point', 
     assert.strictEqual(resolved.enabled, false);
     assert.strictEqual(warnings.length, 1);
     assert.match(warnings[0], /@elastic\/opentelemetry-browser\/replay/);
+});
+
+test('resolveReplayConfig - does not warn on the core entry point when replay is off', (t) => {
+    const warnings = captureWarnings(t);
+    resolveReplayConfig({enabled: false, privacy: {maskAllText: false}}, false);
+    resolveReplayConfig({privacy: {}}, false);
+    assert.deepStrictEqual(warnings, []);
+});
+
+test('resolveReplayConfig - warns on unsupported options', (t) => {
+    const warnings = captureWarnings(t);
+    const resolved = resolveReplayConfig(
+        {enable: true, sampleRate: 0.1, privacy: {maskAll: true}},
+        true
+    );
+    assert.strictEqual(resolved.enabled, false);
+    assert.deepStrictEqual(warnings, [
+        'Unsupported "replay.enable" option. Ignoring it.',
+        'Unsupported "replay.sampleRate" option. Ignoring it.',
+        'Unsupported "replay.privacy.maskAll" option. Ignoring it.',
+    ]);
+});
+
+test('resolveReplayConfig - describes invalid values without throwing', (t) => {
+    const warnings = captureWarnings(t);
+    assert.doesNotThrow(() =>
+        resolveReplayConfig(
+            {
+                enabled: Object.create(null),
+                privacy: {
+                    maskAllText: () => 'secret source',
+                    maskAllInputs: 1n,
+                },
+            },
+            true
+        )
+    );
+    assert.deepStrictEqual(warnings, [
+        'Invalid "replay.enabled" value: {}. Using false.',
+        'Invalid "replay.privacy.maskAllInputs" value: bigint. Using true.',
+        'Invalid "replay.privacy.maskAllText" value: a function. Using true.',
+    ]);
 });
 
 test('resolveReplayConfig - keeps valid values', (t) => {
@@ -185,6 +234,9 @@ test('resolveReplayConfig - disables replay on invalid selectors or input option
     const warnings = captureWarnings(t);
     const invalid = [
         {maskInputOptions: ['password']},
+        {maskInputOptions: {emial: true}},
+        {maskInputOptions: {email: 0}},
+        {maskInputOptions: {checkbox: true}},
         {maskTextSelector: ''},
         {blockSelector: 42},
         {ignoreSelector: null},
@@ -221,8 +273,8 @@ test('resolveReplayConfig - disables replay on selectors the DOM rejects', (t) =
 
 test('toRecordPrivacyOptions - masks all text by default', () => {
     assert.deepStrictEqual(toRecordPrivacyOptions(DEFAULT_PRIVACY), {
-        maskAllInputs: true,
-        maskInputOptions: undefined,
+        maskAllInputs: false,
+        maskInputOptions: ALL_INPUTS_MASKED,
         maskInputFn: undefined,
         maskTextFn: undefined,
         maskTextSelector: '*',
@@ -236,7 +288,21 @@ test('toRecordPrivacyOptions - masks all text by default', () => {
     assert.strictEqual(options.maskTextSelector, '*');
 });
 
-test('toRecordPrivacyOptions - keeps password masking with maskInputOptions', () => {
+test('toRecordPrivacyOptions - masks hidden and file inputs with maskAllInputs', () => {
+    const {maskInputOptions} = toRecordPrivacyOptions(DEFAULT_PRIVACY);
+    assert.strictEqual(maskInputOptions.hidden, true);
+    assert.strictEqual(maskInputOptions.file, true);
+    // Ignored with maskAllInputs, as in rrweb
+    assert.deepStrictEqual(
+        toRecordPrivacyOptions({
+            ...DEFAULT_PRIVACY,
+            maskInputOptions: {email: false},
+        }).maskInputOptions,
+        ALL_INPUTS_MASKED
+    );
+});
+
+test('toRecordPrivacyOptions - keeps password and hidden masking with maskInputOptions', () => {
     const options = (/** @type {Record<string, boolean>} */ opts) =>
         toRecordPrivacyOptions({
             ...DEFAULT_PRIVACY,
@@ -245,17 +311,21 @@ test('toRecordPrivacyOptions - keeps password masking with maskInputOptions', ()
         }).maskInputOptions;
     assert.deepStrictEqual(options({email: true}), {
         password: true,
+        hidden: true,
         email: true,
     });
-    assert.deepStrictEqual(options({password: false}), {password: false});
+    assert.deepStrictEqual(options({password: false}), {
+        password: false,
+        hidden: true,
+    });
 });
 
 test('toRecordPrivacyOptions - always applies the data-elastic-replay selectors', () => {
     assert.deepStrictEqual(
         toRecordPrivacyOptions({...DEFAULT_PRIVACY, maskAllText: false}),
         {
-            maskAllInputs: true,
-            maskInputOptions: undefined,
+            maskAllInputs: false,
+            maskInputOptions: ALL_INPUTS_MASKED,
             maskInputFn: undefined,
             maskTextFn: undefined,
             maskTextSelector: '[data-elastic-replay="mask"]',
@@ -316,7 +386,7 @@ test('startReplay - passes privacy options to the recorder', () => {
     assert.strictEqual(record.mock.callCount(), 1);
     const options = record.mock.calls[0].arguments[0];
     assert.strictEqual(typeof options.emit, 'function');
-    assert.strictEqual(options.maskAllInputs, true);
+    assert.deepStrictEqual(options.maskInputOptions, ALL_INPUTS_MASKED);
     assert.strictEqual(
         options.blockSelector,
         '[data-elastic-replay="block"], .payment'
@@ -390,18 +460,23 @@ test('startReplay - emits a start record and one record per event', async () => 
     assert.deepStrictEqual(eventRecords[2].hrTime, [1793551234, 567_000_000]);
 });
 
-test('startReplay - drops events once the session is no longer sampled', async () => {
+test('startReplay - drops events once the session is no longer sampled, leaving a gap', async () => {
     const {start, emit, exported, session} = setup();
     const replay = start();
     emit({type: 4, data: {}, timestamp: 1});
     session.sampled = false;
     emit({type: 3, data: {}, timestamp: 2});
+    session.sampled = true;
+    emit({type: 3, data: {}, timestamp: 3});
     await replay?.shutdown();
 
     const events = exported.filter(
         (r) => r.eventName === 'elastic.replay.event'
     );
-    assert.strictEqual(events.length, 1);
+    assert.deepStrictEqual(
+        events.map((r) => r.attributes['elastic.replay.sequence']),
+        [0, 2]
+    );
 });
 
 test('startReplay - gives up when the recorder does not start', (t) => {
@@ -440,23 +515,30 @@ test('startReplay - skips DomContentLoaded and Load so segments start with Meta'
     assert.strictEqual(events[0].attributes['elastic.replay.sequence'], 0);
 });
 
-test('startReplay - never throws from emit into the page', async () => {
+test('startReplay - never throws from emit into the page', async (t) => {
+    const warnings = captureWarnings(t);
     const {start, emit, exported} = setup();
     const replay = start();
     /** @type {any} */
     const circular = {type: 5, data: {}, timestamp: 1};
     circular.data.self = circular;
     assert.doesNotThrow(() => emit(circular));
+    assert.doesNotThrow(() => emit(circular));
     emit({type: 4, data: {}, timestamp: 2});
     await replay?.shutdown();
 
+    // The start record is still sent, and the lost events leave a gap
+    assert.strictEqual(exported[0].eventName, 'elastic.replay.start');
     const events = exported.filter(
         (r) => r.eventName === 'elastic.replay.event'
     );
     assert.deepStrictEqual(
         events.map((r) => r.attributes['elastic.replay.sequence']),
-        [0]
+        [2]
     );
+    // Warned once, then debug only
+    assert.strictEqual(warnings.length, 1);
+    assert.match(warnings[0], /may be incomplete/);
 });
 
 test('startReplay - masks text attributes when maskAllText is on', async () => {
@@ -514,4 +596,131 @@ test('startReplay - masks text attributes when maskAllText is on', async () => {
         clear.data.node.attributes,
         snapshot.data.node.attributes
     );
+});
+
+/**
+ * @param {string} tagName
+ * @param {Record<string, string>} attributes
+ */
+const element = (tagName, attributes) => ({
+    type: 2,
+    tagName,
+    attributes,
+    childNodes: [],
+});
+
+test('startReplay - masks values rrweb copies as is', async () => {
+    const snapshot = {
+        type: 2,
+        timestamp: 1,
+        data: {
+            node: {
+                type: 2,
+                tagName: 'form',
+                attributes: {},
+                childNodes: [
+                    element('input', {type: 'checkbox', value: 'opt-in'}),
+                    element('input', {type: 'radio', value: 'plan-pro'}),
+                    element('input', {type: 'submit', value: 'Pay Jane'}),
+                    element('option', {value: 'jane', label: 'Jane'}),
+                ],
+            },
+        },
+    };
+    const values = (/** @type {typeof snapshot} */ body) =>
+        body.data.node.childNodes.map((n) => n.attributes);
+    /** @param {typeof DEFAULT_PRIVACY} privacy */
+    const run = async (privacy) => {
+        const {start, emit, exported} = setup();
+        const replay = start({privacy});
+        emit(snapshot);
+        await replay?.shutdown();
+        return values(JSON.parse(String(exported[1].body)));
+    };
+
+    assert.deepStrictEqual(await run(DEFAULT_PRIVACY), [
+        {type: 'checkbox', value: '******'},
+        {type: 'radio', value: '********'},
+        {type: 'submit', value: '*** ****'},
+        {value: '****', label: '****'},
+    ]);
+    // Labels follow maskAllText, values follow maskAllInputs
+    assert.deepStrictEqual(
+        await run({maskAllInputs: true, maskAllText: false}),
+        [
+            {type: 'checkbox', value: '******'},
+            {type: 'radio', value: '********'},
+            {type: 'submit', value: 'Pay Jane'},
+            {value: '****', label: 'Jane'},
+        ]
+    );
+    assert.deepStrictEqual(
+        await run({maskAllInputs: false, maskAllText: false}),
+        values(snapshot)
+    );
+});
+
+test('startReplay - masks checkbox values in mutations and input events', async () => {
+    const nodes = {
+        3: {tagName: 'INPUT', type: 'checkbox'},
+        4: {tagName: 'INPUT', type: 'text'},
+    };
+    const {start, emit, exported} = setup({nodes});
+    const replay = start();
+    // Attribute mutations only carry the node id
+    emit({
+        type: 3,
+        timestamp: 1,
+        data: {source: 0, attributes: [{id: 3, attributes: {value: 'yes'}}]},
+    });
+    emit({
+        type: 3,
+        timestamp: 2,
+        data: {source: 5, id: 3, text: 'opt-in', isChecked: true},
+    });
+    // Already masked by rrweb, left as is
+    emit({
+        type: 3,
+        timestamp: 3,
+        data: {source: 5, id: 4, text: '****', isChecked: false},
+    });
+    await replay?.shutdown();
+
+    const [mutation, checkbox, text] = exported
+        .filter((r) => r.eventName === 'elastic.replay.event')
+        .map((r) => JSON.parse(String(r.body)));
+    assert.deepStrictEqual(mutation.data.attributes[0].attributes, {
+        value: '***',
+    });
+    assert.strictEqual(checkbox.data.text, '******');
+    assert.strictEqual(text.data.text, '****');
+});
+
+test('startReplay - falls back to the default mask when maskTextFn throws', async (t) => {
+    const warnings = captureWarnings(t);
+    const {start, emit, exported} = setup();
+    const replay = start({
+        privacy: {
+            ...DEFAULT_PRIVACY,
+            maskTextFn: (text, el) => {
+                if (!el) {
+                    throw new TypeError('no element');
+                }
+                return text;
+            },
+        },
+    });
+    emit({
+        type: 2,
+        timestamp: 1,
+        data: {node: element('span', {title: 'Jane Doe'})},
+    });
+    await replay?.shutdown();
+
+    const [snapshot] = exported
+        .filter((r) => r.eventName === 'elastic.replay.event')
+        .map((r) => JSON.parse(String(r.body)));
+    // No DOM here, so the element is null and the function throws
+    assert.strictEqual(snapshot.data.node.attributes.title, '**** ***');
+    assert.strictEqual(warnings.length, 1);
 });

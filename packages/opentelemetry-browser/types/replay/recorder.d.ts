@@ -24,7 +24,7 @@ export function toRecordPrivacyOptions(privacy: import("./config.js").ResolvedRe
  * @property {(event: RecorderEvent) => void} emit
  * @property {boolean} maskAllInputs
  * @property {Record<string, boolean>} [maskInputOptions]
- * @property {(text: string, element: HTMLElement) => string} [maskInputFn]
+ * @property {(text: string, element: HTMLElement | null) => string} [maskInputFn]
  * @property {(text: string, element: HTMLElement | null) => string} [maskTextFn]
  * @property {string} maskTextSelector
  * @property {string} blockSelector
@@ -37,8 +37,13 @@ export function toRecordPrivacyOptions(privacy: import("./config.js").ResolvedRe
  * @typedef {(options: RecordOptions) => (() => void) | undefined} RecordFn
  */
 /**
+ * Looks up the DOM node of an rrweb node id.
+ * @typedef {(id: number) => unknown} GetNodeFn
+ */
+/**
  * @typedef {import('./config.js').ReplayStartOptions & {
  *  record: RecordFn;
+ *  getNode?: GetNodeFn;
  *  exporter?: import('@opentelemetry/sdk-logs').LogRecordExporter;
  * }} StartReplayOptions
  */
@@ -57,7 +62,7 @@ export type RecordOptions = {
     emit: (event: RecorderEvent) => void;
     maskAllInputs: boolean;
     maskInputOptions?: Record<string, boolean> | undefined;
-    maskInputFn?: ((text: string, element: HTMLElement) => string) | undefined;
+    maskInputFn?: ((text: string, element: HTMLElement | null) => string) | undefined;
     maskTextFn?: ((text: string, element: HTMLElement | null) => string) | undefined;
     maskTextSelector: string;
     blockSelector: string;
@@ -69,7 +74,12 @@ export type RecordOptions = {
  * rrweb `record`, injected so tests can run without a DOM.
  */
 export type RecordFn = (options: RecordOptions) => (() => void) | undefined;
+/**
+ * Looks up the DOM node of an rrweb node id.
+ */
+export type GetNodeFn = (id: number) => unknown;
 export type StartReplayOptions = import("./config.js").ReplayStartOptions & {
     record: RecordFn;
+    getNode?: GetNodeFn;
     exporter?: import("@opentelemetry/sdk-logs").LogRecordExporter;
 };
