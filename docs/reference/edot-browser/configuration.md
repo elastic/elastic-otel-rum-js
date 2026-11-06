@@ -80,14 +80,30 @@ Configuration is passed as an object to `startBrowserSdk`. The following options
 | `disableInstrumentations` | `string[]`            | Optional list of instrumentation keys to turn off. Values must match the keys in [instrumentations details](#otel_browser_instrumentations-details). Refer to [`disableInstrumentations` details](#otel_browser_disableinstrumentations-details). |
 | `session`             | `{ sampleRate?: number; inactivityTimeout?: number; maxDuration?: number }` | Session tracking and session-level sampling. Refer to [session details](#otel_browser_session-details) for more information. |
 | `ignoreFetchUrls`     | `(string \| RegExp)[]`   | URLs to exclude from fetch, XMLHttpRequest, and resource timing instrumentation. OTLP export URLs are always ignored. Refer to [`ignoreFetchUrls` details](#otel_browser_ignorefetchurls-details). Optional; defaults to `[]`. |
-| `exportConfig`    | `{ url?: string; headers?: Record<string, string>}` | Configuration for exporters of the different signals. |
+| `exportConfig`    | `{ url?: string; tracesUrl?: string; logsUrl?: string; metricsUrl?: string; headers?: Record<string, string>}` | Configuration for exporters of the different signals. |
 | `exportConfig.url`    | `string` | Base URL of the OTLP export endpoint (reverse proxy). Do not include signal paths such as `/v1/traces`. Defaults to `http://localhost:4318`. |
+| `exportConfig.tracesUrl`, `exportConfig.logsUrl`, `exportConfig.metricsUrl`    | `string` | Full URL for one signal, used as is without appending `/v1/<signal>`. Overrides `exportConfig.url` for that signal only. Optional. Refer to [Export endpoint configuration](#export-endpoint-configuration). |
 | `exportConfig.headers`    | `Record<string, string>` | Headers to send with export requests. Defaults to `{}`. The reverse proxy typically injects `Authorization`; do not put API keys here in browser code. |
 
 
 ## Export endpoint configuration [export-endpoint-configuration]
 
 Configure `exportConfig.url` to point to a server that accepts OTLP traffic. Use the base URL of the server only: do not include signal paths such as `/v1/traces`, `/v1/metrics`, or `/v1/logs`. The SDK appends these paths when exporting each signal.
+
+If your server routes OTLP traffic on paths other than `/v1/traces`, `/v1/logs` and `/v1/metrics`, set `exportConfig.tracesUrl`, `exportConfig.logsUrl` or `exportConfig.metricsUrl`. Each one is a full URL and is used exactly as written. A signal without its own URL still uses `exportConfig.url` plus the default path, and you can omit `exportConfig.url` when all three are set.
+
+```js
+import { startBrowserSdk } from '@elastic/opentelemetry-browser';
+
+startBrowserSdk({
+  serviceName: 'my-web-app',
+  exportConfig: {
+    tracesUrl: 'https://telemetry.example.com/otlp/t',
+    logsUrl: 'https://telemetry.example.com/otlp/l',
+    metricsUrl: 'https://telemetry.example.com/otlp/m',
+  },
+});
+```
 
 For security reasons, Elastic recommends configuring a reverse proxy that forwards OTLP traffic to {{product.observability}}. Refer to [Proxy and CORS configuration](proxy-cors.md) for more details.
 

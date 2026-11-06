@@ -51,3 +51,30 @@ test('should send export requests to the configured endpoint', async ({
         expect(url.port).toStrictEqual('4318');
     }
 });
+
+test('should send each signal to its own configured URL', async ({page}) => {
+    /** @type {string[]} */
+    const received = [];
+    await page.route('http://collector:4318/custom/**', async (route, req) => {
+        received.push(new URL(req.url()).pathname);
+        await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: '',
+        });
+    });
+    const config = encodeURIComponent(
+        JSON.stringify({
+            exportConfig: {
+                tracesUrl: 'http://collector:4318/custom/t',
+                logsUrl: 'http://collector:4318/custom/l',
+                metricsUrl: 'http://collector:4318/custom/m',
+            },
+        })
+    );
+    await page.goto(`/fixtures/use-navigation-timing.html?config=${config}`);
+
+    // navigation timing is exported as logs; the exact path is used, no /v1/logs appended
+    await expect.poll(() => received).toContain('/custom/l');
+    expect(received.some((p) => p.includes('/v1/'))).toBe(false);
+});

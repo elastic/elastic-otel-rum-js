@@ -36,7 +36,7 @@ import {
     SessionLogRecordProcessor,
     SessionSpanProcessor,
 } from './session.js';
-import {isValidArray, appendPath} from './utils.js';
+import {isValidArray, resolveExportUrls} from './utils.js';
 import {EDOT_VERSION, OTEL_BROWSER_INSTRUMENTATION_VERSION} from './version.js';
 
 /**
@@ -60,7 +60,7 @@ import {EDOT_VERSION, OTEL_BROWSER_INSTRUMENTATION_VERSION} from './version.js';
  * @property {string} [serviceName]
  * @property {string} [serviceVersion]
  * @property {import('@opentelemetry/api').Attributes} [resourceAttributes]
- * @property {{url?: string; headers?: Record<string, string>}} [exportConfig]
+ * @property {{url?: string; tracesUrl?: string; logsUrl?: string; metricsUrl?: string; headers?: Record<string, string>}} [exportConfig]
  */
 
 /**
@@ -127,20 +127,16 @@ export function startBrowserSdk(cfg = {}) {
 
     // Input validation
     // - endpoint
-    /** @type {URL} */
-    let endpointUrl;
+    /** @type {ReturnType<typeof resolveExportUrls>} */
+    let exportUrls;
     try {
-        endpointUrl = new URL(config?.exportConfig?.url || '');
+        exportUrls = resolveExportUrls(config.exportConfig);
     } catch (urlErr) {
-        diag.error(
-            `The value "${config?.exportConfig?.url}" for "exportConfig.url" configuration is not an URL. SDK won't start.`
-        );
+        diag.error(`${/** @type {Error} */ (urlErr).message} SDK won't start.`);
         return NOOP_SDK;
     }
+    const {tracesUrl, logsUrl, metricsUrl} = exportUrls;
     // - ignoreFetchUrls and resolving all URLs to ignore
-    const logsUrl = appendPath(endpointUrl, 'v1/logs').href;
-    const tracesUrl = appendPath(endpointUrl, 'v1/traces').href;
-    const metricsUrl = appendPath(endpointUrl, 'v1/metrics').href;
     /** @type {Array<string | RegExp>} */
     const ignoreFetchUrls = [tracesUrl, logsUrl, metricsUrl];
     if (config.ignoreFetchUrls) {
