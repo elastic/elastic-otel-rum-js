@@ -78,6 +78,7 @@ Configuration is passed as an object to `startBrowserSdk`. The following options
 | `disabled`            | `boolean`                | If `true`, the SDK does not start. |
 | `instrumentations`    | `Record<string, Object>` | **Not recommended.** Advanced per-instrumentation config passed through to upstream OpenTelemetry Browser instrumentations. EDOT Browser logs a warning when this option is set. Refer to [instrumentations details](#otel_browser_instrumentations-details). |
 | `session`             | `{ sampleRate?: number; inactivityTimeout?: number; maxDuration?: number }` | Session tracking and session-level sampling. Refer to [session details](#otel_browser_session-details) for more information. |
+| `ignoreFetchUrls`     | `(string \| RegExp)[]`   | URLs to exclude from fetch, XMLHttpRequest, and resource timing instrumentation. OTLP export URLs are always ignored. Refer to [`ignoreFetchUrls` details](#otel_browser_ignorefetchurls-details). Optional; defaults to `[]`. |
 | `exportConfig`    | `{ url?: string; headers?: Record<string, string>}` | Configuration for exporters of the different signals. |
 | `exportConfig.url`    | `string` | Base URL of the OTLP export endpoint (reverse proxy). Do not include signal paths such as `/v1/traces`. Defaults to `http://localhost:4318`. |
 | `exportConfig.headers`    | `Record<string, string>` | Headers to send with export requests. Defaults to `{}`. The reverse proxy typically injects `Authorization`; do not put API keys here in browser code. |
@@ -161,6 +162,37 @@ When a session is **sampled in**, all configured instrumentations run for that s
 To stop automatic RUM export while keeping session machinery active, set `session.sampleRate` to `0`. With `sampleRate: 0`, session state still exists client-side but automatic export is suppressed.
 
 Metrics your application emits through the OpenTelemetry API are not gated by session sampling today. Refer to [Sessions](telemetry.md#sessions) for signal-specific behavior.
+
+### `ignoreFetchUrls` details [otel_browser_ignorefetchurls-details]
+
+`ignoreFetchUrls` lists URLs that EDOT Browser should not instrument. The SDK always ignores OTLP export URLs (traces, logs, and metrics) to prevent self-instrumentation. When you set `instrumentations`, per-instrumentation `ignoreUrls` values are merged with this list for fetch, XMLHttpRequest, and resource timing.
+
+**Matching rules**
+
+- **Strings** must exactly match the full absolute request URL, including scheme, host, path, and query string. A path-only value such as `/api/health` does not match.
+- **`RegExp` values** are partial matches against the URL, consistent with upstream fetch and XHR `ignoreUrls`.
+
+**What is suppressed**
+
+- **Fetch and XHR:** ignored requests produce no spans and do not receive a `traceparent` header, so trace context is not propagated to those endpoints and downstream services are not linked from the browser trace.
+- **Resource timing:** ignored URLs are filtered from resource timing log records for every resource type (scripts, stylesheets, images, fonts, and others), not only fetch and XHR. For example, ignoring a URL pattern that matches `analytics.js` also omits resource timing telemetry for that script load.
+
+```js
+import { startBrowserSdk } from '@elastic/opentelemetry-browser';
+
+startBrowserSdk({
+  serviceName: 'my-web-app',
+  exportConfig: {
+    url: 'https://telemetry.example.com',
+  },
+  ignoreFetchUrls: [
+    // Exact match on the full URL
+    'https://api.example.com/v1/internal/health?key=abc',
+    // Partial match (RegExp)
+    /https:\/\/analytics\.example\.net\//,
+  ],
+});
+```
 
 ## Next steps [next-steps]
 

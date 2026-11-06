@@ -36,6 +36,7 @@ import {
     SessionLogRecordProcessor,
     SessionSpanProcessor,
 } from './session.js';
+import {isValidArray, appendPath} from './utils.js';
 import {EDOT_VERSION, OTEL_BROWSER_INSTRUMENTATION_VERSION} from './version.js';
 
 /**
@@ -67,6 +68,7 @@ import {EDOT_VERSION, OTEL_BROWSER_INSTRUMENTATION_VERSION} from './version.js';
  * @typedef {Object} EdotConfig
  * @property {Partial<InstrumentationsConfigMap>} [instrumentations]
  * @property {import('./session.js').SessionConfig} [session]
+ * @property {Array<string | RegExp>} [ignoreFetchUrls]
  */
 /**
  * @typedef {SdkConfig & EdotConfig} BrowserSdkConfiguration
@@ -123,6 +125,7 @@ export function startBrowserSdk(cfg = {}) {
     const config = {...defaultConfig, ...cfg};
 
     // Input validation
+    // - endpoint
     /** @type {URL} */
     let endpointUrl;
     try {
@@ -132,6 +135,28 @@ export function startBrowserSdk(cfg = {}) {
             `The value "${config?.exportConfig?.url}" for "exportConfig.url" configuration is not an URL. SDK won't start.`
         );
         return NOOP_SDK;
+    }
+    // - ignoreFetchUrls and resolving all URLs to ignore
+    const logsUrl = appendPath(endpointUrl, 'v1/logs').href;
+    const tracesUrl = appendPath(endpointUrl, 'v1/traces').href;
+    const metricsUrl = appendPath(endpointUrl, 'v1/metrics').href;
+    /** @type {Array<string | RegExp>} */
+    const ignoreFetchUrls = [tracesUrl, logsUrl, metricsUrl];
+    if (config.ignoreFetchUrls) {
+        /**
+         * @param {unknown} i
+         * @returns {boolean}
+         */
+        const isValidIgnore = (i) =>
+            typeof i === 'string' || i instanceof RegExp;
+        if (isValidArray(config.ignoreFetchUrls, isValidIgnore)) {
+            ignoreFetchUrls.push(...config.ignoreFetchUrls);
+        } else {
+            diag.error(
+                `The value "${config.ignoreFetchUrls}" for "ignoreFetchUrls" configuration is not valid. SDK won't start.`
+            );
+            return NOOP_SDK;
+        }
     }
 
     // Detect resource
@@ -162,7 +187,6 @@ export function startBrowserSdk(cfg = {}) {
         }
     });
 
-    const tracesUrl = appendPath(endpointUrl, 'v1/traces').href;
     const spanProcessors = [];
     // By default the Span sampler is allways on
     /** @type {(...args: any[]) => import('@opentelemetry/sdk-trace').SamplingResult} */
@@ -201,9 +225,7 @@ export function startBrowserSdk(cfg = {}) {
     // this will be used later for instrumentations
     const tracerProvider = trace.getTracerProvider();
 
-    const logsUrl = appendPath(endpointUrl, 'v1/logs').href;
     const logProcessors = [];
-
     // Some of the logs configuration depend if we can provide sessions. If so:
     // - add a processor to append session attributes
     // - add a configurator to enable/disable when session is sampled or not
@@ -246,7 +268,6 @@ export function startBrowserSdk(cfg = {}) {
 
     // metrics signal configuration
     // possible `startMetricsSdk` function
-    const metricsUrl = appendPath(endpointUrl, 'v1/metrics').href;
     const metricsReader = new PeriodicExportingMetricReader({
         exporter: new OTLPMetricExporter({
             url: metricsUrl,
@@ -271,26 +292,27 @@ export function startBrowserSdk(cfg = {}) {
     // proxy instruments that inject the session attributes and recretes on each new session
     // (proposed in https://github.com/open-telemetry/opentelemetry-browser/discussions/265)
 
+    // Instrumentations configuration & enablement
+    /** @param {{ignoreUrls?: any}} [cfg] */
+    const withIgnoreUrls = (cfg) => {
+        const ignoreUrls = [...ignoreFetchUrls];
+        if (Array.isArray(cfg?.ignoreUrls)) {
+            ignoreUrls.push(...cfg.ignoreUrls);
+        }
+        return {...cfg, ignoreUrls};
+    };
+
     // Factory functions for each instrumentation so it can resolve 1st which configuration
     // goes to which instrumentation
     /** @type {Record<keyof InstrumentationsConfigMap, (cfg: any) => any>} */
     const instrFactories = {
         navigation: (cfg) => new NavigationInstrumentation(cfg),
         'navigation-timing': (cfg) => new NavigationTimingInstrumentation(cfg),
-        'resource-timing': (cfg) => {
-            // This intrumentation must gnore export URLs.
-            // ref: https://github.com/elastic/elastic-otel-rum-js/issues/108
-            const config = cfg ?? {};
-            if (Array.isArray(config.ignoreUrls)) {
-                config.ignoreUrls.push(tracesUrl, logsUrl, metricsUrl);
-            } else {
-                config.ignoreUrls = [tracesUrl, logsUrl, metricsUrl];
-            }
-            return new ResourceTimingInstrumentation(config);
-        },
-        fetch: (cfg) => new FetchInstrumentation(cfg),
+        'resource-timing': (cfg) =>
+            new ResourceTimingInstrumentation(withIgnoreUrls(cfg)),
+        fetch: (cfg) => new FetchInstrumentation(withIgnoreUrls(cfg)),
         'user-action': (cfg) => new UserActionInstrumentation(cfg),
-        xhr: (cfg) => new XhrInstrumentation(cfg),
+        xhr: (cfg) => new XhrInstrumentation(withIgnoreUrls(cfg)),
         errors: (cfg) => new ErrorsInstrumentation(cfg),
         'web-vitals': (cfg) => new WebVitalsInstrumentation(cfg),
     };
@@ -356,17 +378,4 @@ export function startBrowserSdk(cfg = {}) {
             });
         },
     };
-}
-
-// -- helper functions
-
-/**
- * Returns a new URL with the path appended. Avoiding double slash
- * @param {URL} url
- * @param {string} path
- */
-function appendPath(url, path) {
-    const result = new URL(url.href);
-    result.pathname = (result.pathname + path).replace('//', '/');
-    return result;
 }
