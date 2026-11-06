@@ -4,13 +4,51 @@
  */
 
 import {test, expect} from '@playwright/test';
-import {createCollector} from './test-utils';
+import {createCollector, addRoutes} from './test-utils';
+
+test('should ignore export URLs by default', async ({page}) => {
+    const collector = createCollector(page);
+
+    await page.goto('/fixtures/use-fetch.html');
+    await addRoutes(page);
+    await page.click('#same-origin');
+    await page.waitForFunction(
+        () => document.getElementById('status')?.innerText === 'finished'
+    );
+
+    // We got the 1st batch of spans and logs
+    let spans = await collector.getSpans({flush: false});
+    const logs = await collector.getLogs();
+    expect(spans.length).toBeGreaterThan(0);
+    expect(logs.length).toBeGreaterThan(0);
+
+    // After this export the resource timings of the fetch call to /v1/traces and
+    // v1/logs are going to be reported to the instrumentation. But they should
+    // be ignored
+
+    // We click a button to make sure is thre is a next batch of spans/logs
+    // so we do not wait the collector to fail. Next batch will include the export
+    // Spans if the default ignores don't work
+    await page.click('#same-origin');
+    await page.waitForFunction(
+        () => document.getElementById('status')?.innerText === 'finished'
+    );
+
+    spans = await collector.getSpans({flush: false});
+    expect(
+        spans.find((s) => {
+            /** @type {string} */
+            const urlFull = s.attributes['url.full'];
+            return urlFull.includes('v1/traces') || urlFull.includes('v1/logs');
+        })
+    ).not.toBeDefined();
+});
 
 test('should collect telemetry if no URL is ignored', async ({page}) => {
     const collector = createCollector(page);
-    addRoutes(page);
 
     await page.goto('/fixtures/use-fetch.html');
+    await addRoutes(page);
     await page.click('#same-origin');
     await page.waitForFunction(
         () => document.getElementById('status')?.innerText === 'finished'
@@ -43,7 +81,6 @@ test('should not collect telemetry if the URL is ignored using "ignoreFetchUrls"
     page,
 }) => {
     const collector = createCollector(page);
-    addRoutes(page);
 
     const exampleUrl = 'http://www.example.com/';
     const apiUrl = 'http://localhost:3000/api/method';
@@ -53,6 +90,7 @@ test('should not collect telemetry if the URL is ignored using "ignoreFetchUrls"
         })
     );
     await page.goto(`/fixtures/use-fetch.html?config=${config}`);
+    await addRoutes(page);
     await page.click('#same-origin');
     await page.waitForFunction(
         () => document.getElementById('status')?.innerText === 'finished'
@@ -89,7 +127,6 @@ test('should combine the "ignoreUrls" option from instrumentation and "ignoreFet
     page,
 }) => {
     const collector = createCollector(page);
-    addRoutes(page);
 
     const apiUrl = 'http://localhost:3000/api/method';
     const exampleUrl = 'http://www.example.com/';
@@ -103,6 +140,7 @@ test('should combine the "ignoreUrls" option from instrumentation and "ignoreFet
         })
     );
     await page.goto(`/fixtures/use-fetch.html?config=${config}`);
+    await addRoutes(page);
     await page.click('#same-origin');
     await page.waitForFunction(
         () => document.getElementById('status')?.innerText === 'finished'
@@ -132,48 +170,20 @@ test('should combine the "ignoreUrls" option from instrumentation and "ignoreFet
     );
     expect(foobarSpans.length).toBeGreaterThan(0);
 
-    // Same for logs
+    // For logs only the global ignore works because the other ignored
+    // URL is scoped to fetch instrumentation and not resource-timing
     const logs = await collector.getLogs();
 
     const apiLogs = logs.filter((l) => l.attributes['url.full'] === apiUrl);
     expect(apiLogs.length).toEqual(0);
 
-    const exampleLogs = spans.filter(
+    const exampleLogs = logs.filter(
         (l) => l.attributes['url.full'] === exampleUrl
     );
-    expect(exampleLogs.length).toEqual(0);
+    expect(exampleLogs.length).toBeGreaterThan(0);
 
-    const foobarLogs = spans.filter(
+    const foobarLogs = logs.filter(
         (l) => l.attributes['url.full'] === foobarUrl
     );
     expect(foobarLogs.length).toBeGreaterThan(0);
 });
-
-// -- Helpers
-
-/**
- * @param {import('@playwright/test').Page} page
- */
-function addRoutes(page) {
-    page.route('api/method', (route) => {
-        route.fulfill({
-            status: 200,
-            contentType: 'text/plain',
-            body: 'Response for the same origin request',
-        });
-    });
-    page.route('http://www.example.com', (route) => {
-        route.fulfill({
-            status: 200,
-            contentType: 'text/plain',
-            body: 'Response for a different origin request',
-        });
-    });
-    page.route('http://www.foobar.com', (route) => {
-        route.fulfill({
-            status: 200,
-            contentType: 'text/plain',
-            body: 'Response for a different origin request',
-        });
-    });
-}

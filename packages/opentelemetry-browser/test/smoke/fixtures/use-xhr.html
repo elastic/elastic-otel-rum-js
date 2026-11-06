@@ -5,11 +5,26 @@
         <meta name="traceparent" content="00-ab42124a3c573678d4d8b21ba52df3bf-d21f7bc17caa5aba-01">
         <title>XHR Instrumentation Test</title>
         <!-- EDOT_PLACEHOLDER (DO NOT REMOVE)-->
+        <script>
+            // Define routes for this page and its responses (can be overriden by tests)
+            window.__ROUTES__ = {
+                'api/method': {
+                    status: 200,
+                    contentType: 'text/plain',
+                    body: 'Response for the same origin request',
+                },
+                'http://www.example.com': {
+                    status: 200,
+                    contentType: 'text/plain',
+                    body: 'Response for the same origin request',
+                },
+            }
+        </script>
     </head>
     <body>
         <h1>XHR Instrumentation Test</h1>
         <button id="same-origin">XHR Same Origin</button>
-        <button id="other-origin">XHR Same Origin</button>
+        <button id="other-origin">XHR Other Origin</button>
         <!-- The test file will look here to wait for the completion of the handlers -->
         <p id="status"></p>
         <script>
