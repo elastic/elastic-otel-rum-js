@@ -382,7 +382,10 @@ export function startBrowserSdk(cfg = {}) {
         instr.setTracerProvider(tracerProvider);
         instr.setMeterProvider(meterProvider);
         instr.enable();
-        if (disableInstrumentations.has(name) || instr.getConfig().enabled === false) {
+        if (
+            disableInstrumentations.has(name) ||
+            instr.getConfig().enabled === false
+        ) {
             instr.disable();
         }
     }

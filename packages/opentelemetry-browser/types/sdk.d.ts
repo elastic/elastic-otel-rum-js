@@ -38,6 +38,7 @@ export type EdotConfig = {
     instrumentations?: Partial<InstrumentationsConfigMap> | undefined;
     session?: import("./session.js").SessionConfig | undefined;
     ignoreFetchUrls?: (string | RegExp)[] | undefined;
+    disableInstrumentations?: (keyof InstrumentationsConfigMap)[] | undefined;
 };
 export type BrowserSdkConfiguration = SdkConfig & EdotConfig;
 export type DefaultConfigProps = "logLevel" | "serviceName" | "resourceAttributes" | "exportConfig";
