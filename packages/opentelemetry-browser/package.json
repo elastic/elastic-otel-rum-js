@@ -51,7 +51,8 @@
     "lint:types": "rm -rf build/lint-types && tsc --outDir build/lint-types && diff -ur types build/lint-types && rm -rf build/lint-types",
     "lint:fix": "eslint --fix . && (cd ../../; prettier --list-different --write $npm_config_local_prefix)",
     "lint:ci": " npm run lint:licenses && npm run lint:version && npm run lint:types # eslint/prettier ran in repo root",
-    "test:smoke": "npm run build && cp build/* ./test/smoke/assets && playwright test",
+    "test:smoke": "npm run build && cp build/* ./test/smoke/assets && npm run build:smoke && playwright test",
+    "build:smoke": "esbuild ./test/smoke/replay-bundle.js --bundle --conditions=esnext,module --sourcemap --platform=browser --target=es2022 --outfile=test/smoke/assets/elastic-otel-browser-replay.js",
     "test:unit": "node --test test/unit/*.spec.js",
     "report:bundle-size": "node ../../scripts/report-bundle-size.js build/elastic-otel-browser.js build/elastic-otel-browser.min.js",
     "test:bundle": "set -e; for d in ./test/bundle/*/; do (cd \"$d\" && npm run test:bundle); done"
@@ -62,11 +63,13 @@
     "@opentelemetry/browser-instrumentation": "^0.8.0",
     "@opentelemetry/browser-sdk": "^0.3.0",
     "@opentelemetry/core": "^2.10.0",
+    "@opentelemetry/exporter-logs-otlp-http": "^0.221.0",
     "@opentelemetry/exporter-metrics-otlp-http": "^0.221.0",
     "@opentelemetry/resources": "^2.10.0",
     "@opentelemetry/sdk-logs": "^0.223.0",
     "@opentelemetry/sdk-metrics": "^2.2.0",
-    "@opentelemetry/sdk-trace": "^2.12.0"
+    "@opentelemetry/sdk-trace": "^2.12.0",
+    "@rrweb/record": "^2.2.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.57.0",

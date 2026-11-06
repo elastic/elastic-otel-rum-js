@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>Session Replay Test</title>
+        <!-- EDOT_PLACEHOLDER (DO NOT REMOVE)-->
+    </head>
+    <body>
+        <h1>Session Replay Test</h1>
+        <input id="secret" type="text" placeholder="placeholder-text">
+        <p id="masked" data-elastic-replay="mask">masked-text</p>
+        <div id="blocked" data-elastic-replay="block">blocked-text</div>
+        <button id="action">Click me</button>
+        <form>
+            <input type="hidden" value="hidden-value">
+            <input id="consent" type="checkbox" value="checkbox-value">
+            <input type="submit" value="submit-label">
+            <select><option value="option-value" label="option-label">Option</option></select>
+        </form>
+    </body>
+</html>

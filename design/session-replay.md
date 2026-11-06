@@ -60,7 +60,7 @@ Set on every replay record:
 | `browser.tab.id` | string | Added by the session log processor. |
 | `elastic.replay.segment.id` | string | UUID v4, new for each segment. |
 | `elastic.replay.sequence` | int | Position of the rrweb event in its segment. Starts at `0`, increases by 1 per event. All chunks of an event share it. |
-| `elastic.replay.event.type` | int | rrweb [`EventType`](https://github.com/rrweb-io/rrweb/blob/master/packages/types/src/index.ts): 0 DomContentLoaded, 1 Load, 2 FullSnapshot, 3 IncrementalSnapshot, 4 Meta, 5 Custom (from `rrweb.record.addCustomEvent`), 6 Plugin (from rrweb record plugins such as console recording, data is `{plugin, payload}`), 7 Asset, 8 Annotation. New rrweb types are passed through as they are. |
+| `elastic.replay.event.type` | int | rrweb [`EventType`](https://github.com/rrweb-io/rrweb/blob/master/packages/types/src/index.ts): 0 DomContentLoaded, 1 Load, 2 FullSnapshot, 3 IncrementalSnapshot, 4 Meta, 5 Custom (from `rrweb.record.addCustomEvent`), 6 Plugin (from rrweb record plugins such as console recording, data is `{plugin, payload}`), 7 Asset, 8 Annotation. DomContentLoaded and Load carry no data and are not sent. New rrweb types are passed through as they are. |
 
 Set only when the value differs from the default. A missing attribute means
 the default:
@@ -90,8 +90,8 @@ A segment is the event stream of one recorder run in one tab for one session.
 The SDK starts a new segment, with a new `elastic.replay.segment.id`, a
 sequence reset to `0`, and a Meta and FullSnapshot as its first events, when:
 
-- a page loads and recording starts (a full navigation or reload starts a new
-  JS context and a new segment),
+- a page loads and recording starts, at `DOMContentLoaded` (a full navigation
+  or reload starts a new JS context and a new segment),
 - the session rotates while the page is open (idle timeout or max duration),
 - recording starts again after `stopReplay()`.
 
@@ -102,7 +102,10 @@ a new one.
 Why not one sequence per session, as in the POC: a session is shared by all tabs
 of an origin (`localStorage`), so tabs write interleaved, colliding counters, and
 the counter has to survive page loads through storage. A per-segment counter
-lives in memory, never collides, and a gap in it means a record was lost.
+lives in memory, never collides, and a gap in it means a record was lost. The
+SDK also leaves a gap for events it drops itself (the session ended, or the
+event could not be serialized), so a player never applies later events to a DOM
+that is missing changes.
 
 How a player reads a session:
 
@@ -110,8 +113,10 @@ How a player reads a session:
    `session.id` (see below), or a terms aggregation on
    `elastic.replay.segment.id` in the replay data.
 2. Fetch each segment's records sorted by `elastic.replay.sequence`, then
-   `elastic.replay.chunk.index` with missing values first (`missing: "_first"`).
-   Page with `search_after` on those two fields.
+   `elastic.replay.chunk.index` with missing values first (`missing: -1`).
+   Page with `search_after` on those two fields. Avoid `missing: "_first"`: it
+   returns `Long.MIN_VALUE` as the sort value, which a JSON number cannot hold
+   exactly, so a JavaScript client sends back a rounded cursor.
 3. Reassemble chunks, unpack packed events, and play.
 4. Segments of the same `browser.tab.id` are sequential page loads. Order them by
    start time and play them back to back as one stream; each starts with a
@@ -265,6 +270,7 @@ startBrowserSdk({
         errorSampleRate: 1,
         privacy: {
             maskAllInputs: true,
+            // Text is masked by default. Opt out, then mask what needs it.
             maskAllText: false,
             maskTextSelector: '.customer-name',
             blockSelector: '.payment-form',
@@ -321,6 +327,12 @@ mode would start buffering late. It can be added later behind the same config.
 Rates follow `session.sampleRate`: 0..1, invalid values fall back to the default
 with a warning, out-of-range values are clamped, four decimal places.
 
+Options not listed here, and typos, are ignored with a warning.
+
+Until per session sampling ships (#142), `sampleRate` and `errorSampleRate`
+are not supported and `enabled: true` records every session that
+`session.sampleRate` kept. Replay is experimental until then.
+
 ### Sampling
 
 Replay only runs for sessions that `session.sampleRate` kept, so the share of
@@ -354,18 +366,64 @@ belong to elastic/observability-dev#6141.
 
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
-| `maskAllInputs` | boolean | `true` | Replace the value of every input with `*`. |
-| `maskAllText` | boolean | `false` | Replace all text content with `*`. |
-| `maskInputOptions` | object | | Per input type masking, as in rrweb, when `maskAllInputs` is `false`. |
-| `maskTextSelector` | string | | CSS selector whose text is masked. |
+| `maskAllInputs` | boolean | `true` | Replace the value of every input with `*`, including hidden and file inputs, checkbox and radio values, and `<option>` values. |
+| `maskAllText` | boolean | `true` | Replace all text content with `*`, including the `alt`, `aria-description`, `aria-label`, `aria-valuetext`, `label`, `placeholder` and `title` attributes, and the labels of `button`, `reset` and `submit` inputs. |
+| `maskInputOptions` | object | | Per input type masking, as in rrweb, when `maskAllInputs` is `false`. Keys are rrweb's input types plus `hidden` and `file`, values are booleans. Password and hidden inputs stay masked unless it sets `password: false` or `hidden: false`. |
+| `maskTextSelector` | string | | CSS selector whose text is masked when `maskAllText` is `false`. |
 | `blockSelector` | string | | CSS selector whose elements are replaced by an empty box of the same size. |
 | `ignoreSelector` | string | | CSS selector whose input events are not recorded. |
-| `maskInputFn` | function | | Custom input masking. |
-| `maskTextFn` | function | | Custom text masking. |
+| `maskInputFn` | function | | Custom input masking, `(text, element) => string`. |
+| `maskTextFn` | function | | Custom text masking, `(text, element) => string`. |
 
 The selectors `[data-elastic-replay="mask"]`, `[data-elastic-replay="block"]`
 and `[data-elastic-replay="ignore"]` always apply, so markup can opt out without
 config. Configured selectors add to them.
+
+An invalid selector or `maskInputOptions` value disables replay with a warning.
+Ignoring it would record what it was meant to hide, and with rrweb one bad
+selector also turns off the `data-elastic-replay` selectors it is joined with.
+A typo in a `maskInputOptions` key, or a non boolean value, counts as invalid.
+
+`element` is `null` in `maskInputFn` and `maskTextFn` when the SDK cannot look
+it up. If either function throws, the SDK uses the default mask for that value
+and logs a warning.
+
+Text and inputs are masked by default, so a replay shows layout and interactions
+but no page content until the app opts out. Sentry, Datadog and Splunk mask text
+by default too. Masking too much is fixed by a config change; recorded personal
+data cannot be taken back once it is exported.
+
+#### What a replay contains
+
+A replay is a copy of the page's DOM and of what the user did on it, sent as
+OTLP logs to the same endpoint as the rest of the telemetry. It records:
+
+- the DOM structure, with text masked and blocked elements replaced by an
+  empty box of the same size,
+- element attributes, with the text-bearing ones above masked,
+- the stylesheets the page can read,
+- mouse moves, clicks, scrolls, viewport changes and input events, with input
+  values masked.
+
+The SDK does not mask, with the defaults:
+
+- URLs: the page URL in the Meta event, with its query string and fragment, and
+  every `href`, `src` and `srcset`. The rest of the SDK's telemetry sends the
+  page URL too.
+- Attributes not listed above, such as `data-*`, `value` on elements other than
+  inputs and options, and `class`.
+- With `maskAllText: false`, the text-bearing attributes of elements matched by
+  `maskTextSelector`: only their text is masked.
+- With `maskAllInputs: false`, every input type not set in `maskInputOptions`,
+  including card number and one-time code fields. Only password and hidden
+  inputs stay masked.
+
+Apps keep content out with `blockSelector` or `[data-elastic-replay="block"]`.
+Masking URLs and extra attributes is a follow-up.
+
+Replay never runs unless the app imports the replay entry point and sets
+`enabled: true`. It has no API for the page to read recorded data back, and the
+SDK keeps no replay data in storage.
 
 #### Canvas
 
@@ -373,7 +431,7 @@ A `<canvas>` is recorded as image frames or drawing calls (including the
 strings passed to `fillText`), not as DOM text, so masking cannot apply to it.
 Only blocking can. Privacy settings take precedence over `quality.recordCanvas`:
 
-- With `maskAllText: true`, no canvas is recorded, even when `recordCanvas` is
+- With `maskAllText: true` (the default), no canvas is recorded, even when `recordCanvas` is
   `true`. The SDK logs a warning when both are set.
 - A canvas that matches `maskTextSelector` or `[data-elastic-replay="mask"]`,
   or sits inside an element that does, is blocked instead of recorded.
@@ -412,8 +470,9 @@ Only blocking can. Privacy settings take precedence over `quality.recordCanvas`:
 
 ## Open questions
 
-- Is `maskAllText: false` the right default, or should replay mask all text until
-  the app opts out? This needs a privacy review.
+- With `maskAllText: true` an app can only unmask all text. Do we add a
+  `[data-elastic-replay="unmask"]` selector to show chosen elements, like
+  Sentry's `unmask` and Datadog's `data-dd-privacy="allow"`?
 - Packed bodies are binary strings. Over OTLP/JSON they inflate through escaping,
   which can cancel the compression. We may need a base64 body or to rely on
   transport compression instead; to measure in elastic/observability-dev#6140.

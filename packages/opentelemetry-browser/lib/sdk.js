@@ -32,6 +32,7 @@ import {
     PageRouteSpanProcessor,
     resolvePageRouteConfig,
 } from './page-route.js';
+import {resolveReplayConfig} from './replay/config.js';
 import {
     ATTR_SESSION_ID,
     ATTR_SESSION_PREVIOUS_ID,
@@ -83,6 +84,7 @@ import {EDOT_VERSION, OTEL_BROWSER_INSTRUMENTATION_VERSION} from './version.js';
  * @property {Partial<InstrumentationsConfigMap>} [instrumentations]
  * @property {import('./session.js').SessionConfig} [session]
  * @property {import('./page-route.js').PageRouteResolver | false} [pageRoute] // defaults to `inferPageRoute`
+ * @property {import('./replay/config.js').ReplayConfig} [replay] needs the `@elastic/opentelemetry-browser/replay` entry point
  */
 /**
  * @typedef {SdkConfig & EdotConfig} BrowserSdkConfiguration
@@ -144,6 +146,17 @@ const defaultConfig = {
  * @returns {BrowserSdk}
  */
 export function startBrowserSdk(cfg = {}) {
+    return startSdk(cfg);
+}
+
+/**
+ * Start path shared by all entry points. Each one passes in the features it
+ * bundles, so the core entry point never imports the replay recorder.
+ * @param {BrowserSdkConfiguration} cfg
+ * @param {{startReplay?: import('./replay/config.js').StartReplayFn}} [internals]
+ * @returns {BrowserSdk}
+ */
+export function startSdk(cfg = {}, internals = {}) {
     if (sdkStarted || cfg.disabled) {
         return NOOP_SDK;
     }
@@ -184,6 +197,10 @@ export function startBrowserSdk(cfg = {}) {
     const pageRouteManager = new PageRouteManager();
     pageRouteManager.setResolver(resolvePageRouteConfig(config.pageRoute));
     const sessionManager = createSessionManager(config.session);
+    const replayConfig = resolveReplayConfig(
+        config.replay,
+        typeof internals.startReplay === 'function'
+    );
 
     // Disable our logger to let the upstream take its place
     // TODO: if upstream exports its method to register a logger
@@ -325,6 +342,13 @@ export function startBrowserSdk(cfg = {}) {
             resolveActivityEvents(config.session)
         );
 
+    const replay = internals.startReplay?.({
+        config: replayConfig,
+        sessionManager,
+        resourceAttributes,
+        exportConfig: {url: logsUrl, headers: config.exportConfig.headers},
+    });
+
     // NOTE: metrics is different in semantics. depending on the user's inent:
     // - there could be metrics that outlive session limits
     // - there could be metrics attached to a session (sampled)
@@ -404,11 +428,14 @@ export function startBrowserSdk(cfg = {}) {
         ...createUserApi(userManager),
         ...createSessionApi(sessionManager),
         shutdown() {
+            // Stop recording while the session is still there
+            const replayShutdown = replay?.shutdown();
             pageRouteManager.setResolver(undefined);
             stopActivityTracking?.();
             sessionManager?.shutdown();
             instrumentationInstances.forEach((i) => i.disable());
             return Promise.allSettled([
+                replayShutdown,
                 tracesSdk.shutdown(),
                 logsSdk.shutdown(),
                 meterProvider.shutdown(),
