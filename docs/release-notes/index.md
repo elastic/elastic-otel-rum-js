@@ -43,7 +43,8 @@ To check for security updates, go to [Security announcements for the Elastic sta
 
 ### Fixes [edot-browser-X.X.X-fixes]
 
-*
+* Fix export URLs when `exportConfig.url` has no trailing slash. The path separator was missing, so `https://example.com/api` exported to `https://example.com/apiv1/traces`.
+  Ref: https://github.com/elastic/elastic-otel-rum-js/issues/168
 
 ### Chores [edot-browser-X.X.X-chores]
 
