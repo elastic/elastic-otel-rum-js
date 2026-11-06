@@ -22,7 +22,7 @@ export type InstrumentationsConfigMap = {
  */
 export type SdkConfig = {
     disabled?: boolean | undefined;
-    logLevel?: "warn" | "none" | "error" | "info" | "debug" | "verbose" | "all" | undefined;
+    logLevel?: "warn" | "error" | "none" | "info" | "debug" | "verbose" | "all" | undefined;
     serviceName?: string | undefined;
     serviceVersion?: string | undefined;
     resourceAttributes?: import("@opentelemetry/api").Attributes | undefined;
@@ -39,7 +39,7 @@ export type SdkConfig = {
  */
 export type EdotConfig = {
     instrumentations?: Partial<InstrumentationsConfigMap> | undefined;
-    session?: import("./session.js").SessionConfig | undefined;
+    session?: import("./session/config.js").SessionConfig | undefined;
     ignoreFetchUrls?: (string | RegExp)[] | undefined;
     disableInstrumentations?: (keyof InstrumentationsConfigMap)[] | undefined;
 };
