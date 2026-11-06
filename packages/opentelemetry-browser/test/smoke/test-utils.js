@@ -195,11 +195,12 @@ export function createCollector(page) {
 /**
  * @callback RouteHook
  * @param {import('@playwright/test').Request} req
- * @returns {undefined | Parameters<import('@playwright/test').Route['fulfill'][0]>}
+ * @returns {undefined | Parameters<import('@playwright/test').Route['fulfill']>[0]}
  */
 /**
  * @param {import('@playwright/test').Page} page
  * @param {RouteHook} [hook]
+ * @returns {Promise<void>}
  */
 export async function addRoutes(page, hook) {
     // @ts-expect-error -- accessing custom property
@@ -222,13 +223,15 @@ export async function addRoutes(page, hook) {
         return;
     }
 
-    routeUrls.forEach((url) => {
-        page.route(url, (route, req) => {
-            // Run the hook and fulfill with its return value if defined
-            // Fallback to the value defined in the page.
-            route.fulfill((hook && hook(req)) || pageRoutes[url]);
-        });
-    });
+    return Promise.all(
+        routeUrls.map((url) =>
+            page.route(url, (route, req) => {
+                // Run the hook and fulfill with its return value if defined
+                // Fallback to the value defined in the page.
+                route.fulfill((hook && hook(req)) || pageRoutes[url]);
+            })
+        )
+    ).then(() => undefined);
 }
 
 // -- helper functions

@@ -26,9 +26,10 @@ test('should ignore export URLs by default', async ({page}) => {
     // v1/logs are going to be reported to the instrumentation. But they should
     // be ignored
 
-    // We click a button to make sure is thre is a next batch of spans/logs
+    // We click a button to make sure is there is a next batch of spans/logs
     // so we do not wait the collector to fail. Next batch will include the export
     // Spans if the default ignores don't work
+    collector.clear();
     await page.click('#same-origin');
     await page.waitForFunction(
         () => document.getElementById('status')?.innerText === 'finished'
