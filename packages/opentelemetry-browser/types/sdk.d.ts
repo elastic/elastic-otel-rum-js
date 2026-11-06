@@ -28,6 +28,9 @@ export type SdkConfig = {
     resourceAttributes?: import("@opentelemetry/api").Attributes | undefined;
     exportConfig?: {
         url?: string;
+        tracesUrl?: string;
+        logsUrl?: string;
+        metricsUrl?: string;
         headers?: Record<string, string>;
     } | undefined;
 };

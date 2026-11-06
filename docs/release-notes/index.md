@@ -38,6 +38,8 @@ To check for security updates, go to [Security announcements for the Elastic sta
 
 * Add `ignoreFetchUrls` to exclude URLs from fetch, XMLHttpRequest, and resource timing instrumentation. Strings and regular expressions are supported; OTLP export URLs are always ignored.
   Ref: https://github.com/elastic/elastic-otel-rum-js/issues/151
+* Add `exportConfig.tracesUrl`, `exportConfig.logsUrl` and `exportConfig.metricsUrl` to export a signal to a custom URL. The URL is used as is, without appending `/v1/<signal>`.
+  Ref: https://github.com/elastic/elastic-otel-rum-js/issues/166
 
 ### Fixes [edot-browser-X.X.X-fixes]
 

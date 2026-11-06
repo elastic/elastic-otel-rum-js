@@ -2,15 +2,15 @@
 navigation_title: Configuration
 description: Configure the Elastic Distribution of OpenTelemetry Browser (EDOT Browser).
 applies_to:
-  stack:
-  serverless:
-    observability:
-  product:
-    edot_browser: preview
+    stack:
+    serverless:
+        observability:
+    product:
+        edot_browser: preview
 products:
-  - id: cloud-serverless
-  - id: observability
-  - id: edot-sdk
+    - id: cloud-serverless
+    - id: observability
+    - id: edot-sdk
 ---
 
 # Configure EDOT Browser
@@ -50,14 +50,14 @@ At a minimum, EDOT Browser requires:
 You can also set a log level, which is recommended during setup.
 
 ```js
-import { startBrowserSdk } from '@elastic/opentelemetry-browser';
+import {startBrowserSdk} from '@elastic/opentelemetry-browser';
 
 startBrowserSdk({
-  serviceName: 'my-web-app',
-  logLevel: 'info',
-  exportConfig: {
-    url: 'https://telemetry.example.com',
-  }
+    serviceName: 'my-web-app',
+    logLevel: 'info',
+    exportConfig: {
+        url: 'https://telemetry.example.com',
+    },
 });
 ```
 
@@ -69,24 +69,37 @@ startBrowserSdk({
 
 Configuration is passed as an object to `startBrowserSdk`. The following options are supported:
 
-| Option                | Type                     | Description |
-|-----------------------|--------------------------|-------------|
-| `serviceName`         | `string`                 | Logical name of the frontend service. Defaults to `unknown_service:web` if not set. |
-| `serviceVersion`      | `string`                 | Version of the application. Optional. |
-| `logLevel` | `"none" \| "error" \| "warn" \| "info" \| "debug" \| "verbose" \| "all"` | Diagnostic log level for the SDK internal logger. Defaults to `info`. Values are lowercase; the SDK accepts them case-insensitively. |
-| `resourceAttributes`  | `Record<string, any>`    | Optional resource attributes to attach to telemetry. For example: `{ 'deployment.environment.name': 'production' }`. |
-| `disabled`            | `boolean`                | If `true`, the SDK does not start. |
-| `instrumentations`    | `Record<string, Object>` | **Not recommended.** Advanced per-instrumentation config passed through to upstream OpenTelemetry Browser instrumentations. EDOT Browser logs a warning when this option is set. Refer to [instrumentations details](#otel_browser_instrumentations-details). |
-| `session`             | `{ sampleRate?: number; inactivityTimeout?: number; maxDuration?: number }` | Session tracking and session-level sampling. Refer to [session details](#otel_browser_session-details) for more information. |
-| `ignoreFetchUrls`     | `(string \| RegExp)[]`   | URLs to exclude from fetch, XMLHttpRequest, and resource timing instrumentation. OTLP export URLs are always ignored. Refer to [`ignoreFetchUrls` details](#otel_browser_ignorefetchurls-details). Optional; defaults to `[]`. |
-| `exportConfig`    | `{ url?: string; headers?: Record<string, string>}` | Configuration for exporters of the different signals. |
-| `exportConfig.url`    | `string` | Base URL of the OTLP export endpoint (reverse proxy). Do not include signal paths such as `/v1/traces`. Defaults to `http://localhost:4318`. |
-| `exportConfig.headers`    | `Record<string, string>` | Headers to send with export requests. Defaults to `{}`. The reverse proxy typically injects `Authorization`; do not put API keys here in browser code. |
-
+| Option                                                                      | Type                                                                                                           | Description                                                                                                                                                                                                                                                   |
+| --------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `serviceName`                                                               | `string`                                                                                                       | Logical name of the frontend service. Defaults to `unknown_service:web` if not set.                                                                                                                                                                           |
+| `serviceVersion`                                                            | `string`                                                                                                       | Version of the application. Optional.                                                                                                                                                                                                                         |
+| `logLevel`                                                                  | `"none" \| "error" \| "warn" \| "info" \| "debug" \| "verbose" \| "all"`                                       | Diagnostic log level for the SDK internal logger. Defaults to `info`. Values are lowercase; the SDK accepts them case-insensitively.                                                                                                                          |
+| `resourceAttributes`                                                        | `Record<string, any>`                                                                                          | Optional resource attributes to attach to telemetry. For example: `{ 'deployment.environment.name': 'production' }`.                                                                                                                                          |
+| `disabled`                                                                  | `boolean`                                                                                                      | If `true`, the SDK does not start.                                                                                                                                                                                                                            |
+| `instrumentations`                                                          | `Record<string, Object>`                                                                                       | **Not recommended.** Advanced per-instrumentation config passed through to upstream OpenTelemetry Browser instrumentations. EDOT Browser logs a warning when this option is set. Refer to [instrumentations details](#otel_browser_instrumentations-details). |
+| `session`                                                                   | `{ sampleRate?: number; inactivityTimeout?: number; maxDuration?: number }`                                    | Session tracking and session-level sampling. Refer to [session details](#otel_browser_session-details) for more information.                                                                                                                                  |
+| `ignoreFetchUrls`                                                           | `(string \| RegExp)[]`                                                                                         | URLs to exclude from fetch, XMLHttpRequest, and resource timing instrumentation. OTLP export URLs are always ignored. Refer to [`ignoreFetchUrls` details](#otel_browser_ignorefetchurls-details). Optional; defaults to `[]`.                                |
+| `exportConfig`                                                              | `{ url?: string; tracesUrl?: string; logsUrl?: string; metricsUrl?: string; headers?: Record<string, string>}` | Configuration for exporters of the different signals.                                                                                                                                                                                                         |
+| `exportConfig.url`                                                          | `string`                                                                                                       | Base URL of the OTLP export endpoint (reverse proxy). Do not include signal paths such as `/v1/traces`. Defaults to `http://localhost:4318`.                                                                                                                  |
+| `exportConfig.tracesUrl`, `exportConfig.logsUrl`, `exportConfig.metricsUrl` | `string`                                                                                                       | Full URL for one signal, used as is without appending `/v1/<signal>`. Overrides `exportConfig.url` for that signal only. Optional. Refer to [Export endpoint configuration](#export-endpoint-configuration).                                                  |
+| `exportConfig.headers`                                                      | `Record<string, string>`                                                                                       | Headers to send with export requests. Defaults to `{}`. The reverse proxy typically injects `Authorization`; do not put API keys here in browser code.                                                                                                        |
 
 ## Export endpoint configuration [export-endpoint-configuration]
 
 Configure `exportConfig.url` to point to a server that accepts OTLP traffic. Use the base URL of the server only: do not include signal paths such as `/v1/traces`, `/v1/metrics`, or `/v1/logs`. The SDK appends these paths when exporting each signal.
+
+If your server routes OTLP traffic on paths other than `/v1/traces`, `/v1/logs` and `/v1/metrics`, set `exportConfig.tracesUrl`, `exportConfig.logsUrl` or `exportConfig.metricsUrl`. Each one is a full URL and is used exactly as written. A signal without its own URL still uses `exportConfig.url` plus the default path, and you can omit `exportConfig.url` when all three are set.
+
+```js
+startBrowserSdk({
+    serviceName: 'my-web-app',
+    exportConfig: {
+        tracesUrl: 'https://telemetry.example.com/otlp/t',
+        logsUrl: 'https://telemetry.example.com/otlp/l',
+        metricsUrl: 'https://telemetry.example.com/otlp/m',
+    },
+});
+```
 
 For security reasons, Elastic recommends configuring a reverse proxy that forwards OTLP traffic to {{product.observability}}. Refer to [Proxy and CORS configuration](proxy-cors.md) for more details.
 
@@ -101,14 +114,14 @@ EDOT Browser uses the OpenTelemetry diagnostic logger.
 To troubleshoot setup issues, increase the log level when calling `startBrowserSdk`:
 
 ```js
-import { startBrowserSdk } from '@elastic/opentelemetry-browser';
+import {startBrowserSdk} from '@elastic/opentelemetry-browser';
 
 startBrowserSdk({
-  serviceName: 'my-web-app',
-  logLevel: 'debug',
-  exportConfig: {
-    url: 'https://telemetry.example.com',
-  }
+    serviceName: 'my-web-app',
+    logLevel: 'debug',
+    exportConfig: {
+        url: 'https://telemetry.example.com',
+    },
 });
 ```
 
@@ -130,26 +143,26 @@ An object whose keys are the configuration keys of the available instrumentation
 
 The following keys are supported:
 
-| Instrumentation   | Key                                              | Scope                                            | Configuration |
-|-------------------|--------------------------------------------------|--------------------------------------------------|---------------|
-| Navigation timing | `navigation-timing`                              | `@opentelemetry/browser-instrumentation/navigation-timing` | [Reference](https://github.com/open-telemetry/opentelemetry-browser/tree/main/packages/instrumentation#navigation-timing) |
-| Resource timing   | `resource-timing`                              | `@opentelemetry/browser-instrumentation/resource-timing` | [Reference](https://github.com/open-telemetry/opentelemetry-browser/tree/main/packages/instrumentation#resource-timing) |
-| Fetch             | `fetch`                                          | `@opentelemetry/browser-instrumentation/fetch`   | [Reference](https://github.com/open-telemetry/opentelemetry-browser/tree/main/packages/instrumentation#fetch) |
-| User action       | `user-action`                                    | `@opentelemetry/browser-instrumentation/user-action`| [Reference](https://github.com/open-telemetry/opentelemetry-browser/tree/main/packages/instrumentation#user-action) |
-| XMLHttpRequest    | `xhr`                                            | `@opentelemetry/browser-instrumentation/xhr`     | [Reference](https://github.com/open-telemetry/opentelemetry-browser/tree/main/packages/instrumentation#xhr-xmlhttprequest) |
-| Errors            | `errors`                                         | `@opentelemetry/browser-instrumentation/errors`   | [Reference](https://github.com/open-telemetry/opentelemetry-browser/tree/main/packages/instrumentation#errors) |
-| Web vitals        | `web-vitals`                                     | `@opentelemetry/browser-instrumentation/web-vitals` | [Reference](https://github.com/open-telemetry/opentelemetry-browser/blob/main/packages/instrumentation/README.md#web-vitals) |
-| Navigation        | `navigation`                                     | `@opentelemetry/browser-instrumentation/navigation` | [Reference](https://github.com/open-telemetry/opentelemetry-browser/blob/main/packages/instrumentation/README.md#navigation) |
+| Instrumentation   | Key                 | Scope                                                      | Configuration                                                                                                                |
+| ----------------- | ------------------- | ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| Navigation timing | `navigation-timing` | `@opentelemetry/browser-instrumentation/navigation-timing` | [Reference](https://github.com/open-telemetry/opentelemetry-browser/tree/main/packages/instrumentation#navigation-timing)    |
+| Resource timing   | `resource-timing`   | `@opentelemetry/browser-instrumentation/resource-timing`   | [Reference](https://github.com/open-telemetry/opentelemetry-browser/tree/main/packages/instrumentation#resource-timing)      |
+| Fetch             | `fetch`             | `@opentelemetry/browser-instrumentation/fetch`             | [Reference](https://github.com/open-telemetry/opentelemetry-browser/tree/main/packages/instrumentation#fetch)                |
+| User action       | `user-action`       | `@opentelemetry/browser-instrumentation/user-action`       | [Reference](https://github.com/open-telemetry/opentelemetry-browser/tree/main/packages/instrumentation#user-action)          |
+| XMLHttpRequest    | `xhr`               | `@opentelemetry/browser-instrumentation/xhr`               | [Reference](https://github.com/open-telemetry/opentelemetry-browser/tree/main/packages/instrumentation#xhr-xmlhttprequest)   |
+| Errors            | `errors`            | `@opentelemetry/browser-instrumentation/errors`            | [Reference](https://github.com/open-telemetry/opentelemetry-browser/tree/main/packages/instrumentation#errors)               |
+| Web vitals        | `web-vitals`        | `@opentelemetry/browser-instrumentation/web-vitals`        | [Reference](https://github.com/open-telemetry/opentelemetry-browser/blob/main/packages/instrumentation/README.md#web-vitals) |
+| Navigation        | `navigation`        | `@opentelemetry/browser-instrumentation/navigation`        | [Reference](https://github.com/open-telemetry/opentelemetry-browser/blob/main/packages/instrumentation/README.md#navigation) |
 
 ### `session` details [otel_browser_session-details]
 
 EDOT Browser adds `session.id`, `session.previous_id` (after a session rotates), `session.sampling_rate`, and `browser.tab.id` attributes to spans and log records for **sampled** sessions. Refer to [Sessions](telemetry.md#sessions) for details.
 
-| Option              | Type      | Description |
-|---------------------|-----------|-------------|
-| `sampleRate`        | `number`  | Fraction of sessions to record, in the range 0–1. Defaults to `1` (100%). The decision is made when a session starts and stays fixed until the session rotates. Invalid values log a warning and fall back to the default; out-of-range values are clamped. Values are truncated to four decimal places (minimum step 0.0001). At `0`, automatic RUM instrumentations are disabled for that session and the `session.start` log record is not emitted. |
-| `inactivityTimeout` | `number`  | Seconds without telemetry after which the session ends. Defaults to `1800` (30 minutes). Must be between `300` (5 minutes) and `maxDuration`. |
-| `maxDuration`       | `number`  | Maximum session length in seconds, regardless of activity. Defaults to `14400` (4 hours). Must be between `1800` (30 minutes) and `86400` (24 hours). |
+| Option              | Type     | Description                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| ------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `sampleRate`        | `number` | Fraction of sessions to record, in the range 0–1. Defaults to `1` (100%). The decision is made when a session starts and stays fixed until the session rotates. Invalid values log a warning and fall back to the default; out-of-range values are clamped. Values are truncated to four decimal places (minimum step 0.0001). At `0`, automatic RUM instrumentations are disabled for that session and the `session.start` log record is not emitted. |
+| `inactivityTimeout` | `number` | Seconds without telemetry after which the session ends. Defaults to `1800` (30 minutes). Must be between `300` (5 minutes) and `maxDuration`.                                                                                                                                                                                                                                                                                                          |
+| `maxDuration`       | `number` | Maximum session length in seconds, regardless of activity. Defaults to `14400` (4 hours). Must be between `1800` (30 minutes) and `86400` (24 hours).                                                                                                                                                                                                                                                                                                  |
 
 Incorrect values for `inactivityTimeout` and `maxDuration` fall back to the default and out-of-range values are clamped to the closest limit. In both cases EDOT Browser logs a warning.
 
@@ -178,19 +191,19 @@ Metrics your application emits through the OpenTelemetry API are not gated by se
 - **Resource timing:** ignored URLs are filtered from resource timing log records for every resource type (scripts, stylesheets, images, fonts, and others), not only fetch and XHR. For example, ignoring a URL pattern that matches `analytics.js` also omits resource timing telemetry for that script load.
 
 ```js
-import { startBrowserSdk } from '@elastic/opentelemetry-browser';
+import {startBrowserSdk} from '@elastic/opentelemetry-browser';
 
 startBrowserSdk({
-  serviceName: 'my-web-app',
-  exportConfig: {
-    url: 'https://telemetry.example.com',
-  },
-  ignoreFetchUrls: [
-    // Exact match on the full URL
-    'https://api.example.com/v1/internal/health?key=abc',
-    // Partial match (RegExp)
-    /https:\/\/analytics\.example\.net\//,
-  ],
+    serviceName: 'my-web-app',
+    exportConfig: {
+        url: 'https://telemetry.example.com',
+    },
+    ignoreFetchUrls: [
+        // Exact match on the full URL
+        'https://api.example.com/v1/internal/health?key=abc',
+        // Partial match (RegExp)
+        /https:\/\/analytics\.example\.net\//,
+    ],
 });
 ```
 
