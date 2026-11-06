@@ -16,12 +16,13 @@ export function isValidArray(arr, isValidItem) {
 }
 
 /**
- * Returns a new URL with the path appended. Avoiding double slash
+ * Returns a new URL with the path appended. Joins both parts with exactly one
+ * slash, whether or not the URL pathname ends with one or the path starts with one.
  * @param {URL} url
  * @param {string} path
  */
 export function appendPath(url, path) {
     const result = new URL(url.href);
-    result.pathname = (result.pathname + path).replace('//', '/');
+    result.pathname = `${result.pathname.replace(/\/+$/, '')}/${path.replace(/^\/+/, '')}`;
     return result;
 }

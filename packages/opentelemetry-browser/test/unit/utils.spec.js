@@ -46,6 +46,24 @@ test('appendPath - works when base pathname has no trailing slash', () => {
     assert.strictEqual(result.href, 'https://example.com/api/v1/metrics');
 });
 
+test('appendPath - adds the separator when neither side has a slash', () => {
+    const base = new URL('https://example.com/docs/_api');
+    const result = appendPath(base, 'v1/traces');
+    assert.strictEqual(result.href, 'https://example.com/docs/_api/v1/traces');
+});
+
+test('appendPath - joins with a single slash when both sides have one', () => {
+    const base = new URL('https://example.com/api/');
+    const result = appendPath(base, '/v1/logs');
+    assert.strictEqual(result.href, 'https://example.com/api/v1/logs');
+});
+
+test('appendPath - works when the base is the origin only', () => {
+    const base = new URL('https://example.com');
+    const result = appendPath(base, 'v1/metrics');
+    assert.strictEqual(result.href, 'https://example.com/v1/metrics');
+});
+
 test('appendPath - preserves origin, search, and hash', () => {
     const base = new URL('https://example.com:8443/base/?q=1#frag');
     const result = appendPath(base, 'v1/traces');
