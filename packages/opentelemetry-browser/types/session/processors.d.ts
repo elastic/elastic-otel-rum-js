@@ -35,9 +35,9 @@ export class SessionLogRecordProcessor implements LogRecordProcessor {
     constructor(options: SessionLogRecordProcessorOptions);
     _manager: import("./manager.js").SessionManager;
     /**
-     * @param {import('@opentelemetry/sdk-logs').ReadWriteLogRecord} logRecord
+     * @param {import('@opentelemetry/sdk-logs').SdkLogRecord} logRecord
      */
-    onEmit(logRecord: import("@opentelemetry/sdk-logs").ReadWriteLogRecord): void;
+    onEmit(logRecord: import("@opentelemetry/sdk-logs").SdkLogRecord): void;
     forceFlush(): Promise<void>;
     shutdown(): Promise<void>;
 }

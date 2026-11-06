@@ -39,7 +39,7 @@ export type SdkConfig = {
  */
 export type EdotConfig = {
     instrumentations?: Partial<InstrumentationsConfigMap> | undefined;
-    session?: import("./session.js").SessionConfig | undefined;
+    session?: import("./session/config.js").SessionConfig | undefined;
     ignoreFetchUrls?: (string | RegExp)[] | undefined;
     disableInstrumentations?: (keyof InstrumentationsConfigMap)[] | undefined;
 };
