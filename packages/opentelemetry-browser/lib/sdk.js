@@ -175,7 +175,11 @@ export function startBrowserSdk(cfg = {}) {
 
     // Detect resource
     const resourceAttributes = detectResource(
-        config.resourceAttributes,
+        {
+            ...config.resourceAttributes,
+            'data_stream.dataset':
+                config.resourceAttributes?.['data_stream.dataset'] ?? 'browser',
+        },
         serviceName,
         serviceVersion
     );

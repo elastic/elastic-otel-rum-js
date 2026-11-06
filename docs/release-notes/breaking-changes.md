@@ -28,6 +28,28 @@ Breaking changes can impact your applications, potentially disrupting normal ope
 % ::::
 % TEMPLATE END
 
+## Next version [edot-browser-X.X.X-breaking-changes]
+
+::::{dropdown} Browser telemetry uses a dedicated dataset by default
+EDOT Browser now sets `data_stream.dataset` to `browser` on the shared resource for traces, logs, and metrics.
+
+**Impact**<br>
+With the default Elastic OTel-native data stream routing, telemetry that previously used the `generic` dataset now uses these streams:
+
+- `traces-browser.otel-*`
+- `logs-browser.otel-*`
+- `metrics-browser.otel-*`
+
+Valid dataset strings set in `resourceAttributes` remain unchanged. If the dataset is absent, `undefined`, or `null`, the SDK uses `browser`. Other ingest routing settings can change the destination. Existing data stays in its original streams.
+
+**Action**<br>
+If your ingest or read permissions cover only the previous streams, add access to the new streams. Check dashboards and retention settings that target only the previous streams. Update them if needed.
+
+To query data from before and after the change, include both datasets. Queries that already cover both datasets need no change.
+
+To retain the previous default dataset, set `resourceAttributes: { 'data_stream.dataset': 'generic' }` when calling `startBrowserSdk`. Refer to [Data stream routing](../reference/edot-browser/configuration.md#data-stream-routing).
+::::
+
 ## 0.4.0 [edot-browser-0-4-0-breaking-changes]
 
 ::::{dropdown} Session sampling replaces root `sampleRate`
