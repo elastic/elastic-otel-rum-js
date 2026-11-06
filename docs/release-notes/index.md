@@ -39,6 +39,9 @@ To check for security updates, go to [Security announcements for the Elastic sta
 * Add `ignoreFetchUrls` to exclude URLs from fetch, XMLHttpRequest, and resource timing instrumentation. Strings and regular expressions are supported; OTLP export URLs are always ignored.
   Ref: https://github.com/elastic/elastic-otel-rum-js/issues/151
 
+* Add `disableInstrumentations` to turn off selected built-in instrumentations by key (for example, `web-vitals` or `resource-timing`). If you set both `disableInstrumentations` and `instrumentations` for the same key, `disableInstrumentations` takes precedence.
+  Ref: https://github.com/elastic/elastic-otel-rum-js/pull/170
+
 ### Fixes [edot-browser-X.X.X-fixes]
 
 *
