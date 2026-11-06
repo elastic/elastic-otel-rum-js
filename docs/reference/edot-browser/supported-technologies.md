@@ -68,7 +68,7 @@ Usage of `@elastic/opentelemetry-browser` in TypeScript code requires:
 
 EDOT Browser bundles a curated set of OpenTelemetry JS instrumentations suitable for browser environments. This list is being reviewed and might change in future releases.
 
-The following instrumentations are included and turned on by default. You can turn off any of them using `instrumentations` by setting `{ enabled: false }` for the corresponding key when calling `startBrowserSdk`:
+The following instrumentations are included and turned on by default. You can turn off any of them by listing its config key in `disableInstrumentations`, or using `instrumentations` with `{ enabled: false }` for the corresponding key when calling `startBrowserSdk` (the `instrumentations` option is not recommended for most applications; refer to [Configure EDOT Browser](configuration.md#otel_browser_instrumentations-details)):
 
 | Instrumentation   | NPM package                                | Config key                                 | On by default |
 |-------------------|--------------------------------------------|--------------------------------------------|---------------|
@@ -90,7 +90,7 @@ By default, EDOT Browser:
 - Configures an OTLP exporter
 - Applies Elastic-specific defaults (for example, resource detection or attribute normalization)
 
-To turn off an instrumentation, pass `instrumentations` to `startBrowserSdk` with the instrumentation key and `{ enabled: false }` (for example, `instrumentations: { 'web-vitals': { enabled: false } }`).
+To turn off an instrumentation, pass `disableInstrumentations` with the instrumentation keys you want to disable (for example, `disableInstrumentations: ['web-vitals']`), or pass `instrumentations` with `{ enabled: false }` for that key (for example, `instrumentations: { 'web-vitals': { enabled: false } }`). Prefer `disableInstrumentations` when you only need to disable defaults without passthrough configuration.
 
 ## Version compatibility [version-compatibility]
 

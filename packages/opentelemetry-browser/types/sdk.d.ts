@@ -28,6 +28,9 @@ export type SdkConfig = {
     resourceAttributes?: import("@opentelemetry/api").Attributes | undefined;
     exportConfig?: {
         url?: string;
+        tracesUrl?: string;
+        logsUrl?: string;
+        metricsUrl?: string;
         headers?: Record<string, string>;
     } | undefined;
 };
@@ -36,7 +39,9 @@ export type SdkConfig = {
  */
 export type EdotConfig = {
     instrumentations?: Partial<InstrumentationsConfigMap> | undefined;
-    session?: import("./session/config.js").SessionConfig | undefined;
+    session?: import("./session.js").SessionConfig | undefined;
+    ignoreFetchUrls?: (string | RegExp)[] | undefined;
+    disableInstrumentations?: (keyof InstrumentationsConfigMap)[] | undefined;
 };
 export type BrowserSdkConfiguration = SdkConfig & EdotConfig;
 export type DefaultConfigProps = "logLevel" | "serviceName" | "resourceAttributes" | "exportConfig";

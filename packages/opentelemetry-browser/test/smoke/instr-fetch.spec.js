@@ -4,7 +4,7 @@
  */
 
 import {test, expect} from '@playwright/test';
-import {createCollector} from './test-utils';
+import {createCollector, addRoutes} from './test-utils';
 
 test('should export fetch related spans', async ({page}) => {
     const collector = createCollector(page);
@@ -12,24 +12,16 @@ test('should export fetch related spans', async ({page}) => {
     const sameOriginHeaders = {};
     /** @type {Record<string, any>} */
     const otherOriginHeaders = {};
-    page.route('api/method', (route, req) => {
-        Object.assign(sameOriginHeaders, req.headers());
-        route.fulfill({
-            status: 200,
-            contentType: 'text/plain',
-            body: 'Response for the same origin request',
-        });
-    });
-    page.route('http://www.example.com', (route, req) => {
-        Object.assign(otherOriginHeaders, req.headers());
-        route.fulfill({
-            status: 200,
-            contentType: 'text/plain',
-            body: 'Response for the same origin request',
-        });
-    });
 
     await page.goto('/fixtures/use-fetch.html');
+    await addRoutes(page, (req) => {
+        const headers = req.headers();
+        if (req.url().includes('api/method')) {
+            Object.assign(sameOriginHeaders, headers);
+        } else {
+            Object.assign(otherOriginHeaders, headers);
+        }
+    });
     await page.click('#same-origin');
     await page.waitForFunction(
         () => document.getElementById('status')?.innerText === 'finished'
