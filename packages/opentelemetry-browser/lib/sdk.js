@@ -330,40 +330,42 @@ export function startBrowserSdk(cfg = {}) {
             )
         ) {
             config.disableInstrumentations.forEach((name) => {
-                if (name in instrFactoriesMap) {
+                if (Object.hasOwn(instrFactoriesMap, name)) {
                     disableInstrumentations.add(name);
                 } else {
-                    console.warn(
+                    diag.warn(
                         `Can't disable instrumentation with name "${name}". It is not in the list of available instrumentations`
                     );
                 }
             });
         } else {
-            console.warn(
+            diag.warn(
                 `Configuration option "disableInstrumentations" must be an array of strings. Instead found "${config.disableInstrumentations}"`
             );
         }
     }
 
+    const instrConfigType = typeof config.instrumentations;
+    /** @type {Record<string, unknown>} */
+    let instrConfigMap = {};
+
     // Configuring instrumentations manually has some risks since they are under
     // active development and future releases may break configuration. Let's warn
-    if (typeof config.instrumentations !== 'undefined') {
+    if (instrConfigType !== 'undefined') {
         const docsUrl = instrumentationDocsUrl(
             OTEL_BROWSER_INSTRUMENTATION_VERSION
         );
         diag.warn(
             `Manual configuration of instrumentations is not recommended. The current options supported are documented in ${docsUrl}`
         );
-    }
-
-    /** @type {Record<string, unknown>} */
-    let instrConfigMap = {};
-    if (typeof config.instrumentations === 'object') {
-        instrConfigMap = {...config.instrumentations};
-    } else {
-        diag.warn(
-            `Configuration option "instrumentations" must be an object. Instead found "${config.instrumentations}"`
-        );
+        // If user passed the options check the type is correct. Do not check nested properties
+        if (instrConfigType !== 'object') {
+            diag.warn(
+                `Configuration option "instrumentations" must be an object. Instead found "${config.instrumentations}"`
+            );
+        } else {
+            instrConfigMap = {...config.instrumentations};
+        }
     }
 
     const instrEntries = Object.entries(instrFactoriesMap).map(
