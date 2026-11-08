@@ -5,6 +5,7 @@
 
 /** @typedef {import('./types/websites.js').MonitoredWebsite} MonitoredWebsite */
 /** @typedef {import('./types/websites.js').WebsitesStorage} WebsitesStorage */
+/** @typedef {import('./types/websites.js').InjectionStatus} InjectionStatus */
 
 export const WEBSITES_STORAGE_KEY = 'monitoredWebsites';
 
@@ -38,11 +39,39 @@ export async function saveWebsites(websites) {
 export async function upsertWebsite(website) {
     const websites = await getWebsites();
     const index = websites.findIndex((w) => w.id === website.id);
+    /** @type {MonitoredWebsite} */
+    const next = {
+        ...website,
+        injection_status: 'unknown',
+        injection_message: undefined,
+        injection_checked_at: undefined,
+    };
     if (index === -1) {
-        websites.push(website);
+        websites.push(next);
     } else {
-        websites[index] = website;
+        websites[index] = next;
     }
+    await saveWebsites(websites);
+}
+
+/**
+ * @param {string} id
+ * @param {InjectionStatus} status
+ * @param {string} [message]
+ * @returns {Promise<void>}
+ */
+export async function setWebsiteInjectionStatus(id, status, message) {
+    const websites = await getWebsites();
+    const index = websites.findIndex((w) => w.id === id);
+    if (index === -1) {
+        return;
+    }
+    websites[index] = {
+        ...websites[index],
+        injection_status: status,
+        injection_message: message,
+        injection_checked_at: new Date().toISOString(),
+    };
     await saveWebsites(websites);
 }
 

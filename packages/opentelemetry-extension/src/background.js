@@ -3,8 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import {describeInjectionError} from './injection-status.js';
 import {findWebsiteForUrl} from './match-host.js';
-import {getWebsites} from './storage.js';
+import {getWebsites, setWebsiteInjectionStatus} from './storage.js';
 
 /** @typedef {import('./types/websites.js').EdotInjectConfig} EdotInjectConfig */
 
@@ -17,6 +18,7 @@ const tabsBeingInjected = new Set();
  */
 function toInjectConfig(website) {
     return {
+        websiteId: website.id,
         host: website.host,
         version: website.version,
         endpoint: website.endpoint,
@@ -41,6 +43,11 @@ async function injectEdot(tabId, config) {
     try {
         await chrome.scripting.executeScript({
             target: {tabId},
+            world: 'ISOLATED',
+            files: ['src/page/injection-bridge.js'],
+        });
+        await chrome.scripting.executeScript({
+            target: {tabId},
             world: 'MAIN',
             func: (cfg) => {
                 window.__EDOT_EXT_CONFIG__ = cfg;
@@ -53,7 +60,9 @@ async function injectEdot(tabId, config) {
             files: ['src/page/inject-edot.js'],
         });
     } catch (err) {
+        const message = describeInjectionError(err);
         console.warn('[EDOT extension] Injection skipped for tab', tabId, err);
+        await setWebsiteInjectionStatus(config.websiteId, 'failed', message);
     } finally {
         tabsBeingInjected.delete(tabId);
     }
@@ -146,6 +155,19 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
             () => sendResponse({ok: true}),
             (err) => sendResponse({ok: false, error: String(err)})
         );
+        return true;
+    }
+    if (
+        message?.type === 'injection-status' &&
+        typeof message.websiteId === 'string'
+    ) {
+        const status =
+            message.status === 'active' ? 'active' : 'failed';
+        void setWebsiteInjectionStatus(
+            message.websiteId,
+            status,
+            typeof message.message === 'string' ? message.message : undefined
+        ).then(() => sendResponse({ok: true}));
         return true;
     }
     return undefined;

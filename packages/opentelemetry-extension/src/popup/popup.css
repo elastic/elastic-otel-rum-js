@@ -319,10 +319,55 @@
   text-align: center;
 }
 
+.site-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--eui-size-s);
+}
+
 .site-host {
   font-size: var(--eui-font-size-m);
   font-weight: var(--eui-font-weight-semibold);
   color: var(--eui-color-text-heading);
+  word-break: break-word;
+}
+
+.euiHealth {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--eui-font-size-s);
+  font-weight: var(--eui-font-weight-semibold);
+  line-height: 1.2;
+}
+
+.euiHealth::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: currentColor;
+}
+
+.euiHealth--success {
+  color: #09724d;
+}
+
+.euiHealth--danger {
+  color: var(--eui-color-danger-text);
+}
+
+.euiHealth--subdued {
+  color: var(--eui-color-text-subdued);
+}
+
+.site-injection-detail {
+  margin: var(--eui-size-s) 0 0;
+  font-size: var(--eui-font-size-s);
+  line-height: 1.4;
+  color: var(--eui-color-text-subdued);
 }
 
 .site-meta {

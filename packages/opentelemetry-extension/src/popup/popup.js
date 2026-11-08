@@ -6,6 +6,7 @@
 import {deleteWebsite, getWebsites, upsertWebsite} from '../storage.js';
 
 /** @typedef {import('../types/websites.js').MonitoredWebsite} MonitoredWebsite */
+/** @typedef {import('../types/websites.js').InjectionStatus} InjectionStatus */
 
 /** @type {HTMLFormElement} */
 const form = /** @type {HTMLFormElement} */ (
@@ -69,6 +70,21 @@ function fillForm(website) {
 }
 
 /**
+ * @param {InjectionStatus | undefined} status
+ * @returns {{label: string, healthClass: string}}
+ */
+function describeInjectionDisplay(status) {
+    switch (status) {
+        case 'active':
+            return {label: 'Injected', healthClass: 'euiHealth--success'};
+        case 'failed':
+            return {label: 'Failed', healthClass: 'euiHealth--danger'};
+        default:
+            return {label: 'Not checked', healthClass: 'euiHealth--subdued'};
+    }
+}
+
+/**
  * @param {MonitoredWebsite[]} websites
  */
 function renderList(websites) {
@@ -85,9 +101,22 @@ function renderList(websites) {
         const item = document.createElement('li');
         item.className = 'euiListItem';
 
+        const header = document.createElement('div');
+        header.className = 'site-header';
+
         const host = document.createElement('div');
         host.className = 'site-host';
         host.textContent = site.host;
+
+        const {label, healthClass} = describeInjectionDisplay(
+            site.injection_status
+        );
+        const health = document.createElement('span');
+        health.className = `euiHealth ${healthClass}`;
+        health.setAttribute('role', 'status');
+        health.textContent = label;
+
+        header.append(host, health);
 
         const meta = document.createElement('div');
         meta.className = 'site-meta';
@@ -113,7 +142,17 @@ function renderList(websites) {
         });
 
         actions.append(editBtn, deleteBtn);
-        item.append(host, meta, actions);
+
+        item.append(header, meta);
+
+        if (site.injection_status === 'failed' && site.injection_message) {
+            const statusDetail = document.createElement('p');
+            statusDetail.className = 'site-injection-detail';
+            statusDetail.textContent = site.injection_message;
+            item.append(statusDetail);
+        }
+
+        item.append(actions);
         list.appendChild(item);
     }
 }
@@ -133,5 +172,11 @@ form.addEventListener('submit', async (event) => {
 });
 
 resetBtn.addEventListener('click', () => clearForm());
+
+chrome.storage.onChanged.addListener((changes, areaName) => {
+    if (areaName === 'local' && changes.monitoredWebsites) {
+        void refresh();
+    }
+});
 
 void refresh();
