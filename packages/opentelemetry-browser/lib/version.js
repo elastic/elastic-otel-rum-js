@@ -4,3 +4,4 @@
  */
 
 export const EDOT_VERSION = '0.4.0';
+export const OTEL_BROWSER_INSTRUMENTATION_VERSION = '0.8.0';

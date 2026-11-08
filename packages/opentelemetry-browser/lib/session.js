@@ -343,7 +343,6 @@ export class SessionSampler {
 /**
  * @typedef {Object} SessionSpanProcessorOptions
  * @property {SessionManager} manager
- * @property {SpanProcessor[]} processors
  */
 
 /**
@@ -371,53 +370,23 @@ export class SessionSpanProcessor {
     /** @param {SessionSpanProcessorOptions} options */
     constructor(options) {
         this._manager = options.manager;
-        this._processors = options.processors;
-        this._sampledSpans = new WeakSet();
     }
     /**
      * @param {import('@opentelemetry/sdk-trace').Span} span
-     * @param {import('@opentelemetry/api').Context} ctx
      */
-    onStart(span, ctx) {
+    onStart(span) {
         const session = this._manager.getSession();
-        if (session.sampled) {
-            span.setAttributes({
-                ...sessionToAttributes(session),
-                [ATTR_BROWSER_TAB_ID]: this._manager.getTabId(),
-            });
-            for (const p of this._processors) {
-                p.onStart(span, ctx);
-            }
-            // track which Spans have been sampled
-            this._sampledSpans.add(span);
-        }
+        span.setAttributes({
+            ...sessionToAttributes(session),
+            [ATTR_BROWSER_TAB_ID]: this._manager.getTabId(),
+        });
     }
-    /**
-     * @param {import('@opentelemetry/sdk-trace').Span} span
-     */
-    onEnd(span) {
-        // We check the Span was sampled and it contains the ID attrib
-        // to discard any Spans being tampered by other processors or
-        // externally
-        if (
-            this._sampledSpans.has(span) &&
-            typeof span.attributes?.[ATTR_SESSION_ID] === 'string'
-        ) {
-            for (const p of this._processors) {
-                p.onEnd(span);
-            }
-            this._sampledSpans.delete(span);
-        }
-    }
+    onEnd() {}
     forceFlush() {
-        return Promise.all(this._processors.map((p) => p.forceFlush())).then(
-            () => undefined
-        );
+        return Promise.resolve();
     }
     shutdown() {
-        return Promise.all(this._processors.map((p) => p.shutdown())).then(
-            () => undefined
-        );
+        return Promise.resolve();
     }
 }
 
@@ -425,44 +394,32 @@ export class SessionSpanProcessor {
 /**
  * @typedef {Object} SessionLogRecordProcessorOptions
  * @property {SessionManager} manager
- * @property {LogRecordProcessor[]} processors
  */
 /**
  * Adds session attributes on log emit. Must be registered before exporting
  * processors since records become read-only after all `onEmit` calls.
+ * @implements {LogRecordProcessor}
  */
 export class SessionLogRecordProcessor {
     /** @param {SessionLogRecordProcessorOptions} options */
     constructor(options) {
         this._manager = options.manager;
-        this._processors = options.processors;
     }
-    /** @param {{setAttributes: (attrs: import('@opentelemetry/api').Attributes) => unknown}} logRecord */
     /**
      * @param {import('@opentelemetry/sdk-logs').SdkLogRecord} logRecord
-     * @param {import('@opentelemetry/api').Context} [ctx]
      */
-    onEmit(logRecord, ctx) {
+    onEmit(logRecord) {
         const session = this._manager.getSession();
-        if (session.sampled) {
-            logRecord.setAttributes({
-                ...sessionToAttributes(session),
-                [ATTR_BROWSER_TAB_ID]: this._manager.getTabId(),
-            });
-            for (const p of this._processors) {
-                p.onEmit(logRecord, ctx);
-            }
-        }
+        logRecord.setAttributes({
+            ...sessionToAttributes(session),
+            [ATTR_BROWSER_TAB_ID]: this._manager.getTabId(),
+        });
     }
     forceFlush() {
-        return Promise.all(this._processors.map((p) => p.forceFlush())).then(
-            () => undefined
-        );
+        return Promise.resolve();
     }
     shutdown() {
-        return Promise.all(this._processors.map((p) => p.shutdown())).then(
-            () => undefined
-        );
+        return Promise.resolve();
     }
 }
 

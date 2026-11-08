@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import {diag, DiagLogLevel, metrics} from '@opentelemetry/api';
+import {diag, DiagLogLevel, metrics, trace} from '@opentelemetry/api';
 import {logs} from '@opentelemetry/api-logs';
 import {startLogsSdk} from '@opentelemetry/browser-sdk/logs';
 import {startTracesSdk} from '@opentelemetry/browser-sdk/traces';
@@ -13,12 +13,7 @@ import {
     MeterProvider,
     PeriodicExportingMetricReader,
 } from '@opentelemetry/sdk-metrics';
-import {BatchSpanProcessor} from '@opentelemetry/sdk-trace';
-import {OTLPTraceExporter} from '@opentelemetry/exporter-trace-otlp-http';
-import {BatchLogRecordProcessor} from '@opentelemetry/sdk-logs';
-import {OTLPLogExporter} from '@opentelemetry/exporter-logs-otlp-http';
 
-import {registerInstrumentations} from '@opentelemetry/instrumentation';
 import {NavigationInstrumentation} from '@opentelemetry/browser-instrumentation/experimental/navigation';
 import {NavigationTimingInstrumentation} from '@opentelemetry/browser-instrumentation/experimental/navigation-timing';
 import {ResourceTimingInstrumentation} from '@opentelemetry/browser-instrumentation/experimental/resource-timing';
@@ -41,7 +36,8 @@ import {
     SessionLogRecordProcessor,
     SessionSpanProcessor,
 } from './session.js';
-import {EDOT_VERSION} from './version.js';
+import {isValidArray, resolveExportUrls} from './utils.js';
+import {EDOT_VERSION, OTEL_BROWSER_INSTRUMENTATION_VERSION} from './version.js';
 
 /**
  * @typedef {{
@@ -64,7 +60,7 @@ import {EDOT_VERSION} from './version.js';
  * @property {string} [serviceName]
  * @property {string} [serviceVersion]
  * @property {import('@opentelemetry/api').Attributes} [resourceAttributes]
- * @property {{url?: string; headers?: Record<string, string>}} [exportConfig]
+ * @property {{url?: string; tracesUrl?: string; logsUrl?: string; metricsUrl?: string; headers?: Record<string, string>}} [exportConfig]
  */
 
 /**
@@ -72,12 +68,21 @@ import {EDOT_VERSION} from './version.js';
  * @typedef {Object} EdotConfig
  * @property {Partial<InstrumentationsConfigMap>} [instrumentations]
  * @property {import('./session.js').SessionConfig} [session]
+ * @property {Array<string | RegExp>} [ignoreFetchUrls]
+ * @property {Array<keyof InstrumentationsConfigMap>} [disableInstrumentations]
  */
 /**
  * @typedef {SdkConfig & EdotConfig} BrowserSdkConfiguration
  */
 
 const EDOT_SCOPE_NAME = '@elastic/opentelemetry-browser';
+
+/**
+ * @param {string} version
+ * @returns {string}
+ */
+const instrumentationDocsUrl = (version) =>
+    `https://github.com/open-telemetry/opentelemetry-browser/tree/browser-instrumentation-v${version}/packages/instrumentation#readme`;
 
 // SDK returned when invalid config or some error happens at start
 const NOOP_SDK = {shutdown: () => Promise.resolve()};
@@ -121,15 +126,34 @@ export function startBrowserSdk(cfg = {}) {
     const config = {...defaultConfig, ...cfg};
 
     // Input validation
-    /** @type {URL} */
-    let endpointUrl;
+    // - endpoint
+    /** @type {ReturnType<typeof resolveExportUrls>} */
+    let exportUrls;
     try {
-        endpointUrl = new URL(config?.exportConfig?.url || '');
+        exportUrls = resolveExportUrls(config.exportConfig);
     } catch (urlErr) {
-        diag.error(
-            `The value "${config?.exportConfig?.url}" for "exportConfig.url" configuration is not an URL. SDK won't start.`
-        );
+        diag.error(`${/** @type {Error} */ (urlErr).message} SDK won't start.`);
         return NOOP_SDK;
+    }
+    const {tracesUrl, logsUrl, metricsUrl} = exportUrls;
+    // - ignoreFetchUrls and resolving all URLs to ignore
+    /** @type {Array<string | RegExp>} */
+    const ignoreFetchUrls = [tracesUrl, logsUrl, metricsUrl];
+    if (config.ignoreFetchUrls) {
+        /**
+         * @param {unknown} i
+         * @returns {boolean}
+         */
+        const isValidIgnore = (i) =>
+            typeof i === 'string' || i instanceof RegExp;
+        if (isValidArray(config.ignoreFetchUrls, isValidIgnore)) {
+            ignoreFetchUrls.push(...config.ignoreFetchUrls);
+        } else {
+            diag.error(
+                `The value "${config.ignoreFetchUrls}" for "ignoreFetchUrls" configuration is not valid. SDK won't start.`
+            );
+            return NOOP_SDK;
+        }
     }
 
     // Detect resource
@@ -160,28 +184,26 @@ export function startBrowserSdk(cfg = {}) {
         }
     });
 
-    // To have full control of what's exported we need to build the processor
-    // ourselves with a custom exporter
-    const tracesUrl = appendPath(endpointUrl, 'v1/traces').href;
     const spanProcessors = [];
-    const edotSpanProcessor = new BatchSpanProcessor({
-        exporter: new OTLPTraceExporter({
-            url: tracesUrl,
-            headers: config.exportConfig.headers,
-        }),
-    });
+    // By default the Span sampler is allways on
+    /** @type {(...args: any[]) => import('@opentelemetry/sdk-trace').SamplingResult} */
+    let shouldSample = () => ({decision: 2});
 
-    // If session available it we use a processor that controls others based
-    // on session state.
+    // Some of the traces configuration depend if we can provide sessions. If so:
+    // - add a processor to append session attributes
+    // - span sampling is decided by the session sampling
     if (sessionManager) {
         spanProcessors.push(
             new SessionSpanProcessor({
                 manager: sessionManager,
-                processors: [edotSpanProcessor],
             })
         );
-    } else {
-        spanProcessors.push(edotSpanProcessor);
+        shouldSample = () => {
+            if (sessionManager.getSession().sampled) {
+                return {decision: 2};
+            }
+            return {decision: 0};
+        };
     }
 
     // NOTE: export payloads can be seen in DevTools network tab in JSON format
@@ -191,37 +213,58 @@ export function startBrowserSdk(cfg = {}) {
         resourceAttributes,
         contextManager: AsyncApisContextManager.enable(),
         processors: spanProcessors,
-    });
-
-    const logsUrl = appendPath(endpointUrl, 'v1/logs').href;
-    const logProcessors = [];
-    const edotLogProcessor = new BatchLogRecordProcessor({
-        exporter: new OTLPLogExporter({
-            url: logsUrl,
+        sampler: {shouldSample},
+        exportConfig: {
+            url: tracesUrl,
             headers: config.exportConfig.headers,
-        }),
+        },
     });
-    // If session available it we use a processor that controls others based
-    // on session state.
+    // this will be used later for instrumentations
+    const tracerProvider = trace.getTracerProvider();
+
+    const logProcessors = [];
+    // Some of the logs configuration depend if we can provide sessions. If so:
+    // - add a processor to append session attributes
+    // - add a configurator to enable/disable when session is sampled or not
     if (sessionManager) {
         logProcessors.push(
             new SessionLogRecordProcessor({
                 manager: sessionManager,
-                processors: [edotLogProcessor],
             })
         );
-    } else {
-        logProcessors.push(edotLogProcessor);
     }
     const logsSdk = startLogsSdk({
         logLevel,
         resourceAttributes,
         processors: logProcessors,
+        exportConfig: {
+            url: logsUrl,
+            headers: config.exportConfig.headers,
+        },
     });
+    // this will be used later for instrumentations
+    const loggerProvider = logs.getLoggerProvider();
+
+    // Maybe a better way to control the loggers would be to provide a `LoggerConfigurator`
+    // but the upstream SDK does not offer the option to pass it through.
+    // Solution for now is to wrap the `getLogger` method and patch the `enabled` method
+    // so is aware of the session when called.
+    if (sessionManager) {
+        const loggers = new WeakSet();
+        const loggerFn = loggerProvider.getLogger;
+        loggerProvider.getLogger = function (name, version, options) {
+            const logger = loggerFn.call(this, name, version, options);
+            if (loggers.has(logger)) {
+                return logger;
+            }
+            loggers.add(logger);
+            logger.enabled = () => sessionManager.getSession().sampled;
+            return logger;
+        };
+    }
 
     // metrics signal configuration
     // possible `startMetricsSdk` function
-    const metricsUrl = appendPath(endpointUrl, 'v1/metrics').href;
     const metricsReader = new PeriodicExportingMetricReader({
         exporter: new OTLPMetricExporter({
             url: metricsUrl,
@@ -234,55 +277,116 @@ export function startBrowserSdk(cfg = {}) {
     });
     metrics.setGlobalMeterProvider(meterProvider);
 
-    // Resgister instrumentations. The `registerInstrumentations` enabled all of them
-    // regardless of the configuration so EDOT only add the ones that are not disabled
-    // by configuration
+    // NOTE: metrics is different in semantics. depending on the user's inent:
+    // - there could be metrics that outlive session limits
+    // - there could be metrics attached to a session (sampled)
+    //
+    // The 1st type of metics are allways collected and exported with no session attributes and
+    // the 2nd should have session attributes and should be reset/recreated whenever
+    // a session starts. Also collection and export is tied to the sampling decision.
+    // By doing nothing we have the 1st type of metrics. We should check how
+    // to provide the 2nd type. A possible implementation could be to have API to create
+    // proxy instruments that inject the session attributes and recretes on each new session
+    // (proposed in https://github.com/open-telemetry/opentelemetry-browser/discussions/265)
+
+    // Instrumentations configuration & enablement
+    /** @param {{ignoreUrls?: any}} [cfg] */
+    const withIgnoreUrls = (cfg) => {
+        const ignoreUrls = [...ignoreFetchUrls];
+        if (Array.isArray(cfg?.ignoreUrls)) {
+            ignoreUrls.push(...cfg.ignoreUrls);
+        }
+        return {...cfg, ignoreUrls};
+    };
+
+    // Factory functions for each instrumentation so it can resolve 1st which configuration
+    // goes to which instrumentation
     /** @type {Record<keyof InstrumentationsConfigMap, (cfg: any) => any>} */
-    const instrFactories = {
+    const instrFactoriesMap = {
         navigation: (cfg) => new NavigationInstrumentation(cfg),
         'navigation-timing': (cfg) => new NavigationTimingInstrumentation(cfg),
-        'resource-timing': (cfg) => {
-            // This intrumentation must gnore export URLs.
-            // ref: https://github.com/elastic/elastic-otel-rum-js/issues/108
-            const config = cfg ?? {};
-            if (Array.isArray(config.ignoreUrls)) {
-                config.ignoreUrls.push(tracesUrl, logsUrl, metricsUrl);
-            } else {
-                config.ignoreUrls = [tracesUrl, logsUrl, metricsUrl];
-            }
-            return new ResourceTimingInstrumentation(config);
-        },
-        fetch: (cfg) => new FetchInstrumentation(cfg),
+        'resource-timing': (cfg) =>
+            new ResourceTimingInstrumentation(withIgnoreUrls(cfg)),
+        fetch: (cfg) => new FetchInstrumentation(withIgnoreUrls(cfg)),
         'user-action': (cfg) => new UserActionInstrumentation(cfg),
-        xhr: (cfg) => new XhrInstrumentation(cfg),
+        xhr: (cfg) => new XhrInstrumentation(withIgnoreUrls(cfg)),
         errors: (cfg) => new ErrorsInstrumentation(cfg),
         'web-vitals': (cfg) => new WebVitalsInstrumentation(cfg),
     };
 
-    const instrumentations = config.instrumentations || {};
+    /** @type {Set<string>} */
+    const disableInstrumentations = new Set();
+    if (config.disableInstrumentations) {
+        // NOTE: we do not check all the items are valid instrumentation names because
+        // a typo would mean nothing gets disabled. EDOT should do as much as it can
+        if (
+            isValidArray(
+                config.disableInstrumentations,
+                (i) => typeof i === 'string'
+            )
+        ) {
+            config.disableInstrumentations.forEach((name) => {
+                if (Object.hasOwn(instrFactoriesMap, name)) {
+                    disableInstrumentations.add(name);
+                } else {
+                    diag.warn(
+                        `Can't disable instrumentation with name "${name}". It is not in the list of available instrumentations`
+                    );
+                }
+            });
+        } else {
+            diag.warn(
+                `Configuration option "disableInstrumentations" must be an array of strings. Instead found "${config.disableInstrumentations}"`
+            );
+        }
+    }
 
-    /** @type {Array<keyof InstrumentationsConfigMap>} */
-    // @ts-expect-error - the object defined above only has the allowed keys
-    const instrKeys = Object.keys(instrFactories);
+    const instrConfigType = typeof config.instrumentations;
+    /** @type {Record<string, unknown>} */
+    let instrConfigMap = {};
 
-    // Create all instrumentations
-    /** @type {Array<import('@opentelemetry/instrumentation').Instrumentation>} */
-    const instrumentationInstances = instrKeys.map((key) => {
-        const config = instrumentations[key];
-        return instrFactories[key](config);
-    });
-    // register them (which enables all performing any required patching)
-    const disableInstrumentations = registerInstrumentations({
-        instrumentations: instrumentationInstances,
-    });
+    // Configuring instrumentations manually has some risks since they are under
+    // active development and future releases may break configuration. Let's warn
+    if (instrConfigType !== 'undefined') {
+        const docsUrl = instrumentationDocsUrl(
+            OTEL_BROWSER_INSTRUMENTATION_VERSION
+        );
+        diag.warn(
+            `Manual configuration of instrumentations is not recommended. The current options supported are documented in ${docsUrl}`
+        );
+        // If user passed the options check the type is correct. Do not check nested properties
+        if (instrConfigType !== 'object') {
+            diag.warn(
+                `Configuration option "instrumentations" must be an object. Instead found "${config.instrumentations}"`
+            );
+        } else {
+            instrConfigMap = {...config.instrumentations};
+        }
+    }
 
-    // Disable the ones with { enabled: false } in configuration
-    instrumentationInstances.forEach((instr) => {
-        const config = instr.getConfig();
-        if (config.enabled === false) {
+    const instrEntries = Object.entries(instrFactoriesMap).map(
+        ([name, factory]) => {
+            const instr = factory(instrConfigMap[name]);
+            return {name, instr};
+        }
+    );
+
+    // Does the same as `registerInstrumentations` form upstream at the end
+    // disabling the ones with { enabled: false } in configuration or present
+    // in `disableInstrumentations`
+    for (const entry of instrEntries) {
+        const {name, instr} = entry;
+        instr.setLoggerProvider?.(loggerProvider);
+        instr.setTracerProvider(tracerProvider);
+        instr.setMeterProvider(meterProvider);
+        instr.enable();
+        if (
+            disableInstrumentations.has(name) ||
+            instr.getConfig().enabled === false
+        ) {
             instr.disable();
         }
-    });
+    }
 
     // Resolve the session eagerly so `session.start` is emitted on load
     // rather than with the first piece of telemetry.
@@ -293,7 +397,7 @@ export function startBrowserSdk(cfg = {}) {
 
     return {
         shutdown() {
-            disableInstrumentations();
+            instrEntries.forEach((e) => e.instr.disable());
             return Promise.allSettled([
                 tracesSdk.shutdown(),
                 logsSdk.shutdown(),
@@ -309,17 +413,4 @@ export function startBrowserSdk(cfg = {}) {
             });
         },
     };
-}
-
-// -- helper functions
-
-/**
- * Returns a new URL with the path appended. Avoiding double slash
- * @param {URL} url
- * @param {string} path
- */
-function appendPath(url, path) {
-    const result = new URL(url.href);
-    result.pathname = (result.pathname + path).replace('//', '/');
-    return result;
 }

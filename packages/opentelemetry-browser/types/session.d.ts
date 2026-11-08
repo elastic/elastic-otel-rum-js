@@ -132,48 +132,38 @@ export class SessionSpanProcessor implements SpanProcessor {
     /** @param {SessionSpanProcessorOptions} options */
     constructor(options: SessionSpanProcessorOptions);
     _manager: SessionManager;
-    _processors: import("@opentelemetry/sdk-trace").SpanProcessor[];
-    _sampledSpans: WeakSet<object>;
-    /**
-     * @param {import('@opentelemetry/sdk-trace').Span} span
-     * @param {import('@opentelemetry/api').Context} ctx
-     */
-    onStart(span: import("@opentelemetry/sdk-trace").Span, ctx: import("@opentelemetry/api").Context): void;
     /**
      * @param {import('@opentelemetry/sdk-trace').Span} span
      */
-    onEnd(span: import("@opentelemetry/sdk-trace").Span): void;
-    forceFlush(): Promise<undefined>;
-    shutdown(): Promise<undefined>;
+    onStart(span: import("@opentelemetry/sdk-trace").Span): void;
+    onEnd(): void;
+    forceFlush(): Promise<void>;
+    shutdown(): Promise<void>;
 }
 /** @typedef {import('@opentelemetry/sdk-logs').LogRecordProcessor} LogRecordProcessor */
 /**
  * @typedef {Object} SessionLogRecordProcessorOptions
  * @property {SessionManager} manager
- * @property {LogRecordProcessor[]} processors
  */
 /**
  * Adds session attributes on log emit. Must be registered before exporting
  * processors since records become read-only after all `onEmit` calls.
+ * @implements {LogRecordProcessor}
  */
-export class SessionLogRecordProcessor {
+export class SessionLogRecordProcessor implements LogRecordProcessor {
     /** @param {SessionLogRecordProcessorOptions} options */
     constructor(options: SessionLogRecordProcessorOptions);
     _manager: SessionManager;
-    _processors: import("@opentelemetry/sdk-logs").LogRecordProcessor[];
-    /** @param {{setAttributes: (attrs: import('@opentelemetry/api').Attributes) => unknown}} logRecord */
     /**
      * @param {import('@opentelemetry/sdk-logs').SdkLogRecord} logRecord
-     * @param {import('@opentelemetry/api').Context} [ctx]
      */
-    onEmit(logRecord: import("@opentelemetry/sdk-logs").SdkLogRecord, ctx?: import("@opentelemetry/api").Context): void;
-    forceFlush(): Promise<undefined>;
-    shutdown(): Promise<undefined>;
+    onEmit(logRecord: import("@opentelemetry/sdk-logs").SdkLogRecord): void;
+    forceFlush(): Promise<void>;
+    shutdown(): Promise<void>;
 }
 export type SpanProcessor = import("@opentelemetry/sdk-trace").SpanProcessor;
 export type SessionSpanProcessorOptions = {
     manager: SessionManager;
-    processors: SpanProcessor[];
 };
 export type SessionConfig = {
     inactivityTimeout?: number | undefined;
@@ -215,5 +205,4 @@ export type SamplingResult = {
 export type LogRecordProcessor = import("@opentelemetry/sdk-logs").LogRecordProcessor;
 export type SessionLogRecordProcessorOptions = {
     manager: SessionManager;
-    processors: LogRecordProcessor[];
 };
