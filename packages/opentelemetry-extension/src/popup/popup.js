@@ -75,6 +75,7 @@ function renderList(websites) {
     list.replaceChildren();
     if (websites.length === 0) {
         const empty = document.createElement('li');
+        empty.className = 'euiListItem euiListItem--empty';
         empty.textContent = 'No websites configured yet.';
         list.appendChild(empty);
         return;
@@ -82,6 +83,7 @@ function renderList(websites) {
 
     for (const site of websites) {
         const item = document.createElement('li');
+        item.className = 'euiListItem';
 
         const host = document.createElement('div');
         host.className = 'site-host';
@@ -96,11 +98,13 @@ function renderList(websites) {
 
         const editBtn = document.createElement('button');
         editBtn.type = 'button';
+        editBtn.className = 'euiButton euiButton--empty euiButton--primary';
         editBtn.textContent = 'Edit';
         editBtn.addEventListener('click', () => fillForm(site));
 
         const deleteBtn = document.createElement('button');
         deleteBtn.type = 'button';
+        deleteBtn.className = 'euiButton euiButton--empty euiButton--danger';
         deleteBtn.textContent = 'Delete';
         deleteBtn.addEventListener('click', async () => {
             await deleteWebsite(site.id);
