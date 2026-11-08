@@ -82,8 +82,7 @@
             window.edotBrowser = window.startBrowserSdk(sdkConfig);
             reportInjectionStatus('active', 'EDOT SDK started on this tab.');
         } catch (err) {
-            const detail =
-                err instanceof Error ? err.message : String(err);
+            const detail = err instanceof Error ? err.message : String(err);
             console.error('[EDOT extension] startBrowserSdk failed', err);
             reportInjectionStatus(
                 'failed',

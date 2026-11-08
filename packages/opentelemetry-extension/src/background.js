@@ -161,8 +161,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         message?.type === 'injection-status' &&
         typeof message.websiteId === 'string'
     ) {
-        const status =
-            message.status === 'active' ? 'active' : 'failed';
+        const status = message.status === 'active' ? 'active' : 'failed';
         void setWebsiteInjectionStatus(
             message.websiteId,
             status,

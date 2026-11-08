@@ -14,7 +14,11 @@ export const INJECTION_REPORT_SOURCE = 'edot-browser-extension';
  */
 export function describeInjectionError(err) {
     const message = err instanceof Error ? err.message : String(err);
-    if (/cannot access|Cannot inject|extensions gallery|chrome:\/\//i.test(message)) {
+    if (
+        /cannot access|Cannot inject|extensions gallery|chrome:\/\//i.test(
+            message
+        )
+    ) {
         return 'Extension cannot inject scripts on this page.';
     }
     if (/CSP|content security policy/i.test(message)) {
