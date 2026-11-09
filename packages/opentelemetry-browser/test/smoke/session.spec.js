@@ -144,6 +144,46 @@ test('should not export logs/traces for non sampled sessions', async ({
     }
 });
 
+test('should drop session id from spans and logs after inactivity expires the session', async ({
+    page,
+}) => {
+    const collector = createCollector(page);
+    await page.clock.install();
+    await page.goto(MANUAL_FIXTURE);
+
+    // Perform some actions that trigger the manual instrumentations
+    // - span
+    await page.click('#span');
+    await page.waitForFunction(
+        () => document.getElementById('status')?.innerText === 'finished'
+    );
+    // - log
+    await page.click('#log');
+
+    let spans = await collector.getSpans({flush: true});
+    let logs = await collector.getLogs({flush: true});
+    assertAllHaveSessionId(spans, logs);
+
+    collector.clear();
+    await page.clock.fastForward('31:00');
+
+    // Actions performed programatically is not user activity so it should contain
+    // session information
+    await page.evaluate(() =>
+        // @ts-expect-error -- the function is set in the fixture
+        window.getTracer('automation').startSpan('triggered Span').end()
+    );
+    await page.evaluate(() =>
+        // @ts-expect-error -- the function is set in the fixture
+        window.getLogger('automation').emit({eventName: 'triggered Log'})
+    );
+
+    spans = await collector.getSpans({flush: true});
+    logs = await collector.getLogs({flush: true});
+
+    assertNoneHaveSessionId(spans, logs);
+});
+
 test('should export traces and logs when web storage is unavailable', async ({
     page,
 }) => {
@@ -174,6 +214,42 @@ test('should export traces and logs when web storage is unavailable', async ({
 });
 
 // -- Helpers
+
+/**
+ * @param {import('./test-utils').CollectedSpan[]} spans
+ * @param {import('./test-utils').CollectedLog[]} logs
+ */
+function assertAllHaveSessionId(spans, logs) {
+    expect(spans.length).toBeGreaterThan(0);
+    expect(logs.length).toBeGreaterThan(0);
+    const sessionId =
+        spans.find((s) => s.attributes['session.id'])?.attributes[
+            'session.id'
+        ] ??
+        logs.find((l) => l.attributes['session.id'])?.attributes['session.id'];
+    expect(sessionId).toMatch(/^[0-9a-f-]{36}$/);
+    for (const span of spans) {
+        expect(span.attributes['session.id']).toStrictEqual(sessionId);
+    }
+    for (const log of logs) {
+        expect(log.attributes['session.id']).toStrictEqual(sessionId);
+    }
+}
+
+/**
+ * @param {import('./test-utils').CollectedSpan[]} spans
+ * @param {import('./test-utils').CollectedLog[]} logs
+ */
+function assertNoneHaveSessionId(spans, logs) {
+    expect(spans.length).toBeGreaterThan(0);
+    expect(logs.length).toBeGreaterThan(0);
+    for (const span of spans) {
+        expect(span.attributes['session.id']).toBeUndefined();
+    }
+    for (const log of logs) {
+        expect(log.attributes['session.id']).toBeUndefined();
+    }
+}
 
 /**
  * Simulates browsers where web storage is unavailable (for example private mode).

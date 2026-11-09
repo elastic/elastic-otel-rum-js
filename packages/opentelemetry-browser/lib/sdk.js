@@ -265,10 +265,11 @@ export function startBrowserSdk(cfg = {}) {
                 return logger;
             }
 
-            const enableFn = logger.enabled;
             logger.enabled = function () {
                 const session = sessionManager.getSession();
-                return session ? session.sampled : enableFn.call(this);
+                return session
+                    ? session.sampled
+                    : sessionManager.exportsWithoutSession();
             };
             loggers.add(logger);
             return logger;
