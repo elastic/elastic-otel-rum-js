@@ -40,7 +40,7 @@
                 message: typeof data.message === 'string' ? data.message : '',
             });
         } catch (err) {
-            console.error(`Could not send the injection status: ${err}`)
+            console.error(`Could not send the injection status: ${err}`);
         }
     });
 })();
