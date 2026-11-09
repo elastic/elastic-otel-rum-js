@@ -196,6 +196,8 @@ Session sampling controls whether EDOT Browser exports automatic RUM telemetry (
 
 When a session is **sampled in**, all configured instrumentations run for that session until it ends or rotates. When a session is **sampled out**, EDOT Browser disables automatic instrumentations for that session so the browser does not collect spans or log records that would be dropped anyway.
 
+When an active session is available, traces and logs use that session's sampling decision. If the session manager cannot return an active session—for example after a session expires and before user activity starts a new one—there is no per-session decision to apply. When `session.sampleRate` is `1` (the default), the trace sampler still **samples spans in** and automatic log records continue to be exported. For any rate below `1`, spans are sampled out until a new session starts.
+
 To stop automatic RUM export while keeping session machinery active, set `session.sampleRate` to `0`. With `sampleRate: 0`, session state still exists client-side but automatic export is suppressed.
 
 Metrics your application emits through the OpenTelemetry API are not gated by session sampling today. Refer to [Sessions](telemetry.md#sessions) for signal-specific behavior.
