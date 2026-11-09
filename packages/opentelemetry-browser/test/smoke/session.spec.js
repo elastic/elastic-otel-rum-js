@@ -7,29 +7,7 @@ import {test, expect} from '@playwright/test';
 import {createCollector} from './test-utils';
 
 const FIXTURE = '/fixtures/use-navigation-timing.html';
-
-/**
- * Waits until all expected click logs are exported since fast-forwarding
- * the clock can split them across export batches.
- * @param {import('./test-utils').Collector} collector
- * @param {number} expected
- */
-async function getClickLogs(collector, expected) {
-    /** @type {import('./test-utils').CollectedLog[]} */
-    let logs = [];
-    await expect
-        .poll(async () => {
-            logs = await collector.getLogs();
-            return logs.filter(
-                (l) => l.eventName === 'browser.user_action.click'
-            ).length;
-        })
-        .toBe(expected);
-    return {
-        clicks: logs.filter((l) => l.eventName === 'browser.user_action.click'),
-        starts: logs.filter((l) => l.eventName === 'session.start'),
-    };
-}
+const MANUAL_FIXTURE = '/fixtures/use-manual-instrumentation.html';
 
 test('should add session attributes to logs and emit session.start', async ({
     page,
@@ -139,12 +117,11 @@ test('should rotate an active session after 4 hours', async ({page}) => {
 test('should not export logs/traces for non sampled sessions', async ({
     page,
 }) => {
-    const fixture = '/fixtures/use-manual-instrumentation.html';
     const collector = createCollector(page);
     const config = encodeURIComponent(
         JSON.stringify({session: {sampleRate: 0}})
     );
-    await page.goto(`${fixture}?config=${config}`);
+    await page.goto(`${MANUAL_FIXTURE}?config=${config}`);
 
     // Perform some actions that trigger the manual instrumentations
     // - span
@@ -166,3 +143,154 @@ test('should not export logs/traces for non sampled sessions', async ({
         expect(res.status).toEqual('rejected');
     }
 });
+
+test('should drop session id from spans and logs after inactivity expires the session', async ({
+    page,
+}) => {
+    const collector = createCollector(page);
+    await page.clock.install();
+    await page.goto(MANUAL_FIXTURE);
+
+    // Perform some actions that trigger the manual instrumentations
+    // - span
+    await page.click('#span');
+    await page.waitForFunction(
+        () => document.getElementById('status')?.innerText === 'finished'
+    );
+    // - log
+    await page.click('#log');
+
+    let spans = await collector.getSpans({flush: true});
+    let logs = await collector.getLogs({flush: true});
+    assertAllHaveSessionId(spans, logs);
+
+    collector.clear();
+    await page.clock.fastForward('31:00');
+
+    // Actions performed programatically is not user activity so it should contain
+    // session information
+    await page.evaluate(() =>
+        // @ts-expect-error -- the function is set in the fixture
+        window.getTracer('automation').startSpan('triggered Span').end()
+    );
+    await page.evaluate(() =>
+        // @ts-expect-error -- the function is set in the fixture
+        window.getLogger('automation').emit({eventName: 'triggered Log'})
+    );
+
+    spans = await collector.getSpans({flush: true});
+    logs = await collector.getLogs({flush: true});
+
+    assertNoneHaveSessionId(spans, logs);
+});
+
+test('should export traces and logs when web storage is unavailable', async ({
+    page,
+}) => {
+    await blockWebStorage(page);
+    const collector = createCollector(page);
+    await page.goto(MANUAL_FIXTURE);
+
+    await page.click('#span');
+    await page.waitForFunction(
+        () => document.getElementById('status')?.innerText === 'finished'
+    );
+    await page.click('#log');
+
+    const [spans, logs] = await Promise.all([
+        collector.getSpans(),
+        collector.getLogs(),
+    ]);
+
+    expect(spans.some((s) => s.name === 'manual Span')).toBe(true);
+    expect(logs.some((l) => l.eventName === 'manual Log')).toBe(true);
+
+    for (const span of spans) {
+        expect(span.attributes['session.id']).toBeUndefined();
+    }
+    for (const log of logs) {
+        expect(log.attributes['session.id']).toBeUndefined();
+    }
+});
+
+// -- Helpers
+
+/**
+ * @param {import('./test-utils').CollectedSpan[]} spans
+ * @param {import('./test-utils').CollectedLog[]} logs
+ */
+function assertAllHaveSessionId(spans, logs) {
+    expect(spans.length).toBeGreaterThan(0);
+    expect(logs.length).toBeGreaterThan(0);
+    const sessionId =
+        spans.find((s) => s.attributes['session.id'])?.attributes[
+            'session.id'
+        ] ??
+        logs.find((l) => l.attributes['session.id'])?.attributes['session.id'];
+    expect(sessionId).toMatch(/^[0-9a-f-]{36}$/);
+    for (const span of spans) {
+        expect(span.attributes['session.id']).toStrictEqual(sessionId);
+    }
+    for (const log of logs) {
+        expect(log.attributes['session.id']).toStrictEqual(sessionId);
+    }
+}
+
+/**
+ * @param {import('./test-utils').CollectedSpan[]} spans
+ * @param {import('./test-utils').CollectedLog[]} logs
+ */
+function assertNoneHaveSessionId(spans, logs) {
+    expect(spans.length).toBeGreaterThan(0);
+    expect(logs.length).toBeGreaterThan(0);
+    for (const span of spans) {
+        expect(span.attributes['session.id']).toBeUndefined();
+    }
+    for (const log of logs) {
+        expect(log.attributes['session.id']).toBeUndefined();
+    }
+}
+
+/**
+ * Simulates browsers where web storage is unavailable (for example private mode).
+ * @param {import('@playwright/test').Page} page
+ */
+function blockWebStorage(page) {
+    return page.addInitScript(() => {
+        const block = () => {
+            throw new DOMException(
+                'The operation is insecure.',
+                'SecurityError'
+            );
+        };
+        for (const name of ['localStorage', 'sessionStorage']) {
+            Object.defineProperty(window, name, {
+                get: block,
+                configurable: true,
+            });
+        }
+    });
+}
+
+/**
+ * Waits until all expected click logs are exported since fast-forwarding
+ * the clock can split them across export batches.
+ * @param {import('./test-utils').Collector} collector
+ * @param {number} expected
+ */
+async function getClickLogs(collector, expected) {
+    /** @type {import('./test-utils').CollectedLog[]} */
+    let logs = [];
+    await expect
+        .poll(async () => {
+            logs = await collector.getLogs();
+            return logs.filter(
+                (l) => l.eventName === 'browser.user_action.click'
+            ).length;
+        })
+        .toBe(expected);
+    return {
+        clicks: logs.filter((l) => l.eventName === 'browser.user_action.click'),
+        starts: logs.filter((l) => l.eventName === 'session.start'),
+    };
+}
