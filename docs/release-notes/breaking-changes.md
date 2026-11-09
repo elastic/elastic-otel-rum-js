@@ -145,3 +145,12 @@ will be ignored if using the old configuration key.
 Refer to [PR #95](https://github.com/elastic/elastic-otel-rum-js/pull/95).
 ::::
 
+::::{dropdown} Configuration change in web vitals instrumentation
+The configuration key for `web-vitals` instrumentation has changed from `@opentelemetry/instrumentation-web-vitals`
+to a shorter name `web-vitals`.
+**Impact**<br> This change produces a compilation error if you use the SDK with TypeScript. At runtime the configuration
+will be ignored if using the old configuration key: web vitals turned off with `{ enabled: false }` are collected again,
+and hooks such as `applyCustomLogRecordData` stop running.
+**Action**<br> Change the configuration key to `web-vitals`.
+Refer to [PR #107](https://github.com/elastic/elastic-otel-rum-js/pull/107).
+::::
