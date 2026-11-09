@@ -205,10 +205,11 @@ export function startBrowserSdk(cfg = {}) {
             })
         );
         shouldSample = () => {
-            if (sessionManager.getSession()?.sampled) {
-                return {decision: 2};
-            }
-            return {decision: 0};
+            const session = sessionManager.getSession();
+            const isSampled = session
+                ? session.sampled
+                : sessionManager.exportsWithoutSession();
+            return {decision: isSampled ? 2 : 0};
         };
     }
 
