@@ -47,14 +47,22 @@ To check for security updates, go to [Security announcements for the Elastic sta
   Ref: https://github.com/elastic/elastic-otel-rum-js/issues/124
 * Add `sdk.endSession()` to end the current session, for example on logout. The next session starts on the next user interaction.
   Ref: https://github.com/elastic/elastic-otel-rum-js/issues/123
+* Add `ignoreFetchUrls` to exclude URLs from fetch, XMLHttpRequest, and resource timing instrumentation. Strings and regular expressions are supported; OTLP export URLs are always ignored.
+  Ref: https://github.com/elastic/elastic-otel-rum-js/issues/151
+* Add `exportConfig.tracesUrl`, `exportConfig.logsUrl` and `exportConfig.metricsUrl` to export a signal to a custom URL. The URL is used as is, without appending `/v1/<signal>`.
+  Ref: https://github.com/elastic/elastic-otel-rum-js/issues/166
+
+* Add `disableInstrumentations` to turn off selected built-in instrumentations by key (for example, `web-vitals` or `resource-timing`). If you set both `disableInstrumentations` and `instrumentations` for the same key, `disableInstrumentations` takes precedence.
+  Ref: https://github.com/elastic/elastic-otel-rum-js/pull/170
 
 ### Fixes [edot-browser-X.X.X-fixes]
 
-*
+* Fix export URLs when `exportConfig.url` has no trailing slash. The path separator was missing, so `https://example.com/api` exported to `https://example.com/apiv1/traces`.
+  Ref: https://github.com/elastic/elastic-otel-rum-js/issues/168
 
 ### Chores [edot-browser-X.X.X-chores]
 
-* Emit a message when `istrumentations` configuration option is used to warn users the upstream configuratios are unstable.
+* Emit a message when `instrumentations` configuration option is used to warn users the upstream configurations are unstable.
   Ref: https://github.com/elastic/elastic-otel-rum-js/issues/152
 
 ## 0.4.0 [edot-browser-0.4.0-release-notes]
