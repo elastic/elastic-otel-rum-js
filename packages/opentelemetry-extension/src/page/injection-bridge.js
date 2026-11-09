@@ -31,11 +31,16 @@
             return;
         }
 
-        void chrome.runtime.sendMessage({
-            type: 'injection-status',
-            websiteId: data.websiteId,
-            status: data.status === 'active' ? 'active' : 'failed',
-            message: typeof data.message === 'string' ? data.message : '',
-        });
+        // By CSP rules this might throw
+        try {
+            void chrome.runtime.sendMessage({
+                type: 'injection-status',
+                websiteId: data.websiteId,
+                status: data.status === 'active' ? 'active' : 'failed',
+                message: typeof data.message === 'string' ? data.message : '',
+            });
+        } catch (err) {
+            console.error(`Could not send the injection status: ${err}`)
+        }
     });
 })();
