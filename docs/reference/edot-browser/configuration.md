@@ -76,16 +76,34 @@ Configuration is passed as an object to `startBrowserSdk`. The following options
 | `logLevel` | `"none" \| "error" \| "warn" \| "info" \| "debug" \| "verbose" \| "all"` | Diagnostic log level for the SDK internal logger. Defaults to `info`. Values are lowercase; the SDK accepts them case-insensitively. |
 | `resourceAttributes`  | `Record<string, any>`    | Optional resource attributes to attach to telemetry. For example: `{ 'deployment.environment.name': 'production' }`. |
 | `disabled`            | `boolean`                | If `true`, the SDK does not start. |
-| `instrumentations`    | `Record<string, Object>` | Per-instrumentation config. Set `{ enabled: false }` for a key to turn off that instrumentation. Refer to [instrumentations details](#otel_browser_instrumentations-details) for more information. |
+| `instrumentations`    | `Record<string, Object>` | **Not recommended.** Advanced per-instrumentation config passed through to upstream OpenTelemetry Browser instrumentations. EDOT Browser logs a warning when this option is set. Refer to [instrumentations details](#otel_browser_instrumentations-details). |
+| `disableInstrumentations` | `string[]`            | Optional list of instrumentation keys to turn off. Values must match the keys in [instrumentations details](#otel_browser_instrumentations-details). Refer to [`disableInstrumentations` details](#otel_browser_disableinstrumentations-details). |
 | `session`             | `{ sampleRate?: number; inactivityTimeout?: number; maxDuration?: number }` | Session tracking and session-level sampling. Refer to [session details](#otel_browser_session-details) for more information. |
-| `exportConfig`    | `{ url?: string; headers?: Record<string, string>}` | Configuration for exporters of the different signals. |
+| `ignoreFetchUrls`     | `(string \| RegExp)[]`   | URLs to exclude from fetch, XMLHttpRequest, and resource timing instrumentation. OTLP export URLs are always ignored. Refer to [`ignoreFetchUrls` details](#otel_browser_ignorefetchurls-details). Optional; defaults to `[]`. |
+| `exportConfig`    | `{ url?: string; tracesUrl?: string; logsUrl?: string; metricsUrl?: string; headers?: Record<string, string>}` | Configuration for exporters of the different signals. |
 | `exportConfig.url`    | `string` | Base URL of the OTLP export endpoint (reverse proxy). Do not include signal paths such as `/v1/traces`. Defaults to `http://localhost:4318`. |
+| `exportConfig.tracesUrl`, `exportConfig.logsUrl`, `exportConfig.metricsUrl`    | `string` | Full URL for one signal, used as is without appending `/v1/<signal>`. Overrides `exportConfig.url` for that signal only. Optional. Refer to [Export endpoint configuration](#export-endpoint-configuration). |
 | `exportConfig.headers`    | `Record<string, string>` | Headers to send with export requests. Defaults to `{}`. The reverse proxy typically injects `Authorization`; do not put API keys here in browser code. |
 
 
 ## Export endpoint configuration [export-endpoint-configuration]
 
 Configure `exportConfig.url` to point to a server that accepts OTLP traffic. Use the base URL of the server only: do not include signal paths such as `/v1/traces`, `/v1/metrics`, or `/v1/logs`. The SDK appends these paths when exporting each signal.
+
+If your server routes OTLP traffic on paths other than `/v1/traces`, `/v1/logs` and `/v1/metrics`, set `exportConfig.tracesUrl`, `exportConfig.logsUrl` or `exportConfig.metricsUrl`. Each one is a full URL and is used exactly as written. A signal without its own URL still uses `exportConfig.url` plus the default path, and you can omit `exportConfig.url` when all three are set.
+
+```js
+import { startBrowserSdk } from '@elastic/opentelemetry-browser';
+
+startBrowserSdk({
+  serviceName: 'my-web-app',
+  exportConfig: {
+    tracesUrl: 'https://telemetry.example.com/otlp/t',
+    logsUrl: 'https://telemetry.example.com/otlp/l',
+    metricsUrl: 'https://telemetry.example.com/otlp/m',
+  },
+});
+```
 
 For security reasons, Elastic recommends configuring a reverse proxy that forwards OTLP traffic to {{product.observability}}. Refer to [Proxy and CORS configuration](proxy-cors.md) for more details.
 
@@ -119,6 +137,12 @@ This section provides additional details about configuration settings that requi
 
 ### `instrumentations` details [otel_browser_instrumentations-details]
 
+:::{warning}
+Using `instrumentations` is not recommended for most applications. EDOT Browser aims to provide a stable configuration surface, but the upstream OpenTelemetry Browser instrumentations are still in active development and their configuration can change in ways that break your initialization options on upgrade.
+
+If you set `instrumentations`, EDOT Browser prints a warning in the browser console to remind you that this option is unstable and that future EDOT or instrumentation updates may require changes on your side. For advanced use only, review the `@opentelemetry/browser-instrumentation` version bundled with your EDOT Browser release when you upgrade. Stable, EDOT-specific options for common instrumentation settings are planned separately from this passthrough. For background, refer to [elastic-otel-rum-js#152](https://github.com/elastic/elastic-otel-rum-js/issues/152).
+:::
+
 An object whose keys are the configuration keys of the available instrumentations in EDOT and whose values are the corresponding configuration objects. The scope name is the instrumentation identifier attached to exported telemetry.
 
 The following keys are supported:
@@ -133,6 +157,26 @@ The following keys are supported:
 | Errors            | `errors`                                         | `@opentelemetry/browser-instrumentation/errors`   | [Reference](https://github.com/open-telemetry/opentelemetry-browser/tree/main/packages/instrumentation#errors) |
 | Web vitals        | `web-vitals`                                     | `@opentelemetry/browser-instrumentation/web-vitals` | [Reference](https://github.com/open-telemetry/opentelemetry-browser/blob/main/packages/instrumentation/README.md#web-vitals) |
 | Navigation        | `navigation`                                     | `@opentelemetry/browser-instrumentation/navigation` | [Reference](https://github.com/open-telemetry/opentelemetry-browser/blob/main/packages/instrumentation/README.md#navigation) |
+
+### `disableInstrumentations` details [otel_browser_disableinstrumentations-details]
+
+Pass an array of instrumentation keys (the same strings as the **Key** column in the table above) to turn off specific instrumentations without using the `instrumentations` object. This option is intended for simple cases such as disabling one or two defaults.
+
+- The value must be an array of strings. Other shapes log a warning in the browser console and are ignored.
+- If a string is not a known instrumentation key, EDOT Browser logs a warning and skips that entry.
+- If you set both `disableInstrumentations` and `instrumentations` for the same key, `disableInstrumentations` takes precedence. For example, `disableInstrumentations: ['resource-timing']` keeps resource timing disabled even when `instrumentations['resource-timing']` sets `enabled: true`.
+
+```js
+import { startBrowserSdk } from '@elastic/opentelemetry-browser';
+
+startBrowserSdk({
+  serviceName: 'my-web-app',
+  exportConfig: {
+    url: 'https://telemetry.example.com',
+  },
+  disableInstrumentations: ['web-vitals', 'resource-timing'],
+});
+```
 
 ### `session` details [otel_browser_session-details]
 
@@ -155,6 +199,37 @@ When a session is **sampled in**, all configured instrumentations run for that s
 To stop automatic RUM export while keeping session machinery active, set `session.sampleRate` to `0`. With `sampleRate: 0`, session state still exists client-side but automatic export is suppressed.
 
 Metrics your application emits through the OpenTelemetry API are not gated by session sampling today. Refer to [Sessions](telemetry.md#sessions) for signal-specific behavior.
+
+### `ignoreFetchUrls` details [otel_browser_ignorefetchurls-details]
+
+`ignoreFetchUrls` lists URLs that EDOT Browser should not instrument. The SDK always ignores OTLP export URLs (traces, logs, and metrics) to prevent self-instrumentation. When you set `instrumentations`, per-instrumentation `ignoreUrls` values are merged with this list for fetch, XMLHttpRequest, and resource timing.
+
+**Matching rules**
+
+- **Strings** must exactly match the full absolute request URL, including scheme, host, path, and query string. A path-only value such as `/api/health` does not match.
+- **`RegExp` values** are partial matches against the URL, consistent with upstream fetch and XHR `ignoreUrls`.
+
+**What is suppressed**
+
+- **Fetch and XHR:** ignored requests produce no spans and do not receive a `traceparent` header, so trace context is not propagated to those endpoints and downstream services are not linked from the browser trace.
+- **Resource timing:** ignored URLs are filtered from resource timing log records for every resource type (scripts, stylesheets, images, fonts, and others), not only fetch and XHR. For example, ignoring a URL pattern that matches `analytics.js` also omits resource timing telemetry for that script load.
+
+```js
+import { startBrowserSdk } from '@elastic/opentelemetry-browser';
+
+startBrowserSdk({
+  serviceName: 'my-web-app',
+  exportConfig: {
+    url: 'https://telemetry.example.com',
+  },
+  ignoreFetchUrls: [
+    // Exact match on the full URL
+    'https://api.example.com/v1/internal/health?key=abc',
+    // Partial match (RegExp)
+    /https:\/\/analytics\.example\.net\//,
+  ],
+});
+```
 
 ## Next steps [next-steps]
 

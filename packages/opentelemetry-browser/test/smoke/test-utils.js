@@ -192,6 +192,48 @@ export function createCollector(page) {
     };
 }
 
+/**
+ * @callback RouteHook
+ * @param {import('@playwright/test').Request} req
+ * @returns {undefined | Parameters<import('@playwright/test').Route['fulfill']>[0]}
+ */
+/**
+ * @param {import('@playwright/test').Page} page
+ * @param {RouteHook} [hook]
+ * @returns {Promise<void>}
+ */
+export async function addRoutes(page, hook) {
+    // @ts-expect-error -- accessing custom property
+    await page.waitForFunction(() => window.__ROUTES__ !== undefined);
+
+    /** @type {Record<string, any>} */
+    // @ts-expect-error -- accessing custom property
+    const pageRoutes = await page.evaluate(() => window.__ROUTES__ || {});
+
+    if (typeof pageRoutes !== 'object') {
+        console.error(
+            `Routes defined on page is not an object "${pageRoutes}"`
+        );
+        return;
+    }
+
+    const routeUrls = Object.keys(pageRoutes);
+    if (routeUrls.length === 0) {
+        console.warn(`Page has not routes defined.`);
+        return;
+    }
+
+    return Promise.all(
+        routeUrls.map((url) =>
+            page.route(url, (route, req) => {
+                // Run the hook and fulfill with its return value if defined
+                // Fallback to the value defined in the page.
+                route.fulfill((hook && hook(req)) || pageRoutes[url]);
+            })
+        )
+    ).then(() => undefined);
+}
+
 // -- helper functions
 /** @type {Record<number, string>} */
 const StatusCodeMap = {
