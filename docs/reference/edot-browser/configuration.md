@@ -253,6 +253,8 @@ When web storage is unavailable or after `sdk.shutdown()`, `getSession()` return
 - **Resource timing:** ignored URLs are filtered from resource timing log records for every resource type (scripts, stylesheets, images, fonts, and others), not only fetch and XHR. For example, ignoring a URL pattern that matches `analytics.js` also omits resource timing telemetry for that script load.
 
 ```js
+import { startBrowserSdk } from '@elastic/opentelemetry-browser';
+
 startBrowserSdk({
   serviceName: 'my-web-app',
   exportConfig: {
