@@ -178,20 +178,6 @@ startBrowserSdk({
 });
 ```
 
-### `ignoreFetchUrls` details [otel_browser_ignorefetchurls-details]
-
-`ignoreFetchUrls` lists URLs that EDOT Browser should not instrument. The SDK always ignores OTLP export URLs (traces, logs, and metrics) to prevent self-instrumentation. When you set `instrumentations`, per-instrumentation `ignoreUrls` values are merged with this list for fetch, XMLHttpRequest, and resource timing.
-
-**Matching rules**
-
-- **Strings** must exactly match the full absolute request URL, including scheme, host, path, and query string. A path-only value such as `/api/health` does not match.
-- **`RegExp` values** are partial matches against the URL, consistent with upstream fetch and XHR `ignoreUrls`.
-
-**What is suppressed**
-
-- **Fetch and XHR:** ignored requests produce no spans and do not receive a `traceparent` header, so trace context is not propagated to those endpoints and downstream services are not linked from the browser trace.
-- **Resource timing:** ignored URLs are filtered from resource timing log records for every resource type (scripts, stylesheets, images, fonts, and others), not only fetch and XHR. For example, ignoring a URL pattern that matches `analytics.js` also omits resource timing telemetry for that script load.
-
 ### `session` details [otel_browser_session-details]
 
 EDOT Browser adds `session.id`, `session.previous_id` (after a session rotates), `session.sampling_rate`, and `browser.tab.id` attributes to spans and log records for **sampled** sessions. Refer to [Sessions](telemetry.md#sessions) for details.
@@ -252,13 +238,19 @@ The session ends in every tab of the application and observers get `onSessionEnd
 
 When web storage is unavailable or after `sdk.shutdown()`, `getSession()` returns `undefined`, and `addObserver()` and `endSession()` have no effect.
 
-### `pageRoute` details [otel_browser_page-route-details]
+### `ignoreFetchUrls` details [otel_browser_ignorefetchurls-details]
 
-EDOT Browser adds a `url.template` attribute with the route of the current page (for example `/product/{id}`) to spans and log records. Refer to [Page routes](telemetry.md#page-routes) for details.
+`ignoreFetchUrls` lists URLs that EDOT Browser should not instrument. The SDK always ignores OTLP export URLs (traces, logs, and metrics) to prevent self-instrumentation. When you set `instrumentations`, per-instrumentation `ignoreUrls` values are merged with this list for fetch, XMLHttpRequest, and resource timing.
 
-By default, EDOT Browser infers the route from the URL with `inferPageRoute`. It replaces ID-like path segments (numbers, UUIDs, hashes, and ULIDs) with `{id}`, drops the query string, and keeps the route of hash-based routers. For example, `/product/123?ref=ad` becomes `/product/{id}` and `/#/cart/42` becomes `/#/cart/{id}`.
+**Matching rules**
 
-Inferred routes keep other path segments as they are, so URLs with slugs (for example `/blog/my-first-post`) still produce one route per page. To control the routes, set `pageRoute` to a function that receives the URL of the current page and returns its route, or `undefined` to omit the attribute. EDOT Browser calls it once per URL, including after in-page (SPA) navigations. The function also receives `inferPageRoute` as second argument, so you can fall back to it for URLs you don't handle. The following example doesn't depend on any framework:
+- **Strings** must exactly match the full absolute request URL, including scheme, host, path, and query string. A path-only value such as `/api/health` does not match.
+- **`RegExp` values** are partial matches against the URL, consistent with upstream fetch and XHR `ignoreUrls`.
+
+**What is suppressed**
+
+- **Fetch and XHR:** ignored requests produce no spans and do not receive a `traceparent` header, so trace context is not propagated to those endpoints and downstream services are not linked from the browser trace.
+- **Resource timing:** ignored URLs are filtered from resource timing log records for every resource type (scripts, stylesheets, images, fonts, and others), not only fetch and XHR. For example, ignoring a URL pattern that matches `analytics.js` also omits resource timing telemetry for that script load.
 
 ```js
 startBrowserSdk({
