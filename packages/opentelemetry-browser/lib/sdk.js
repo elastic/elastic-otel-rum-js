@@ -86,7 +86,6 @@ const EDOT_SCOPE_NAME = '@elastic/opentelemetry-browser';
  * @property {import('./session.js').SessionApi['getSession']} getSession
  * @property {import('./session.js').SessionApi['addObserver']} addObserver
  * @property {import('./session.js').SessionApi['endSession']} endSession
- * @property {(route: string | undefined) => void} setPageRoute Sets the
  */
 
 /**
@@ -101,7 +100,6 @@ const instrumentationDocsUrl = (version) =>
 const NOOP_SDK = {
     shutdown: () => Promise.resolve(),
     ...createSessionApi(undefined),
-    setPageRoute() {},
 };
 
 // To control multiple calls to `startBrowserSdk`

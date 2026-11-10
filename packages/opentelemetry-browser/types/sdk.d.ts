@@ -49,13 +49,5 @@ export type BrowserSdk = {
     getSession: import("./session.js").SessionApi["getSession"];
     addObserver: import("./session.js").SessionApi["addObserver"];
     endSession: import("./session.js").SessionApi["endSession"];
-    /**
-     * Sets the
-     * low-cardinality route of the current page (e.g. `/product/{id}`), added as
-     * `url.template` to spans and log records. The route applies until the page
-     * path changes, so call it after your router updates the URL. Passing
-     * `undefined` falls back to the `pageRoute` configuration.
-     */
-    setPageRoute: (route: string | undefined) => void;
 };
 export type DefaultConfigProps = "logLevel" | "serviceName" | "resourceAttributes" | "exportConfig";
