@@ -90,7 +90,7 @@ const EDOT_SCOPE_NAME = '@elastic/opentelemetry-browser';
  */
 
 /**
- * @param {string} version 
+ * @param {string} version
  * @returns {string}
  */
 const instrumentationDocsUrl = (version) =>
