@@ -27,6 +27,7 @@ import {
     EVENT_SESSION_START,
 } from './semconv.js';
 import {
+    createSessionApi,
     createSessionManager,
     resolveActivityEvents,
     SessionLogRecordProcessor,
@@ -75,6 +76,14 @@ import {EDOT_VERSION, OTEL_BROWSER_INSTRUMENTATION_VERSION} from './version.js';
 const EDOT_SCOPE_NAME = '@elastic/opentelemetry-browser';
 
 /**
+ * @typedef {Object} BrowserSdk
+ * @property {() => Promise<void>} shutdown
+ * @property {import('./session.js').SessionApi['getSession']} getSession
+ * @property {import('./session.js').SessionApi['addObserver']} addObserver
+ * @property {import('./session.js').SessionApi['endSession']} endSession
+ */
+
+/**
  * @param {string} version
  * @returns {string}
  */
@@ -82,7 +91,11 @@ const instrumentationDocsUrl = (version) =>
     `https://github.com/open-telemetry/opentelemetry-browser/tree/browser-instrumentation-v${version}/packages/instrumentation#readme`;
 
 // SDK returned when invalid config or some error happens at start
-const NOOP_SDK = {shutdown: () => Promise.resolve()};
+/** @type {BrowserSdk} */
+const NOOP_SDK = {
+    shutdown: () => Promise.resolve(),
+    ...createSessionApi(undefined),
+};
 
 // To control multiple calls to `startBrowserSdk`
 let sdkStarted = false;
@@ -100,9 +113,7 @@ const defaultConfig = {
 
 /**
  * @param {BrowserSdkConfiguration} cfg
- * @returns {{
- *      shutdown: () => Promise<void>;
- * }}
+ * @returns {BrowserSdk}
  */
 export function startBrowserSdk(cfg = {}) {
     if (sdkStarted || cfg.disabled) {
@@ -395,6 +406,7 @@ export function startBrowserSdk(cfg = {}) {
     sdkStarted = true;
 
     return {
+        ...createSessionApi(sessionManager),
         shutdown() {
             stopActivityTracking?.();
             sessionManager?.shutdown();

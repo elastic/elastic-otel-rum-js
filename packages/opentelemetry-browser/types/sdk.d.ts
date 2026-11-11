@@ -1,12 +1,8 @@
 /**
  * @param {BrowserSdkConfiguration} cfg
- * @returns {{
- *      shutdown: () => Promise<void>;
- * }}
+ * @returns {BrowserSdk}
  */
-export function startBrowserSdk(cfg?: BrowserSdkConfiguration): {
-    shutdown: () => Promise<void>;
-};
+export function startBrowserSdk(cfg?: BrowserSdkConfiguration): BrowserSdk;
 export type InstrumentationsConfigMap = {
     "navigation": import("@opentelemetry/browser-instrumentation/experimental/navigation").NavigationInstrumentationConfig;
     "navigation-timing": import("@opentelemetry/browser-instrumentation/experimental/navigation-timing").NavigationTimingInstrumentationConfig;
@@ -43,4 +39,10 @@ export type EdotConfig = {
     disableInstrumentations?: (keyof InstrumentationsConfigMap)[] | undefined;
 };
 export type BrowserSdkConfiguration = SdkConfig & EdotConfig;
+export type BrowserSdk = {
+    shutdown: () => Promise<void>;
+    getSession: import("./session.js").SessionApi["getSession"];
+    addObserver: import("./session.js").SessionApi["addObserver"];
+    endSession: import("./session.js").SessionApi["endSession"];
+};
 export type DefaultConfigProps = "logLevel" | "serviceName" | "resourceAttributes" | "exportConfig";
