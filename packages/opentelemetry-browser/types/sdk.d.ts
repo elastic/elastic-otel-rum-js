@@ -30,7 +30,6 @@ export type SdkConfig = {
         url?: string;
         tracesUrl?: string;
         logsUrl?: string;
-        metricsUrl?: string;
         headers?: Record<string, string>;
     } | undefined;
 };

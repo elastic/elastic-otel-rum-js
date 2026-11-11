@@ -15,23 +15,25 @@ products:
 
 # Metrics, traces, and logs
 
-EDOT Browser can export all three OpenTelemetry signals (metrics, traces, and logs) to {{product.observability}} using OTLP.
+EDOT Browser exports traces and logs to {{product.observability}} using OTLP. It does not configure the metrics signal. If you need metrics, configure them separately with the OpenTelemetry Metrics SDK.
 
 ## Metrics [metrics]
 
 ### What EDOT Browser currently emits [metrics-what-is-emitted]
 
-EDOT Browser configures the OpenTelemetry MeterProvider and exports metrics over OTLP to the `/v1/metrics` path. Your application can create meters and instruments (counters, histograms, and so on) using the OpenTelemetry Metrics API. EDOT Browser exports those metrics along with any SDK-provided ones.
+EDOT Browser does not configure the OpenTelemetry MeterProvider or export metrics over OTLP. Built-in RUM data such as Core Web Vitals and page timing is emitted on the logs signal instead. Refer to [Logs](#logs) for details.
 
-Ensure your reverse proxy and OTLP endpoint accept the `/v1/metrics` path.
+If your application needs counters, histograms, or other instruments, set up a MeterProvider and OTLP metrics export yourself (for example with `@opentelemetry/sdk-metrics` and an OTLP metrics exporter). EDOT Browser does not register a global meter provider or send data to the `/v1/metrics` path.
+
+Ensure your reverse proxy and OTLP endpoint accept the `/v1/metrics` path when you add metrics export separately.
 
 ### Known limitations of browser-side metrics [metrics-limitations]
 
 - Metrics are collected in the user’s browser and represent a single session or page. There is no server-side aggregation, so each export batch reflects one client’s view.
 - Browsers have limited resources. High-cardinality or high-frequency metrics can affect performance and export payload size. Use caution with unbounded attributes (for example user IDs, dynamic URLs) on metrics.
-- Metrics are only sent when the SDK exports (for example on an interval or when the page is unloaded). Temporary or single-page sessions might produce few data points.
+- Metrics are only sent when your metrics SDK exports (for example on an interval or when the page is unloaded). Temporary or single-page sessions might produce few data points.
 - Browser environments vary (device, network, extensions). Metric values might be noisier or less consistent than server-side metrics.
-- Session sampling (`session.sampleRate`) does not disable metrics export. Application metrics and periodic SDK export continue for unsampled sessions unless you stop them in application code.
+- Session sampling (`session.sampleRate`) applies to EDOT Browser traces and logs only. If you configure metrics separately, export continues for unsampled sessions unless you gate it in application code.
 
 ## Traces [traces]
 
@@ -118,14 +120,14 @@ The sampling decision is fixed for the lifetime of a session until it rotates (i
 
 A session ends after a period without telemetry (30 minutes by default) or when it reaches its maximum duration (4 hours by default).
 
-Session attributes are not added to metrics to avoid high-cardinality attributes.
+Session attributes are not added to metrics. If you configure metrics separately, avoid attaching high-cardinality session attributes to metric points.
 
 ### Known limitations of sessions [sessions-limitations]
 
 - Sessions are stored in `localStorage` and tab identifiers in `sessionStorage`. If web storage is not available (for example storage is blocked for the site), EDOT Browser does not add session attributes, since they would not persist across page reloads.
 - Duplicating a tab copies its `sessionStorage`, so the duplicated tab reports the same `browser.tab.id` as the original one.
 - Any telemetry, including background requests, counts as activity and extends the session.
-- Sampled-out sessions do not export automatic instrumentation data. Metrics emitted through the OpenTelemetry API in application code are not gated by session sampling.
+- Sampled-out sessions do not export automatic instrumentation data. Metrics you configure separately are not gated by session sampling.
 
 ## Next steps [next-steps]
 
