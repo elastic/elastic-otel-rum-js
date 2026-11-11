@@ -5,13 +5,16 @@ import {
   EuiFieldText,
   EuiForm,
   EuiFormRow,
-  EuiPageTemplate,
   EuiSpacer,
-  EuiCallOut,
 } from '@elastic/eui';
 import { useAuth } from '../../auth/AuthContext.jsx';
+import { AuthFormLayout } from '../../components/AuthFormLayout.jsx';
+import { ValidationErrorSummary } from '../../components/ValidationErrorSummary.jsx';
+import { ErrorBanner } from '../../components/ErrorBanner.jsx';
 
 const USERNAME_RE = /^[a-zA-Z0-9_]+$/;
+
+const FIELD_LABELS = { username: 'Username', password: 'Password' };
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -40,20 +43,36 @@ export default function LoginPage() {
       await login(username.trim(), password);
       navigate('/pics');
     } catch (err) {
-      setApiError(err.data?.message || 'Login failed');
+      setApiError(err.data?.message || 'We could not sign you in.');
     }
   };
 
   const fieldError = (field) => errors.find((x) => x.field === field)?.message;
 
   return (
-    <EuiPageTemplate template="centeredBody" pageTitle="Sign in to Elaspic">
+    <AuthFormLayout title="Sign in to Elaspic">
       <EuiForm component="form" onSubmit={onSubmit}>
-        <EuiFormRow label="Username" isInvalid={!!fieldError('username')} error={fieldError('username')}>
-          <EuiFieldText value={username} onChange={(e) => setUsername(e.target.value)} autoComplete="username" />
-        </EuiFormRow>
-        <EuiFormRow label="Password" isInvalid={!!fieldError('password')} error={fieldError('password')}>
+        <ValidationErrorSummary errors={errors} fieldLabels={FIELD_LABELS} />
+        <EuiFormRow
+          label="Username"
+          helpText="Letters, numbers, and underscores only."
+          isInvalid={!!fieldError('username')}
+          error={fieldError('username')}
+        >
           <EuiFieldText
+            id="username"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            autoComplete="username"
+          />
+        </EuiFormRow>
+        <EuiFormRow
+          label="Password"
+          isInvalid={!!fieldError('password')}
+          error={fieldError('password')}
+        >
+          <EuiFieldText
+            id="password"
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
@@ -61,10 +80,9 @@ export default function LoginPage() {
           />
         </EuiFormRow>
         {apiError && (
-          <>
-            <EuiCallOut title={apiError} color="danger" iconType="alert" />
-            <EuiSpacer />
-          </>
+          <ErrorBanner title={apiError}>
+            <p>Check your username and password, then try again.</p>
+          </ErrorBanner>
         )}
         <EuiButton type="submit" fill>
           Sign in
@@ -72,6 +90,6 @@ export default function LoginPage() {
         <EuiSpacer />
         <Link to="/register">Create an account</Link>
       </EuiForm>
-    </EuiPageTemplate>
+    </AuthFormLayout>
   );
 }

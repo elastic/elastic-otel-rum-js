@@ -1,5 +1,6 @@
 import { EuiPage, EuiPageBody, EuiPageSidebar, EuiPageSection } from '@elastic/eui';
 import { Outlet, useLocation } from 'react-router-dom';
+import { useAuth } from '../auth/AuthContext.jsx';
 import { Header } from './Header.jsx';
 import { Sidebar } from './Sidebar.jsx';
 
@@ -7,10 +8,17 @@ const AUTH_HIDDEN = new Set(['/login', '/register']);
 
 export function Shell() {
   const { pathname } = useLocation();
-  const showChrome = !AUTH_HIDDEN.has(pathname);
+  const { isAuthenticated } = useAuth();
+  const isErrorRoute = pathname.startsWith('/error');
+  const showChrome =
+    !AUTH_HIDDEN.has(pathname) && (!isErrorRoute || isAuthenticated);
 
   if (!showChrome) {
-    return <Outlet />;
+    return (
+      <div className="elaspic-shell--bare">
+        <Outlet />
+      </div>
+    );
   }
 
   return (

@@ -8,6 +8,7 @@ const LoginPage = lazy(() => import('./microfrontends/login/LoginPage.jsx'));
 const RegisterPage = lazy(() => import('./microfrontends/register/RegisterPage.jsx'));
 const PicsRoutes = lazy(() => import('./microfrontends/pics/PicsRoutes.jsx'));
 const UsersRoutes = lazy(() => import('./microfrontends/users/UsersRoutes.jsx'));
+const ErrorPageRoute = lazy(() => import('./pages/ErrorPageRoute.jsx'));
 
 function Lazy({ children }) {
   return <Suspense fallback={<EuiLoadingSpinner size="xl" />}>{children}</Suspense>;
@@ -54,7 +55,15 @@ export function App() {
             </RequireAuth>
           }
         />
-        <Route path="*" element={<Navigate to="/login" replace />} />
+        <Route
+          path="error/:code"
+          element={
+            <Lazy>
+              <ErrorPageRoute />
+            </Lazy>
+          }
+        />
+        <Route path="*" element={<Navigate to="/error/404" replace />} />
       </Route>
     </Routes>
   );

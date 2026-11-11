@@ -5,14 +5,17 @@ import {
   EuiFieldText,
   EuiForm,
   EuiFormRow,
-  EuiPageTemplate,
   EuiSpacer,
-  EuiCallOut,
 } from '@elastic/eui';
 import { api } from '../../api/client.js';
+import { AuthFormLayout } from '../../components/AuthFormLayout.jsx';
+import { ValidationErrorSummary } from '../../components/ValidationErrorSummary.jsx';
+import { ErrorBanner } from '../../components/ErrorBanner.jsx';
 
 const USERNAME_RE = /^[a-zA-Z0-9_]+$/;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const FIELD_LABELS = { username: 'Username', email: 'Email', password: 'Password' };
 
 export default function RegisterPage() {
   const navigate = useNavigate();
@@ -48,29 +51,48 @@ export default function RegisterPage() {
       await api.register({ username: username.trim(), email: email.trim(), password });
       navigate('/login');
     } catch (err) {
-      setApiError(err.data?.message || 'Registration failed');
+      setApiError(err.data?.message || 'We could not create your account.');
     }
   };
 
   const fieldError = (field) => errors.find((x) => x.field === field)?.message;
 
   return (
-    <EuiPageTemplate template="centeredBody" pageTitle="Register">
+    <AuthFormLayout title="Register">
       <EuiForm component="form" onSubmit={onSubmit}>
-        <EuiFormRow label="Username" isInvalid={!!fieldError('username')} error={fieldError('username')}>
-          <EuiFieldText value={username} onChange={(e) => setUsername(e.target.value)} />
+        <ValidationErrorSummary errors={errors} fieldLabels={FIELD_LABELS} />
+        <EuiFormRow
+          label="Username"
+          helpText="Letters, numbers, and underscores only."
+          isInvalid={!!fieldError('username')}
+          error={fieldError('username')}
+        >
+          <EuiFieldText id="username" value={username} onChange={(e) => setUsername(e.target.value)} />
         </EuiFormRow>
-        <EuiFormRow label="Email" isInvalid={!!fieldError('email')} error={fieldError('email')}>
-          <EuiFieldText value={email} onChange={(e) => setEmail(e.target.value)} />
+        <EuiFormRow
+          label="Email"
+          isInvalid={!!fieldError('email')}
+          error={fieldError('email')}
+        >
+          <EuiFieldText id="email" value={email} onChange={(e) => setEmail(e.target.value)} />
         </EuiFormRow>
-        <EuiFormRow label="Password" isInvalid={!!fieldError('password')} error={fieldError('password')}>
-          <EuiFieldText type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+        <EuiFormRow
+          label="Password"
+          helpText="At least 10 characters."
+          isInvalid={!!fieldError('password')}
+          error={fieldError('password')}
+        >
+          <EuiFieldText
+            id="password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
         </EuiFormRow>
         {apiError && (
-          <>
-            <EuiCallOut title={apiError} color="danger" iconType="alert" />
-            <EuiSpacer />
-          </>
+          <ErrorBanner title={apiError}>
+            <p>Review the messages below, update any fields if needed, and submit again.</p>
+          </ErrorBanner>
         )}
         <EuiButton type="submit" fill>
           Register
@@ -78,6 +100,6 @@ export default function RegisterPage() {
         <EuiSpacer />
         <Link to="/login">Back to sign in</Link>
       </EuiForm>
-    </EuiPageTemplate>
+    </AuthFormLayout>
   );
 }

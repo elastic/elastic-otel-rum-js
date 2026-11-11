@@ -10,6 +10,7 @@ import {
   EuiText,
 } from '@elastic/eui';
 import { useAuth } from '../auth/AuthContext.jsx';
+import { ErrorBanner } from './ErrorBanner.jsx';
 
 export function CommentPanel({
   loadComments,
@@ -23,34 +24,43 @@ export function CommentPanel({
   const [editingId, setEditingId] = useState(null);
   const [editText, setEditText] = useState('');
   const [error, setError] = useState(null);
+  const [retryLoad, setRetryLoad] = useState(null);
 
   const refresh = async () => {
     const { data } = await loadComments();
     setComments(data);
+    setError(null);
+    setRetryLoad(null);
   };
 
   useEffect(() => {
-    refresh().catch(() => setError('Failed to load comments'));
+    refresh().catch(() => {
+      setError('We could not load comments.');
+      setRetryLoad(() => () => refresh().catch(() => setError('We could not load comments.')));
+    });
   }, []);
 
   const onAdd = async () => {
     setError(null);
+    setRetryLoad(null);
     try {
       await postComment(text);
       setText('');
       await refresh();
     } catch (e) {
-      setError(e.data?.message || 'Could not add comment');
+      setError(e.data?.message || 'We could not post your comment.');
     }
   };
 
   const onSaveEdit = async () => {
+    setError(null);
+    setRetryLoad(null);
     try {
       await putComment(editingId, editText);
       setEditingId(null);
       await refresh();
     } catch (e) {
-      setError(e.data?.message || 'Could not update comment');
+      setError(e.data?.message || 'We could not save your comment.');
     }
   };
 
@@ -76,8 +86,10 @@ export function CommentPanel({
             <EuiSpacer size="s" />
             <EuiFieldText value={editText} onChange={(e) => setEditText(e.target.value)} fullWidth />
             <EuiSpacer size="s" />
-            <EuiButton size="s" onClick={onSaveEdit}>Save</EuiButton>
-            <EuiButtonEmpty size="s" onClick={() => setEditingId(null)}>Cancel</EuiButtonEmpty>
+            <EuiButton fill onClick={onSaveEdit}>
+              Save comment
+            </EuiButton>{' '}
+            <EuiButtonEmpty onClick={() => setEditingId(null)}>Cancel</EuiButtonEmpty>
           </>
         )}
       </>
@@ -90,20 +102,20 @@ export function CommentPanel({
         <h3>Comments</h3>
       </EuiText>
       <EuiSpacer />
+      {error && (
+        <ErrorBanner title={error} onRetry={retryLoad ?? undefined}>
+          <p>{retryLoad ? 'There may be a temporary connection issue.' : 'Your text is still here — try again when you are ready.'}</p>
+        </ErrorBanner>
+      )}
       <EuiCommentList comments={list} />
       <EuiSpacer size="l" />
       <EuiForm>
         <EuiFormRow label="Add comment" fullWidth>
           <EuiFieldText value={text} onChange={(e) => setText(e.target.value)} fullWidth />
         </EuiFormRow>
-        {error && (
-          <EuiText color="danger" size="s">
-            {error}
-          </EuiText>
-        )}
         <EuiSpacer />
         <EuiButton onClick={onAdd} fill>
-          Post
+          Post comment
         </EuiButton>
       </EuiForm>
     </>
