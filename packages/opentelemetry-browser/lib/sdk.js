@@ -7,12 +7,6 @@ import {diag, DiagLogLevel, metrics, trace} from '@opentelemetry/api';
 import {logs} from '@opentelemetry/api-logs';
 import {startLogsSdk} from '@opentelemetry/browser-sdk/logs';
 import {startTracesSdk} from '@opentelemetry/browser-sdk/traces';
-import {OTLPMetricExporter} from '@opentelemetry/exporter-metrics-otlp-http';
-import {resourceFromAttributes} from '@opentelemetry/resources';
-import {
-    MeterProvider,
-    PeriodicExportingMetricReader,
-} from '@opentelemetry/sdk-metrics';
 
 import {NavigationInstrumentation} from '@opentelemetry/browser-instrumentation/experimental/navigation';
 import {NavigationTimingInstrumentation} from '@opentelemetry/browser-instrumentation/experimental/navigation-timing';
@@ -63,7 +57,7 @@ import {EDOT_VERSION, OTEL_BROWSER_INSTRUMENTATION_VERSION} from './version.js';
  * @property {string} [serviceName]
  * @property {string} [serviceVersion]
  * @property {import('@opentelemetry/api').Attributes} [resourceAttributes]
- * @property {{url?: string; tracesUrl?: string; logsUrl?: string; metricsUrl?: string; headers?: Record<string, string>}} [exportConfig]
+ * @property {{url?: string; tracesUrl?: string; logsUrl?: string; headers?: Record<string, string>}} [exportConfig]
  */
 
 /**
@@ -148,10 +142,10 @@ export function startBrowserSdk(cfg = {}) {
         diag.error(`${/** @type {Error} */ (urlErr).message} SDK won't start.`);
         return NOOP_SDK;
     }
-    const {tracesUrl, logsUrl, metricsUrl} = exportUrls;
+    const {tracesUrl, logsUrl} = exportUrls;
     // - ignoreFetchUrls and resolving all URLs to ignore
     /** @type {Array<string | RegExp>} */
-    const ignoreFetchUrls = [tracesUrl, logsUrl, metricsUrl];
+    const ignoreFetchUrls = [tracesUrl, logsUrl];
     if (config.ignoreFetchUrls) {
         /**
          * @param {unknown} i
@@ -287,20 +281,6 @@ export function startBrowserSdk(cfg = {}) {
         };
     }
 
-    // metrics signal configuration
-    // possible `startMetricsSdk` function
-    const metricsReader = new PeriodicExportingMetricReader({
-        exporter: new OTLPMetricExporter({
-            url: metricsUrl,
-            headers: config.exportConfig.headers,
-        }),
-    });
-    const meterProvider = new MeterProvider({
-        resource: resourceFromAttributes(resourceAttributes),
-        readers: [metricsReader],
-    });
-    metrics.setGlobalMeterProvider(meterProvider);
-
     // Start eagerly so `session.start` is emitted on load rather than with
     // the first piece of telemetry.
     sessionManager?.start();
@@ -412,7 +392,6 @@ export function startBrowserSdk(cfg = {}) {
         const {name, instr} = entry;
         instr.setLoggerProvider?.(loggerProvider);
         instr.setTracerProvider(tracerProvider);
-        instr.setMeterProvider(meterProvider);
         instr.enable();
         if (
             disableInstrumentations.has(name) ||
@@ -434,7 +413,6 @@ export function startBrowserSdk(cfg = {}) {
             return Promise.allSettled([
                 tracesSdk.shutdown(),
                 logsSdk.shutdown(),
-                meterProvider.shutdown(),
             ]).then((results) => {
                 for (const res of results) {
                     if (res.status === 'rejected') {

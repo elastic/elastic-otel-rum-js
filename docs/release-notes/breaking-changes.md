@@ -15,8 +15,6 @@ products:
 
 Breaking changes can impact your applications, potentially disrupting normal operations. Before you upgrade, carefully review the {{edot}} breaking changes and take the necessary steps to mitigate any issues.
 
-% ## Next version [edot-browser-X.X.X-breaking-changes]
-
 % Use the following template to add entries to this document.
 
 % TEMPLATE START
@@ -27,6 +25,20 @@ Breaking changes can impact your applications, potentially disrupting normal ope
 % Refer to [PR #](PR link).
 % ::::
 % TEMPLATE END
+
+## version.next [edot-browser-X.X.X-breaking-changes]
+
+::::{dropdown} Removal of the metrics signal
+EDOT Browser no longer configures the OpenTelemetry MeterProvider or exports metrics over OTLP. The `exportConfig.metricsUrl` option is removed. Built-in RUM data such as Core Web Vitals and page timing continues on the logs signal.
+**Impact**<br>
+- Application metrics created with the OpenTelemetry Metrics API (`metrics.getMeter()`, counters, histograms, and so on) are no longer exported to `/v1/metrics`.
+- TypeScript users see a compilation error if they still set `exportConfig.metricsUrl`.
+- At runtime, `exportConfig.metricsUrl` is ignored.
+**Action**<br>
+- Remove `exportConfig.metricsUrl` from your configuration.
+- If you need the metrics signal, configure a MeterProvider and OTLP metrics export separately with the OpenTelemetry Metrics SDK.
+- Update dashboards or pipelines that expected OTLP metrics from EDOT Browser. Built-in RUM measurements remain available as log records; refer to [Metrics, traces, and logs](../reference/edot-browser/telemetry.md).
+::::
 
 ## 0.4.0 [edot-browser-0-4-0-breaking-changes]
 
