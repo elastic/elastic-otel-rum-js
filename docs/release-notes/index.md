@@ -51,6 +51,8 @@ To check for security updates, go to [Security announcements for the Elastic sta
 
 ### Fixes [edot-browser-X.X.X-fixes]
 
+* Fix cross-tab session handling when another tab calls `endSession()` while this tab is within the activity read throttle. Tabs listen for `storage` events on the shared session key so `onSessionEnded` runs promptly and the next user activity can start a new session.
+  Ref: https://github.com/elastic/elastic-otel-rum-js/issues/176
 * Fix export URLs when `exportConfig.url` has no trailing slash. The path separator was missing, so `https://example.com/api` exported to `https://example.com/apiv1/traces`.
   Ref: https://github.com/elastic/elastic-otel-rum-js/issues/168
 
