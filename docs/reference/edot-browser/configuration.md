@@ -65,6 +65,46 @@ startBrowserSdk({
 - `exportConfig.url` points to a reverse proxy, not directly to {{product.observability}}.
 - `logLevel` controls diagnostic output in the browser console.
 
+## Data stream routing [data-stream-routing]
+
+EDOT Browser sets `data_stream.dataset` to `browser` on the resource used for traces, logs, and metrics.
+
+If the dataset is absent, `undefined`, or `null`, the SDK uses `browser`. Set a valid dataset string in `resourceAttributes` to override this default. Other resource attributes do not remove the default.
+
+With the default Elastic OTel-native data stream routing, Elastic ingest uses these streams:
+
+| Signal | Data stream |
+|--------|-------------|
+| Traces | `traces-browser.otel-<namespace>` |
+| Logs | `logs-browser.otel-<namespace>` |
+| Metrics | `metrics-browser.otel-<namespace>` |
+
+The namespace is `default` unless another value is configured. Scope or record routing attributes can override resource routing attributes. Other ingest routing settings can also change the destination. For example, a fixed destination in the Elasticsearch exporter overrides dataset routing. Refer to [Data stream routing](docs-content://solutions/observability/apm/opentelemetry/data-stream-routing.md).
+
+To separate production data, set `data_stream.namespace` to `production`. You do not need to set the dataset:
+
+```js
+import { startBrowserSdk } from '@elastic/opentelemetry-browser';
+
+startBrowserSdk({
+  serviceName: 'my-web-app',
+  exportConfig: { url: 'https://telemetry.example.com' },
+  resourceAttributes: {
+    'data_stream.namespace': 'production',
+  },
+});
+```
+
+To retain the previous default dataset, set `data_stream.dataset` to `generic` in `resourceAttributes`:
+
+```js
+resourceAttributes: {
+  'data_stream.dataset': 'generic',
+}
+```
+
+Supply the dataset without the `.otel` suffix. Elastic ingest adds the suffix when it uses OTel-native data stream routing. Custom datasets can affect dashboards and integrations. Before you use another dataset, refer to [Custom data stream routing](elastic-agent://reference/edot-collector/config/custom-data-streams.md).
+
 ## Supported configuration settings [supported-configuration-settings]
 
 Configuration is passed as an object to `startBrowserSdk`. The following options are supported:
@@ -74,7 +114,7 @@ Configuration is passed as an object to `startBrowserSdk`. The following options
 | `serviceName`         | `string`                 | Logical name of the frontend service. Defaults to `unknown_service:web` if not set. |
 | `serviceVersion`      | `string`                 | Version of the application. Optional. |
 | `logLevel` | `"none" \| "error" \| "warn" \| "info" \| "debug" \| "verbose" \| "all"` | Diagnostic log level for the SDK internal logger. Defaults to `info`. Values are lowercase; the SDK accepts them case-insensitively. |
-| `resourceAttributes`  | `Record<string, any>`    | Optional resource attributes to attach to telemetry. For example: `{ 'deployment.environment.name': 'production' }`. |
+| `resourceAttributes`  | `Record<string, any>`    | Optional resource attributes to attach to telemetry. The dataset defaults to `browser`. Refer to [Data stream routing](#data-stream-routing) for defaults and overrides. |
 | `disabled`            | `boolean`                | If `true`, the SDK does not start. |
 | `instrumentations`    | `Record<string, Object>` | **Not recommended.** Advanced per-instrumentation config passed through to upstream OpenTelemetry Browser instrumentations. EDOT Browser logs a warning when this option is set. Refer to [instrumentations details](#otel_browser_instrumentations-details). |
 | `session`             | `{ sampleRate?: number; inactivityTimeout?: number; maxDuration?: number; activityEvents?: string[] }` | Session tracking and session-level sampling. Refer to [session details](#otel_browser_session-details) for more information. |
