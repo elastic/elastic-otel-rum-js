@@ -163,7 +163,7 @@ Pass an array of instrumentation keys (the same strings as the **Key** column in
 
 - The value must be an array of strings. Other shapes log a warning in the browser console and are ignored.
 - If a string is not a known instrumentation key, EDOT Browser logs a warning and skips that entry.
-- If you set both `disableInstrumentations` and `instrumentations` for the same key, `disableInstrumentations` takes precedence. For example, `disableInstrumentations: ['resource-timing']` keeps resource timing disabled even when `instrumentations['resource-timing']` sets `enabled: true`.
+- If you set both `disableInstrumentations` and `instrumentations` for the same key, `disableInstrumentations` takes precedence. For example, `disableInstrumentations: ['resource-timing']` keeps resource timing disabled even when you also pass other configuration under `instrumentations['resource-timing']`.
 
 ```js
 import { startBrowserSdk } from '@elastic/opentelemetry-browser';

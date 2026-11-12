@@ -378,6 +378,7 @@ export function startBrowserSdk(cfg = {}) {
         }
     }
 
+    /** @type {Array<{name: string, instr: import('@opentelemetry/browser-sdk').Instrumentation}>} */
     const instrEntries = Object.entries(instrFactoriesMap).map(
         ([name, factory]) => {
             const instr = factory(instrConfigMap[name]);
@@ -386,17 +387,11 @@ export function startBrowserSdk(cfg = {}) {
     );
 
     // Does the same as `registerInstrumentations` form upstream at the end
-    // disabling the ones with { enabled: false } in configuration or present
-    // in `disableInstrumentations`
+    // disabling the present in `disableInstrumentations`
     for (const entry of instrEntries) {
         const {name, instr} = entry;
-        instr.setLoggerProvider?.(loggerProvider);
-        instr.setTracerProvider(tracerProvider);
         instr.enable();
-        if (
-            disableInstrumentations.has(name) ||
-            instr.getConfig().enabled === false
-        ) {
+        if (disableInstrumentations.has(name)) {
             instr.disable();
         }
     }
