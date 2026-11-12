@@ -40,6 +40,17 @@ EDOT Browser no longer configures the OpenTelemetry MeterProvider or exports met
 - Update dashboards or pipelines that expected OTLP metrics from EDOT Browser. Built-in RUM measurements remain available as log records; refer to [Metrics, traces, and logs](../reference/edot-browser/telemetry.md).
 ::::
 
+::::{dropdown} Removal of `enabled` in instrumentation configuration
+With the update to `@opentelemetry/browser-instrumentation` 0.11.0, per-instrumentation configuration objects no longer support an `enabled` option. EDOT Browser always registers the built-in instrumentations and uses `disableInstrumentations` to turn off selected defaults.
+**Impact**<br>
+- TypeScript users see a compilation error if `instrumentations` entries still include `enabled`.
+- At runtime, `enabled: false` is ignored and the instrumentation keeps running unless its key is listed in `disableInstrumentations`.
+- Other options under `instrumentations['<key>']` continue to apply when the instrumentation is enabled.
+**Action**<br>
+- Replace patterns such as `instrumentations: { 'web-vitals': { enabled: false } }` with `disableInstrumentations: ['web-vitals']`.
+- Use `instrumentations` only for upstream passthrough options, not to enable or disable defaults. Refer to [Configure EDOT Browser](../reference/edot-browser/configuration.md#otel_browser_disableinstrumentations-details).
+::::
+
 ## 0.4.0 [edot-browser-0-4-0-breaking-changes]
 
 ::::{dropdown} Session sampling replaces root `sampleRate`
