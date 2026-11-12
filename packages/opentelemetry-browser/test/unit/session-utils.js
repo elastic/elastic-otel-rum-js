@@ -8,6 +8,7 @@ import nodeCrypto from 'node:crypto';
 import {diag, DiagLogLevel} from '@opentelemetry/api';
 
 import {SessionManager} from '../../lib/session/manager.js';
+import {SESSION_STORAGE_KEY} from '../../lib/session/storage.js';
 
 export const UUID_V4 =
     /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
@@ -23,6 +24,7 @@ export function ensureSessionStorageWindow() {
         globalThis.crypto = nodeCrypto.webcrypto;
     }
     const existing = globalThis.window;
+    // @ts-ignore
     if (existing?.addEventListener && mockWindows.has(existing)) {
         return existing;
     }
@@ -47,9 +49,7 @@ export function ensureSessionStorageWindow() {
         ) {
             listeners.get(type)?.delete(fn);
         },
-        dispatchEvent(
-            /** @type {{type: string} & Record<string, unknown>} */ event
-        ) {
+        dispatchEvent(/** @type {Event} */ event) {
             const set = listeners.get(event.type);
             set?.forEach((fn) => fn(/** @type {Event} */ (event)));
             return true;
@@ -73,7 +73,8 @@ export function dispatchSessionStorage(
     const win = ensureSessionStorageWindow();
     win.dispatchEvent({
         type: 'storage',
-        key: 'elastic_otel_browser.session',
+        // @ts-ignore
+        key: SESSION_STORAGE_KEY,
         newValue,
         oldValue,
         storageArea: sessionStorage,
