@@ -45,7 +45,7 @@ export function trackSessionStorageChanges(sessionStorage, onRemoteChange) {
         if (event.storageArea !== sessionStorage) {
             return;
         }
-        if (event.key !== SESSION_STORAGE_KEY) {
+        if (event.key !== SESSION_STORAGE_KEY && event.key !== null) {
             return;
         }
         onRemoteChange(event.newValue);
