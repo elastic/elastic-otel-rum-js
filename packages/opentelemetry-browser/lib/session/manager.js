@@ -22,6 +22,11 @@ import {
 import {SessionObservers} from './observers.js';
 import {SessionSampler} from './sampler.js';
 import {sessionToAttributes} from './state.js';
+import {
+    sessionFromStorageEvent,
+    shouldSyncSessionFromStorage,
+    trackSessionStorageChanges,
+} from './cross-tab.js';
 import {getOrCreateTabId, getStorage, SessionStore} from './storage.js';
 
 /** @typedef {import('./config.js').SessionConfig} SessionConfig */
@@ -62,6 +67,10 @@ export class SessionManager {
         this._lastActivityCheck = 0;
         this._stopped = false;
         this._tabId = getOrCreateTabId(opts.tabStorage);
+        this._stopStorageSync = trackSessionStorageChanges(
+            opts.sessionStorage,
+            (newValue) => this._onRemoteSessionStorage(newValue)
+        );
     }
 
     /**
@@ -136,8 +145,8 @@ export class SessionManager {
 
     /**
      * Callbacks run synchronously, in registration order. `onSessionEnded`
-     * is reported by an expiry timer, or on the next read if the timer was
-     * throttled (background tabs) or the session was replaced by another tab.
+     * is reported by an expiry timer, on the next read, or when another tab
+     * updates shared session storage and this tab handles a `storage` event.
      * @param {SessionObserver} observer
      * @returns {() => void} unsubscribe
      */
@@ -154,6 +163,7 @@ export class SessionManager {
         this._expiry.clear();
         this._observers.clear();
         this._announced = undefined;
+        this._stopStorageSync();
     }
 
     getTabId() {
@@ -259,6 +269,21 @@ export class SessionManager {
                 this._scheduleExpiryCheck(current);
             }
         });
+    }
+
+    /**
+     * @param {string | null} newValue `storage` event payload from another tab
+     */
+    _onRemoteSessionStorage(newValue) {
+        if (this._stopped) {
+            return;
+        }
+        const stored = sessionFromStorageEvent(newValue);
+        if (!shouldSyncSessionFromStorage(stored, this._announced)) {
+            return;
+        }
+        this._lastActivityCheck = 0;
+        this._resolve(this._now(), {extend: false, renew: false});
     }
 }
 

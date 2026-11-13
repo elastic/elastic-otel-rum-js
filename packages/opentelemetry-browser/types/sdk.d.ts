@@ -26,7 +26,6 @@ export type SdkConfig = {
         url?: string;
         tracesUrl?: string;
         logsUrl?: string;
-        metricsUrl?: string;
         headers?: Record<string, string>;
     } | undefined;
 };
@@ -43,8 +42,6 @@ export type EdotConfig = {
 export type BrowserSdkConfiguration = SdkConfig & EdotConfig;
 export type BrowserSdk = {
     shutdown: () => Promise<void>;
-    setUser: import("./user.js").UserApi["setUser"];
-    clearUser: import("./user.js").UserApi["clearUser"];
     getSession: import("./session.js").SessionApi["getSession"];
     addObserver: import("./session.js").SessionApi["addObserver"];
     endSession: import("./session.js").SessionApi["endSession"];

@@ -17,7 +17,13 @@ import {
     SESSION_STORAGE_KEY,
     TAB_STORAGE_KEY,
 } from '../../lib/session/storage.js';
-import {UUID_V4, MemoryStorage, setup, observe} from './session-utils.js';
+import {
+    UUID_V4,
+    MemoryStorage,
+    dispatchSessionStorage,
+    setup,
+    observe,
+} from './session-utils.js';
 
 test('SessionManager - start creates and persists a session', () => {
     const {create, started, sessionStorage} = setup();
@@ -900,6 +906,40 @@ test('SessionManager - endSession ends the session in every tab', () => {
     const second = tabB.getSession();
     assert.strictEqual(second?.previousId, first?.id);
     assert.strictEqual(tabA.getSession()?.id, second?.id);
+});
+
+test('SessionManager - renews after another tab endSession within the activity throttle', () => {
+    const {createStarted, clock, sessionStorage, started} = setup();
+    const tabA = createStarted();
+    const tabB = createStarted(new MemoryStorage());
+    const first = tabA.getSession();
+    const {calls, previous} = observe(tabB);
+
+    clock.now += 1_000;
+    tabB.recordActivity();
+
+    tabA.endSession();
+    dispatchSessionStorage(
+        sessionStorage,
+        sessionStorage.getItem(SESSION_STORAGE_KEY)
+    );
+
+    assert.deepStrictEqual(calls, [`ended:${first?.id}`]);
+    assert.strictEqual(tabB.getSession(), undefined);
+
+    clock.now += 1_000;
+    tabB.recordActivity();
+
+    const second = tabB.getSession();
+    assert.ok(second);
+    assert.notStrictEqual(second.id, first?.id);
+    assert.strictEqual(second.previousId, first?.id);
+    assert.deepStrictEqual(calls, [
+        `ended:${first?.id}`,
+        `started:${second.id}`,
+    ]);
+    assert.strictEqual(previous[0]?.id, first?.id);
+    assert.strictEqual(started.length, 2);
 });
 
 test('SessionManager - endSession does nothing without an active session', () => {

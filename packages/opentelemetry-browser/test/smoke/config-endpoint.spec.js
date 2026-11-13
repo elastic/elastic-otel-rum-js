@@ -68,7 +68,6 @@ test('should send each signal to its own configured URL', async ({page}) => {
             exportConfig: {
                 tracesUrl: 'http://collector:4318/custom/t',
                 logsUrl: 'http://collector:4318/custom/l',
-                metricsUrl: 'http://collector:4318/custom/m',
             },
         })
     );
