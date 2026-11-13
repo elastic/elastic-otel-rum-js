@@ -5,6 +5,7 @@
 
 import {describeInjectionError} from './injection-status.js';
 import {findWebsiteForUrl} from './match-host.js';
+import {getCollectorById} from './storage/collectors.js';
 import {getWebsites, setWebsiteInjectionStatus} from './storage.js';
 
 /** @typedef {import('./types/websites.js').EdotInjectConfig} EdotInjectConfig */
@@ -14,15 +15,16 @@ const tabsBeingInjected = new Set();
 
 /**
  * @param {MonitoredWebsite} website
+ * @param {import('./types/collectors.js').Collector} collector
  * @returns {EdotInjectConfig}
  */
-function toInjectConfig(website) {
+function toInjectConfig(website, collector) {
     return {
         websiteId: website.id,
         host: website.host,
         version: website.version,
-        endpoint: website.endpoint,
-        api_key: website.api_key,
+        endpoint: collector.url,
+        api_key: collector.api_key,
         service_name: website.service_name,
         service_version: website.service_version,
     };
@@ -93,7 +95,17 @@ async function maybeInjectForTab(tabId, url) {
         return;
     }
 
-    await injectEdot(tabId, toInjectConfig(website));
+    const collector = await getCollectorById(website.collector_id);
+    if (!collector) {
+        await setWebsiteInjectionStatus(
+            website.id,
+            'failed',
+            'No collector found for this website.'
+        );
+        return;
+    }
+
+    await injectEdot(tabId, toInjectConfig(website, collector));
 }
 
 /**
@@ -113,7 +125,10 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 });
 
 chrome.storage.onChanged.addListener((changes, areaName) => {
-    if (areaName !== 'local' || !changes.monitoredWebsites) {
+    if (areaName !== 'local') {
+        return;
+    }
+    if (!changes.monitoredWebsites && !changes.collectors) {
         return;
     }
     void (async () => {

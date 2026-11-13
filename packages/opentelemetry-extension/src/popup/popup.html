@@ -15,121 +15,245 @@
   <body class="euiBody">
     <main class="euiPage">
       <header class="euiPageHeader">
-        <h1 class="euiTitle euiTitle--m">Monitored websites</h1>
+        <h1 class="euiTitle euiTitle--m">EDOT Browser Monitor</h1>
         <p class="euiText euiText--s euiTextColor--subdued">
-          Inject EDOT Browser when a tab matches the configured host.
+          Configure OTLP collectors and monitored websites.
         </p>
       </header>
 
-      <div class="euiPanel euiPanel--paddingMedium" role="region" aria-label="Website configuration">
-        <h2 class="euiTitle euiTitle--s">Add or edit entry</h2>
-
-        <form id="website-form" class="euiForm" autocomplete="off">
-          <input type="hidden" id="website-id" name="id" value="" />
-
-          <div class="euiFormRow">
-            <label class="euiFormLabel" for="host">Host</label>
-            <div class="euiFormControlLayout">
-              <input
-                class="euiFieldText"
-                id="host"
-                name="host"
-                type="text"
-                placeholder="example.com"
-                required
-              />
-            </div>
-          </div>
-
-          <div class="euiFormRow">
-            <label class="euiFormLabel" for="version">EDOT version</label>
-            <div class="euiFormControlLayout">
-              <input
-                class="euiFieldText"
-                id="version"
-                name="version"
-                type="text"
-                placeholder="0.4.0"
-                required
-              />
-            </div>
-          </div>
-
-          <div class="euiFormRow">
-            <label class="euiFormLabel" for="endpoint">OTLP endpoint</label>
-            <div class="euiFormControlLayout">
-              <input
-                class="euiFieldText"
-                id="endpoint"
-                name="endpoint"
-                type="url"
-                placeholder="https://…/otlp"
-                required
-              />
-            </div>
-          </div>
-
-          <div class="euiFormRow">
-            <label class="euiFormLabel" for="api_key">API key</label>
-            <div class="euiFormControlLayout">
-              <input
-                class="euiFieldText"
-                id="api_key"
-                name="api_key"
-                type="password"
-                placeholder="ApiKey value"
-                required
-              />
-            </div>
-          </div>
-
-          <div class="euiFormRow">
-            <label class="euiFormLabel" for="service_name">Service name</label>
-            <div class="euiFormControlLayout">
-              <input
-                class="euiFieldText"
-                id="service_name"
-                name="service_name"
-                type="text"
-                placeholder="my-service"
-                required
-              />
-            </div>
-          </div>
-
-          <div class="euiFormRow">
-            <label class="euiFormLabel" for="service_version">Service version</label>
-            <div class="euiFormControlLayout">
-              <input
-                class="euiFieldText"
-                id="service_version"
-                name="service_version"
-                type="text"
-                placeholder="0.0.1"
-                required
-              />
-            </div>
-          </div>
-
-          <div class="euiFlexGroup euiFlexGroup--gutterMedium euiFormRow--compressed">
-            <div class="euiFlexItem euiFlexItem--growZero">
-              <button type="submit" id="save-btn" class="euiButton euiButton--fill euiButton--primary">
-                Save website
-              </button>
-            </div>
-            <div class="euiFlexItem euiFlexItem--growZero">
-              <button type="button" id="reset-btn" class="euiButton euiButton--empty euiButton--primary">
-                Clear form
-              </button>
-            </div>
-          </div>
-        </form>
+      <div class="euiTabs" role="tablist" aria-label="Configuration views">
+        <button
+          type="button"
+          id="tab-collectors"
+          class="euiTab"
+          role="tab"
+          aria-controls="panel-collectors"
+          aria-selected="false"
+        >
+          Collectors
+        </button>
+        <button
+          type="button"
+          id="tab-websites"
+          class="euiTab euiTab--selected"
+          role="tab"
+          aria-controls="panel-websites"
+          aria-selected="true"
+        >
+          Websites
+        </button>
       </div>
 
-      <section class="euiPageSection" aria-labelledby="saved-entries-heading">
-        <h2 id="saved-entries-heading" class="euiTitle euiTitle--s">Saved entries</h2>
-        <ul id="website-list" class="euiList"></ul>
-      </section>
+      <div id="panel-collectors" class="euiTabPanel" role="tabpanel" hidden>
+        <div class="euiPanel euiPanel--paddingMedium" role="region" aria-label="Collector configuration">
+          <h2 class="euiTitle euiTitle--s">Add or edit collector</h2>
+
+          <form id="collector-form" class="euiForm" autocomplete="off">
+            <input type="hidden" id="collector-id" name="id" value="" />
+
+            <div class="euiFormRow">
+              <label class="euiFormLabel" for="collector-name">Name</label>
+              <div class="euiFormControlLayout">
+                <input
+                  class="euiFieldText"
+                  id="collector-name"
+                  name="name"
+                  type="text"
+                  placeholder="Production EU"
+                  required
+                />
+              </div>
+            </div>
+
+            <div class="euiFormRow">
+              <label class="euiFormLabel" for="collector-url">OTLP URL</label>
+              <div class="euiFormControlLayout">
+                <input
+                  class="euiFieldText"
+                  id="collector-url"
+                  name="url"
+                  type="url"
+                  placeholder="https://…/otlp"
+                  required
+                />
+              </div>
+            </div>
+
+            <div class="euiFormRow">
+              <label class="euiFormLabel" for="collector-logs-url">Logs URL</label>
+              <div class="euiFormControlLayout">
+                <input
+                  class="euiFieldText"
+                  id="collector-logs-url"
+                  name="logs_url"
+                  type="url"
+                  placeholder="Optional"
+                />
+              </div>
+            </div>
+
+            <div class="euiFormRow">
+              <label class="euiFormLabel" for="collector-traces-url">Traces URL</label>
+              <div class="euiFormControlLayout">
+                <input
+                  class="euiFieldText"
+                  id="collector-traces-url"
+                  name="traces_url"
+                  type="url"
+                  placeholder="Optional"
+                />
+              </div>
+            </div>
+
+            <div class="euiFormRow">
+              <label class="euiFormLabel" for="collector-api-key">API key</label>
+              <div class="euiFormControlLayout">
+                <input
+                  class="euiFieldText"
+                  id="collector-api-key"
+                  name="api_key"
+                  type="password"
+                  placeholder="ApiKey value"
+                  required
+                />
+              </div>
+            </div>
+
+            <div class="euiFlexGroup euiFlexGroup--gutterMedium euiFormRow--compressed">
+              <div class="euiFlexItem euiFlexItem--growZero">
+                <button type="submit" class="euiButton euiButton--fill euiButton--primary">
+                  Save collector
+                </button>
+              </div>
+              <div class="euiFlexItem euiFlexItem--growZero">
+                <button
+                  type="button"
+                  id="collector-reset-btn"
+                  class="euiButton euiButton--empty euiButton--primary"
+                >
+                  Clear form
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <section class="euiPageSection" aria-labelledby="collector-entries-heading">
+          <h2 id="collector-entries-heading" class="euiTitle euiTitle--s">Saved collectors</h2>
+          <ul id="collector-list" class="euiList"></ul>
+        </section>
+      </div>
+
+      <div id="panel-websites" class="euiTabPanel" role="tabpanel">
+        <div class="euiPanel euiPanel--paddingMedium" role="region" aria-label="Website configuration">
+          <h2 class="euiTitle euiTitle--s">Add or edit website</h2>
+
+          <p id="no-collectors-hint" class="euiText euiText--s euiTextColor--subdued" hidden>
+            Add at least one collector before saving a website.
+            <button type="button" class="euiLinkButton" data-switch-tab>Go to Collectors</button>
+          </p>
+
+          <form id="website-form" class="euiForm" autocomplete="off">
+            <input type="hidden" id="website-id" name="id" value="" />
+
+            <div class="euiFormRow">
+              <label class="euiFormLabel" for="collector-id-select">Collector</label>
+              <div class="euiFormControlLayout">
+                <select
+                  class="euiFieldSelect"
+                  id="collector-id-select"
+                  name="collector_id"
+                  required
+                >
+                  <option value="" disabled selected>Select a collector</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="euiFormRow">
+              <label class="euiFormLabel" for="host">Host</label>
+              <div class="euiFormControlLayout">
+                <input
+                  class="euiFieldText"
+                  id="host"
+                  name="host"
+                  type="text"
+                  placeholder="example.com"
+                  required
+                />
+              </div>
+            </div>
+
+            <div class="euiFormRow">
+              <label class="euiFormLabel" for="version">EDOT version</label>
+              <div class="euiFormControlLayout">
+                <input
+                  class="euiFieldText"
+                  id="version"
+                  name="version"
+                  type="text"
+                  placeholder="0.4.0"
+                  required
+                />
+              </div>
+            </div>
+
+            <div class="euiFormRow">
+              <label class="euiFormLabel" for="service_name">Service name</label>
+              <div class="euiFormControlLayout">
+                <input
+                  class="euiFieldText"
+                  id="service_name"
+                  name="service_name"
+                  type="text"
+                  placeholder="my-service"
+                  required
+                />
+              </div>
+            </div>
+
+            <div class="euiFormRow">
+              <label class="euiFormLabel" for="service_version">Service version</label>
+              <div class="euiFormControlLayout">
+                <input
+                  class="euiFieldText"
+                  id="service_version"
+                  name="service_version"
+                  type="text"
+                  placeholder="0.0.1"
+                  required
+                />
+              </div>
+            </div>
+
+            <div class="euiFlexGroup euiFlexGroup--gutterMedium euiFormRow--compressed">
+              <div class="euiFlexItem euiFlexItem--growZero">
+                <button
+                  type="submit"
+                  id="website-save-btn"
+                  class="euiButton euiButton--fill euiButton--primary"
+                >
+                  Save website
+                </button>
+              </div>
+              <div class="euiFlexItem euiFlexItem--growZero">
+                <button
+                  type="button"
+                  id="website-reset-btn"
+                  class="euiButton euiButton--empty euiButton--primary"
+                >
+                  Clear form
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <section class="euiPageSection" aria-labelledby="saved-entries-heading">
+          <h2 id="saved-entries-heading" class="euiTitle euiTitle--s">Saved websites</h2>
+          <ul id="website-list" class="euiList"></ul>
+        </section>
+      </div>
     </main>
 
     <script type="module" src="popup.js"></script>

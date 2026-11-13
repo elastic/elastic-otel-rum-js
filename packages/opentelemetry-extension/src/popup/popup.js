@@ -3,180 +3,71 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import {deleteWebsite, getWebsites, upsertWebsite} from '../storage.js';
+import {initCollectorsUi} from './collectors-ui.js';
+import {initWebsitesUi} from './websites-ui.js';
 
-/** @typedef {import('../types/websites.js').MonitoredWebsite} MonitoredWebsite */
-/** @typedef {import('../types/websites.js').InjectionStatus} InjectionStatus */
+/** @type {'collectors' | 'websites'} */
+let activeTab = 'websites';
 
-/** @type {HTMLFormElement} */
-const form = /** @type {HTMLFormElement} */ (
-    document.getElementById('website-form')
+/** @type {HTMLElement} */
+const panelCollectors = /** @type {HTMLElement} */ (
+    document.getElementById('panel-collectors')
 );
-/** @type {HTMLUListElement} */
-const list = /** @type {HTMLUListElement} */ (
-    document.getElementById('website-list')
-);
-/** @type {HTMLInputElement} */
-const idInput = /** @type {HTMLInputElement} */ (
-    document.getElementById('website-id')
+/** @type {HTMLElement} */
+const panelWebsites = /** @type {HTMLElement} */ (
+    document.getElementById('panel-websites')
 );
 /** @type {HTMLButtonElement} */
-const resetBtn = /** @type {HTMLButtonElement} */ (
-    document.getElementById('reset-btn')
+const tabCollectors = /** @type {HTMLButtonElement} */ (
+    document.getElementById('tab-collectors')
+);
+/** @type {HTMLButtonElement} */
+const tabWebsites = /** @type {HTMLButtonElement} */ (
+    document.getElementById('tab-websites')
 );
 
-/**
- * @returns {MonitoredWebsite}
- */
-function readForm() {
-    const data = new FormData(form);
-    const id = String(data.get('id') || '').trim() || crypto.randomUUID();
-    return {
-        id,
-        host: String(data.get('host') || '').trim(),
-        version: String(data.get('version') || '').trim(),
-        endpoint: String(data.get('endpoint') || '').trim(),
-        api_key: String(data.get('api_key') || '').trim(),
-        service_name: String(data.get('service_name') || '').trim(),
-        service_version: String(data.get('service_version') || '').trim(),
-    };
-}
-
-function clearForm() {
-    form.reset();
-    idInput.value = '';
-}
-
-/**
- * @param {MonitoredWebsite} website
- */
-function fillForm(website) {
-    idInput.value = website.id;
-    /** @type {HTMLInputElement} */ (document.getElementById('host')).value =
-        website.host;
-    /** @type {HTMLInputElement} */ (document.getElementById('version')).value =
-        website.version;
-    /** @type {HTMLInputElement} */ (
-        document.getElementById('endpoint')
-    ).value = website.endpoint;
-    /** @type {HTMLInputElement} */ (document.getElementById('api_key')).value =
-        website.api_key;
-    /** @type {HTMLInputElement} */ (
-        document.getElementById('service_name')
-    ).value = website.service_name;
-    /** @type {HTMLInputElement} */ (
-        document.getElementById('service_version')
-    ).value = website.service_version;
-}
-
-/**
- * @param {InjectionStatus | undefined} status
- * @returns {{label: string, healthClass: string}}
- */
-function describeInjectionDisplay(status) {
-    switch (status) {
-        case 'active':
-            return {label: 'Injected', healthClass: 'euiHealth--success'};
-        case 'failed':
-            return {label: 'Failed', healthClass: 'euiHealth--danger'};
-        default:
-            return {label: 'Not checked', healthClass: 'euiHealth--subdued'};
-    }
-}
-
-/**
- * @param {MonitoredWebsite[]} websites
- */
-function renderList(websites) {
-    list.replaceChildren();
-    if (websites.length === 0) {
-        const empty = document.createElement('li');
-        empty.className = 'euiListItem euiListItem--empty';
-        empty.textContent = 'No websites configured yet.';
-        list.appendChild(empty);
-        return;
-    }
-
-    for (const site of websites) {
-        const item = document.createElement('li');
-        item.className = 'euiListItem';
-
-        const header = document.createElement('div');
-        header.className = 'site-header';
-
-        const host = document.createElement('div');
-        host.className = 'site-host';
-        host.textContent = site.host;
-
-        const {label, healthClass} = describeInjectionDisplay(
-            site.injection_status
-        );
-        const health = document.createElement('span');
-        health.className = `euiHealth ${healthClass}`;
-        health.setAttribute('role', 'status');
-        health.textContent = label;
-
-        header.append(host, health);
-
-        const meta = document.createElement('div');
-        meta.className = 'site-meta';
-        meta.textContent = `${site.service_name} @ ${site.service_version} · EDOT ${site.version}`;
-
-        const actions = document.createElement('div');
-        actions.className = 'site-actions';
-
-        const editBtn = document.createElement('button');
-        editBtn.type = 'button';
-        editBtn.className = 'euiButton euiButton--empty euiButton--primary';
-        editBtn.textContent = 'Edit';
-        editBtn.addEventListener('click', () => fillForm(site));
-
-        const deleteBtn = document.createElement('button');
-        deleteBtn.type = 'button';
-        deleteBtn.className = 'euiButton euiButton--empty euiButton--danger';
-        deleteBtn.textContent = 'Delete';
-        deleteBtn.addEventListener('click', async () => {
-            await deleteWebsite(site.id);
-            await refresh();
-            void chrome.runtime.sendMessage({type: 'refresh-injections'});
-        });
-
-        actions.append(editBtn, deleteBtn);
-
-        item.append(header, meta);
-
-        if (site.injection_status === 'failed' && site.injection_message) {
-            const statusDetail = document.createElement('p');
-            statusDetail.className = 'site-injection-detail';
-            statusDetail.textContent = site.injection_message;
-            item.append(statusDetail);
-        }
-
-        item.append(actions);
-        list.appendChild(item);
-    }
-}
-
-async function refresh() {
-    const websites = await getWebsites();
-    renderList(websites);
-}
-
-form.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    const website = readForm();
-    await upsertWebsite(website);
-    clearForm();
-    await refresh();
-    void chrome.runtime.sendMessage({type: 'refresh-injections'});
+const collectorsUi = initCollectorsUi(panelCollectors);
+const websitesUi = initWebsitesUi(panelWebsites, {
+    onNeedCollectors: () => setActiveTab('collectors'),
 });
 
-resetBtn.addEventListener('click', () => clearForm());
+/**
+ * @param {'collectors' | 'websites'} tab
+ */
+function setActiveTab(tab) {
+    activeTab = tab;
+    const isCollectors = tab === 'collectors';
+    panelCollectors.hidden = !isCollectors;
+    panelWebsites.hidden = isCollectors;
+    tabCollectors.classList.toggle('euiTab--selected', isCollectors);
+    tabWebsites.classList.toggle('euiTab--selected', !isCollectors);
+    tabCollectors.setAttribute('aria-selected', String(isCollectors));
+    tabWebsites.setAttribute('aria-selected', String(!isCollectors));
+}
+
+tabCollectors.addEventListener('click', () => {
+    setActiveTab('collectors');
+    void collectorsUi.refresh();
+});
+
+tabWebsites.addEventListener('click', () => {
+    setActiveTab('websites');
+    void websitesUi.refresh();
+});
 
 chrome.storage.onChanged.addListener((changes, areaName) => {
-    if (areaName === 'local' && changes.monitoredWebsites) {
-        void refresh();
+    if (areaName !== 'local') {
+        return;
+    }
+    if (changes.collectors) {
+        void collectorsUi.refresh();
+        void websitesUi.refresh();
+    }
+    if (changes.monitoredWebsites) {
+        void websitesUi.refresh();
     }
 });
 
-void refresh();
+setActiveTab('websites');
+void collectorsUi.refresh();
+void websitesUi.refresh();

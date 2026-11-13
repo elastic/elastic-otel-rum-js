@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import {getCollectorById} from './storage/collectors.js';
+
 /** @typedef {import('./types/websites.js').MonitoredWebsite} MonitoredWebsite */
 /** @typedef {import('./types/websites.js').WebsitesStorage} WebsitesStorage */
 /** @typedef {import('./types/websites.js').InjectionStatus} InjectionStatus */
@@ -37,6 +39,11 @@ export async function saveWebsites(websites) {
  * @returns {Promise<void>}
  */
 export async function upsertWebsite(website) {
+    const collector = await getCollectorById(website.collector_id);
+    if (!collector) {
+        throw new Error('Select a valid collector before saving this website.');
+    }
+
     const websites = await getWebsites();
     const index = websites.findIndex((w) => w.id === website.id);
     /** @type {MonitoredWebsite} */
@@ -82,4 +89,13 @@ export async function setWebsiteInjectionStatus(id, status, message) {
 export async function deleteWebsite(id) {
     const websites = await getWebsites();
     await saveWebsites(websites.filter((w) => w.id !== id));
+}
+
+/**
+ * @param {string} collectorId
+ * @returns {Promise<MonitoredWebsite[]>}
+ */
+export async function getWebsitesByCollectorId(collectorId) {
+    const websites = await getWebsites();
+    return websites.filter((w) => w.collector_id === collectorId);
 }

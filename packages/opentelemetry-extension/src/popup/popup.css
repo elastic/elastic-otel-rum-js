@@ -117,6 +117,92 @@
   margin-bottom: var(--eui-size-m);
 }
 
+.euiTabs {
+  display: flex;
+  gap: var(--eui-size-xs);
+  margin-bottom: var(--eui-size-m);
+  padding: 2px;
+  background-color: var(--eui-color-background-subdued);
+  border-radius: var(--eui-radius-control);
+}
+
+.euiTab {
+  flex: 1;
+  min-height: 32px;
+  padding: 0 var(--eui-size-m);
+  font-family: inherit;
+  font-size: var(--eui-font-size-m);
+  font-weight: var(--eui-font-weight-semibold);
+  color: var(--eui-color-text-subdued);
+  background: transparent;
+  border: none;
+  border-radius: calc(var(--eui-radius-control) - 2px);
+  cursor: pointer;
+}
+
+.euiTab:hover {
+  color: var(--eui-color-text);
+}
+
+.euiTab:focus-visible {
+  outline: none;
+  box-shadow: var(--eui-shadow-focus);
+}
+
+.euiTab--selected {
+  color: var(--eui-color-text-heading);
+  background-color: var(--eui-color-background-plain);
+  box-shadow: 0 1px 2px rgba(17, 28, 44, 0.08);
+}
+
+.euiTabPanel {
+  display: block;
+}
+
+.euiTabPanel[hidden] {
+  display: none;
+}
+
+.euiFieldSelect {
+  display: block;
+  width: 100%;
+  height: 32px;
+  margin: 0;
+  padding: 0 var(--eui-size-s);
+  font: inherit;
+  color: var(--eui-color-text);
+  background-color: var(--eui-color-background-plain);
+  border: 1px solid var(--eui-color-border-plain);
+  border-radius: var(--eui-radius-control);
+}
+
+.euiFieldSelect:focus {
+  outline: none;
+  border-color: var(--eui-color-border-strong-primary);
+  box-shadow: var(--eui-shadow-focus);
+}
+
+.euiFieldSelect:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.euiLinkButton {
+  margin: 0;
+  padding: 0;
+  font: inherit;
+  font-weight: var(--eui-font-weight-semibold);
+  color: var(--eui-color-primary-text);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.euiLinkButton:hover {
+  color: var(--eui-color-primary);
+}
+
 .euiPageSection {
   margin-top: var(--eui-size-l);
 }
