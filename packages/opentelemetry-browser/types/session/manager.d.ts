@@ -35,6 +35,7 @@ export class SessionManager {
     _lastActivityCheck: number;
     _stopped: boolean;
     _tabId: string;
+    _stopStorageSync: () => void;
     /**
      * Continues the stored session or starts a new one. Loading the page
      * counts as activity.
@@ -71,8 +72,8 @@ export class SessionManager {
     endSession(): void;
     /**
      * Callbacks run synchronously, in registration order. `onSessionEnded`
-     * is reported by an expiry timer, or on the next read if the timer was
-     * throttled (background tabs) or the session was replaced by another tab.
+     * is reported by an expiry timer, on the next read, or when another tab
+     * updates shared session storage and this tab handles a `storage` event.
      * @param {SessionObserver} observer
      * @returns {() => void} unsubscribe
      */
@@ -119,6 +120,10 @@ export class SessionManager {
      * @param {SessionState} session
      */
     _scheduleExpiryCheck(session: SessionState): void;
+    /**
+     * @param {string | null} newValue `storage` event payload from another tab
+     */
+    _onRemoteSessionStorage(newValue: string | null): void;
 }
 export type SessionConfig = import("./config.js").SessionConfig;
 export type SessionObserver = import("./observers.js").SessionObserver;
