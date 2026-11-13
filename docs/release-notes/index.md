@@ -32,9 +32,9 @@ To check for security updates, go to [Security announcements for the Elastic sta
 % ### Chores [edot-browser-X.X.X-chores]
 % *
 
-## version.next [edot-browser-0.5.0-release-notes]
+## 0.5.0 [edot-browser-0.5.0-release-notes]
 
-### Features and enhancements [edot-browser-X.X.X-features-enhancements]
+### Features and enhancements [edot-browser-0.5.0-features-enhancements]
 
 * Add `ignoreFetchUrls` to exclude URLs from fetch, XMLHttpRequest, and resource timing instrumentation. Strings and regular expressions are supported; OTLP export URLs are always ignored.
   Ref: https://github.com/elastic/elastic-otel-rum-js/issues/151
