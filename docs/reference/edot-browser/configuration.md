@@ -80,17 +80,17 @@ Configuration is passed as an object to `startBrowserSdk`. The following options
 | `disableInstrumentations` | `string[]`            | Optional list of instrumentation keys to turn off. Values must match the keys in [instrumentations details](#otel_browser_instrumentations-details). Refer to [`disableInstrumentations` details](#otel_browser_disableinstrumentations-details). |
 | `session`             | `{ sampleRate?: number; inactivityTimeout?: number; maxDuration?: number }` | Session tracking and session-level sampling. Refer to [session details](#otel_browser_session-details) for more information. |
 | `ignoreFetchUrls`     | `(string \| RegExp)[]`   | URLs to exclude from fetch, XMLHttpRequest, and resource timing instrumentation. OTLP export URLs are always ignored. Refer to [`ignoreFetchUrls` details](#otel_browser_ignorefetchurls-details). Optional; defaults to `[]`. |
-| `exportConfig`    | `{ url?: string; tracesUrl?: string; logsUrl?: string; metricsUrl?: string; headers?: Record<string, string>}` | Configuration for exporters of the different signals. |
+| `exportConfig`    | `{ url?: string; tracesUrl?: string; logsUrl?: string; headers?: Record<string, string>}` | Configuration for exporters of the different signals. |
 | `exportConfig.url`    | `string` | Base URL of the OTLP export endpoint (reverse proxy). Do not include signal paths such as `/v1/traces`. Defaults to `http://localhost:4318`. |
-| `exportConfig.tracesUrl`, `exportConfig.logsUrl`, `exportConfig.metricsUrl`    | `string` | Full URL for one signal, used as is without appending `/v1/<signal>`. Overrides `exportConfig.url` for that signal only. Optional. Refer to [Export endpoint configuration](#export-endpoint-configuration). |
+| `exportConfig.tracesUrl`, `exportConfig.logsUrl`    | `string` | Full URL for one signal, used as is without appending `/v1/<signal>`. Overrides `exportConfig.url` for that signal only. Optional. Refer to [Export endpoint configuration](#export-endpoint-configuration). |
 | `exportConfig.headers`    | `Record<string, string>` | Headers to send with export requests. Defaults to `{}`. The reverse proxy typically injects `Authorization`; do not put API keys here in browser code. |
 
 
 ## Export endpoint configuration [export-endpoint-configuration]
 
-Configure `exportConfig.url` to point to a server that accepts OTLP traffic. Use the base URL of the server only: do not include signal paths such as `/v1/traces`, `/v1/metrics`, or `/v1/logs`. The SDK appends these paths when exporting each signal.
+Configure `exportConfig.url` to point to a server that accepts OTLP traffic. Use the base URL of the server only: do not include signal paths such as `/v1/traces` or `/v1/logs`. The SDK appends these paths when exporting each signal.
 
-If your server routes OTLP traffic on paths other than `/v1/traces`, `/v1/logs` and `/v1/metrics`, set `exportConfig.tracesUrl`, `exportConfig.logsUrl` or `exportConfig.metricsUrl`. Each one is a full URL and is used exactly as written. A signal without its own URL still uses `exportConfig.url` plus the default path, and you can omit `exportConfig.url` when all three are set.
+If your server routes OTLP traffic on paths other than `/v1/traces` and `/v1/logs`, set `exportConfig.tracesUrl` or `exportConfig.logsUrl`. Each one is a full URL and is used exactly as written. A signal without its own URL still uses `exportConfig.url` plus the default path, and you can omit `exportConfig.url` when both are set.
 
 ```js
 import { startBrowserSdk } from '@elastic/opentelemetry-browser';
@@ -100,7 +100,6 @@ startBrowserSdk({
   exportConfig: {
     tracesUrl: 'https://telemetry.example.com/otlp/t',
     logsUrl: 'https://telemetry.example.com/otlp/l',
-    metricsUrl: 'https://telemetry.example.com/otlp/m',
   },
 });
 ```
@@ -164,7 +163,7 @@ Pass an array of instrumentation keys (the same strings as the **Key** column in
 
 - The value must be an array of strings. Other shapes log a warning in the browser console and are ignored.
 - If a string is not a known instrumentation key, EDOT Browser logs a warning and skips that entry.
-- If you set both `disableInstrumentations` and `instrumentations` for the same key, `disableInstrumentations` takes precedence. For example, `disableInstrumentations: ['resource-timing']` keeps resource timing disabled even when `instrumentations['resource-timing']` sets `enabled: true`.
+- If you set both `disableInstrumentations` and `instrumentations` for the same key, `disableInstrumentations` takes precedence. For example, `disableInstrumentations: ['resource-timing']` keeps resource timing disabled even when you also pass other configuration under `instrumentations['resource-timing']`.
 
 ```js
 import { startBrowserSdk } from '@elastic/opentelemetry-browser';
@@ -196,9 +195,47 @@ Session sampling controls whether EDOT Browser exports automatic RUM telemetry (
 
 When a session is **sampled in**, all configured instrumentations run for that session until it ends or rotates. When a session is **sampled out**, EDOT Browser disables automatic instrumentations for that session so the browser does not collect spans or log records that would be dropped anyway.
 
+When an active session is available, traces and logs use that session's sampling decision. If the session manager cannot return an active session—for example after a session expires and before user activity starts a new one—there is no per-session decision to apply. When `session.sampleRate` is `1` (the default), the trace sampler still **samples spans in** and automatic log records continue to be exported. For any rate below `1`, spans are sampled out until a new session starts.
+
 To stop automatic RUM export while keeping session machinery active, set `session.sampleRate` to `0`. With `sampleRate: 0`, session state still exists client-side but automatic export is suppressed.
 
 Metrics your application emits through the OpenTelemetry API are not gated by session sampling today. Refer to [Sessions](telemetry.md#sessions) for signal-specific behavior.
+
+```js
+import { startBrowserSdk } from '@elastic/opentelemetry-browser';
+
+sdk.getSession(); // { id, previousId, startTimestamp, sampled }, or undefined when no session is active
+
+const unsubscribe = sdk.addObserver({
+  onSessionStarted(session, previous) {
+    console.log('Session started', session.id, 'after', previous?.id);
+  },
+  onSessionEnded(session) {
+    console.log('Session ended', session.id);
+  },
+});
+```
+
+Both callbacks are optional and run synchronously. The observer has the same shape as the upstream `@opentelemetry/browser-sdk/session` one.
+
+- `onSessionEnded` is called when the session expires, when the application ends it with `endSession()`, when another tab replaces the session, and when `localStorage` is cleared. Expiry calls it even if the application produces no telemetry.
+- `onSessionStarted` is called when this tab starts a session or adopts one started by another tab. `previous` is set only when this tab sees the preceding session end. Observers added after `startBrowserSdk` returns do not receive the initial session. Use `getSession()` to read it.
+- Browsers throttle timers in background tabs, so `onSessionEnded` can be delayed until the tab is used again.
+
+#### End a session [otel_browser_session-end]
+
+Call `endSession()` to end the current session before it expires, for example when the user logs out, so the next user does not share the same `session.id`:
+
+```js
+function logout() {
+  sdk.endSession();
+  // ...
+}
+```
+
+The session ends in every tab of the application and observers get `onSessionEnded`. As after an expiry, telemetry has no `session.id` until the next user interaction or page load starts a new session, which has the ended session as `session.previous_id`. Calling it when no session is active has no effect.
+
+When web storage is unavailable or after `sdk.shutdown()`, `getSession()` returns `undefined`, and `addObserver()` and `endSession()` have no effect.
 
 ### `ignoreFetchUrls` details [otel_browser_ignorefetchurls-details]
 

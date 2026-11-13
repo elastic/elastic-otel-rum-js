@@ -40,12 +40,19 @@ To check for security updates, go to [Security announcements for the Elastic sta
   Ref: https://github.com/elastic/elastic-otel-rum-js/issues/151
 * Add `exportConfig.tracesUrl`, `exportConfig.logsUrl` and `exportConfig.metricsUrl` to export a signal to a custom URL. The URL is used as is, without appending `/v1/<signal>`.
   Ref: https://github.com/elastic/elastic-otel-rum-js/issues/166
-
 * Add `disableInstrumentations` to turn off selected built-in instrumentations by key (for example, `web-vitals` or `resource-timing`). If you set both `disableInstrumentations` and `instrumentations` for the same key, `disableInstrumentations` takes precedence.
   Ref: https://github.com/elastic/elastic-otel-rum-js/pull/170
+* Expire sessions based on user activity. Sessions end after 30 minutes without user interaction, or 4 hours in total. Telemetry sent after that has no `session.id` until the next interaction. Set `session.activityEvents` to define what counts as activity.
+  Ref: https://github.com/elastic/elastic-otel-rum-js/issues/81
+* Add a session API. The SDK returned by `startBrowserSdk` has `sdk.getSession()` and `sdk.addObserver()` for reading the current session and reacting when sessions start and end.
+  Ref: https://github.com/elastic/elastic-otel-rum-js/issues/81
+* Add `sdk.endSession()` to end the current session, for example on logout. The next session starts on the next user interaction.
+  Ref: https://github.com/elastic/elastic-otel-rum-js/issues/123
 
 ### Fixes [edot-browser-X.X.X-fixes]
 
+* Fix cross-tab session handling when another tab calls `endSession()` while this tab is within the activity read throttle. Tabs listen for `storage` events on the shared session key so `onSessionEnded` runs promptly and the next user activity can start a new session.
+  Ref: https://github.com/elastic/elastic-otel-rum-js/issues/176
 * Fix export URLs when `exportConfig.url` has no trailing slash. The path separator was missing, so `https://example.com/api` exported to `https://example.com/apiv1/traces`.
   Ref: https://github.com/elastic/elastic-otel-rum-js/issues/168
 

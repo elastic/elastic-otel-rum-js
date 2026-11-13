@@ -15,8 +15,6 @@ products:
 
 Breaking changes can impact your applications, potentially disrupting normal operations. Before you upgrade, carefully review the {{edot}} breaking changes and take the necessary steps to mitigate any issues.
 
-% ## Next version [edot-browser-X.X.X-breaking-changes]
-
 % Use the following template to add entries to this document.
 
 % TEMPLATE START
@@ -27,6 +25,31 @@ Breaking changes can impact your applications, potentially disrupting normal ope
 % Refer to [PR #](PR link).
 % ::::
 % TEMPLATE END
+
+## version.next [edot-browser-X.X.X-breaking-changes]
+
+::::{dropdown} Removal of the metrics signal
+EDOT Browser no longer configures the OpenTelemetry MeterProvider or exports metrics over OTLP. The `exportConfig.metricsUrl` option is removed. Built-in RUM data such as Core Web Vitals and page timing continues on the logs signal.
+**Impact**<br>
+- Application metrics created with the OpenTelemetry Metrics API (`metrics.getMeter()`, counters, histograms, and so on) are no longer exported to `/v1/metrics`.
+- TypeScript users see a compilation error if they still set `exportConfig.metricsUrl`.
+- At runtime, `exportConfig.metricsUrl` is ignored.
+**Action**<br>
+- Remove `exportConfig.metricsUrl` from your configuration.
+- If you need the metrics signal, configure a MeterProvider and OTLP metrics export separately with the OpenTelemetry Metrics SDK.
+- Update dashboards or pipelines that expected OTLP metrics from EDOT Browser. Built-in RUM measurements remain available as log records; refer to [Metrics, traces, and logs](../reference/edot-browser/telemetry.md).
+::::
+
+::::{dropdown} Removal of `enabled` in instrumentation configuration
+With the update to `@opentelemetry/browser-instrumentation` 0.11.0, per-instrumentation configuration objects no longer support an `enabled` option. EDOT Browser always registers the built-in instrumentations and uses `disableInstrumentations` to turn off selected defaults.
+**Impact**<br>
+- TypeScript users see a compilation error if `instrumentations` entries still include `enabled`.
+- At runtime, `enabled: false` is ignored and the instrumentation keeps running unless its key is listed in `disableInstrumentations`.
+- Other options under `instrumentations['<key>']` continue to apply when the instrumentation is enabled.
+**Action**<br>
+- Replace patterns such as `instrumentations: { 'web-vitals': { enabled: false } }` with `disableInstrumentations: ['web-vitals']`.
+- Use `instrumentations` only for upstream passthrough options, not to enable or disable defaults. Refer to [Configure EDOT Browser](../reference/edot-browser/configuration.md#otel_browser_disableinstrumentations-details).
+::::
 
 ## 0.4.0 [edot-browser-0-4-0-breaking-changes]
 

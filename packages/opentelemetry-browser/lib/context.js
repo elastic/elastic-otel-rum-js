@@ -52,7 +52,6 @@ export const AsyncApisContextManager = {
         // There is no plan on using other window's APIs so a couple of `ts-expect-error` is enough instead
         // of having to split TS configurations between lib and tests folders.
 
-        // @ts-expect-error -- @types/node merge with globalThis
         wrap(window, 'setTimeout', (origSetTimeout) => {
             /**
              * @this {any}
@@ -68,7 +67,6 @@ export const AsyncApisContextManager = {
                 if (isNaN(delay) || delay <= 50) {
                     args[0] = bindFn(args[0], manager, manager.active());
                 }
-                // @ts-expect-error -- @types/node merge with globalThis
                 return origSetTimeout.apply(this, args);
             };
         });

@@ -7,12 +7,6 @@ import {diag, DiagLogLevel, metrics, trace} from '@opentelemetry/api';
 import {logs} from '@opentelemetry/api-logs';
 import {startLogsSdk} from '@opentelemetry/browser-sdk/logs';
 import {startTracesSdk} from '@opentelemetry/browser-sdk/traces';
-import {OTLPMetricExporter} from '@opentelemetry/exporter-metrics-otlp-http';
-import {resourceFromAttributes} from '@opentelemetry/resources';
-import {
-    MeterProvider,
-    PeriodicExportingMetricReader,
-} from '@opentelemetry/sdk-metrics';
 
 import {NavigationInstrumentation} from '@opentelemetry/browser-instrumentation/experimental/navigation';
 import {NavigationTimingInstrumentation} from '@opentelemetry/browser-instrumentation/experimental/navigation-timing';
@@ -32,9 +26,12 @@ import {
     EVENT_SESSION_START,
 } from './semconv.js';
 import {
+    createSessionApi,
     createSessionManager,
+    resolveActivityEvents,
     SessionLogRecordProcessor,
     SessionSpanProcessor,
+    trackUserActivity,
 } from './session.js';
 import {isValidArray, resolveExportUrls} from './utils.js';
 import {EDOT_VERSION, OTEL_BROWSER_INSTRUMENTATION_VERSION} from './version.js';
@@ -60,7 +57,7 @@ import {EDOT_VERSION, OTEL_BROWSER_INSTRUMENTATION_VERSION} from './version.js';
  * @property {string} [serviceName]
  * @property {string} [serviceVersion]
  * @property {import('@opentelemetry/api').Attributes} [resourceAttributes]
- * @property {{url?: string; tracesUrl?: string; logsUrl?: string; metricsUrl?: string; headers?: Record<string, string>}} [exportConfig]
+ * @property {{url?: string; tracesUrl?: string; logsUrl?: string; headers?: Record<string, string>}} [exportConfig]
  */
 
 /**
@@ -78,6 +75,14 @@ import {EDOT_VERSION, OTEL_BROWSER_INSTRUMENTATION_VERSION} from './version.js';
 const EDOT_SCOPE_NAME = '@elastic/opentelemetry-browser';
 
 /**
+ * @typedef {Object} BrowserSdk
+ * @property {() => Promise<void>} shutdown
+ * @property {import('./session.js').SessionApi['getSession']} getSession
+ * @property {import('./session.js').SessionApi['addObserver']} addObserver
+ * @property {import('./session.js').SessionApi['endSession']} endSession
+ */
+
+/**
  * @param {string} version
  * @returns {string}
  */
@@ -85,7 +90,11 @@ const instrumentationDocsUrl = (version) =>
     `https://github.com/open-telemetry/opentelemetry-browser/tree/browser-instrumentation-v${version}/packages/instrumentation#readme`;
 
 // SDK returned when invalid config or some error happens at start
-const NOOP_SDK = {shutdown: () => Promise.resolve()};
+/** @type {BrowserSdk} */
+const NOOP_SDK = {
+    shutdown: () => Promise.resolve(),
+    ...createSessionApi(undefined),
+};
 
 // To control multiple calls to `startBrowserSdk`
 let sdkStarted = false;
@@ -103,9 +112,7 @@ const defaultConfig = {
 
 /**
  * @param {BrowserSdkConfiguration} cfg
- * @returns {{
- *      shutdown: () => Promise<void>;
- * }}
+ * @returns {BrowserSdk}
  */
 export function startBrowserSdk(cfg = {}) {
     if (sdkStarted || cfg.disabled) {
@@ -135,10 +142,10 @@ export function startBrowserSdk(cfg = {}) {
         diag.error(`${/** @type {Error} */ (urlErr).message} SDK won't start.`);
         return NOOP_SDK;
     }
-    const {tracesUrl, logsUrl, metricsUrl} = exportUrls;
+    const {tracesUrl, logsUrl} = exportUrls;
     // - ignoreFetchUrls and resolving all URLs to ignore
     /** @type {Array<string | RegExp>} */
-    const ignoreFetchUrls = [tracesUrl, logsUrl, metricsUrl];
+    const ignoreFetchUrls = [tracesUrl, logsUrl];
     if (config.ignoreFetchUrls) {
         /**
          * @param {unknown} i
@@ -170,8 +177,12 @@ export function startBrowserSdk(cfg = {}) {
 
     const edotLogger = logs.getLogger(EDOT_SCOPE_NAME, EDOT_VERSION);
     const sessionManager = createSessionManager(config.session);
-    sessionManager?.observe('session:start', (session) => {
-        if (session.sampled) {
+    sessionManager?.addObserver({
+        onSessionStarted(session) {
+            // Tabs sharing the session are told too, only its creator reports it
+            if (!session.sampled || !sessionManager.isCreatedHere(session.id)) {
+                return;
+            }
             /** @type {import('@opentelemetry/api').Attributes} */
             const attributes = {[ATTR_SESSION_ID]: session.id};
             if (session.previousId) {
@@ -181,7 +192,7 @@ export function startBrowserSdk(cfg = {}) {
                 eventName: EVENT_SESSION_START,
                 attributes,
             });
-        }
+        },
     });
 
     const spanProcessors = [];
@@ -199,10 +210,11 @@ export function startBrowserSdk(cfg = {}) {
             })
         );
         shouldSample = () => {
-            if (sessionManager.getSession().sampled) {
-                return {decision: 2};
-            }
-            return {decision: 0};
+            const session = sessionManager.getSession();
+            const isSampled = session
+                ? session.sampled
+                : sessionManager.exportsWithoutSession();
+            return {decision: isSampled ? 2 : 0};
         };
     }
 
@@ -246,7 +258,7 @@ export function startBrowserSdk(cfg = {}) {
     const loggerProvider = logs.getLoggerProvider();
 
     // Maybe a better way to control the loggers would be to provide a `LoggerConfigurator`
-    // but the upstream SDK does not offer the option to pass it through.
+    // but the `startLogsSdk` function does not offer the option to pass it through.
     // Solution for now is to wrap the `getLogger` method and patch the `enabled` method
     // so is aware of the session when called.
     if (sessionManager) {
@@ -257,25 +269,27 @@ export function startBrowserSdk(cfg = {}) {
             if (loggers.has(logger)) {
                 return logger;
             }
+
+            logger.enabled = function () {
+                const session = sessionManager.getSession();
+                return session
+                    ? session.sampled
+                    : sessionManager.exportsWithoutSession();
+            };
             loggers.add(logger);
-            logger.enabled = () => sessionManager.getSession().sampled;
             return logger;
         };
     }
 
-    // metrics signal configuration
-    // possible `startMetricsSdk` function
-    const metricsReader = new PeriodicExportingMetricReader({
-        exporter: new OTLPMetricExporter({
-            url: metricsUrl,
-            headers: config.exportConfig.headers,
-        }),
-    });
-    const meterProvider = new MeterProvider({
-        resource: resourceFromAttributes(resourceAttributes),
-        readers: [metricsReader],
-    });
-    metrics.setGlobalMeterProvider(meterProvider);
+    // Start eagerly so `session.start` is emitted on load rather than with
+    // the first piece of telemetry.
+    sessionManager?.start();
+    const stopActivityTracking =
+        sessionManager &&
+        trackUserActivity(
+            sessionManager,
+            resolveActivityEvents(config.session)
+        );
 
     // NOTE: metrics is different in semantics. depending on the user's inent:
     // - there could be metrics that outlive session limits
@@ -364,6 +378,7 @@ export function startBrowserSdk(cfg = {}) {
         }
     }
 
+    /** @type {Array<{name: string, instr: import('@opentelemetry/browser-sdk').Instrumentation}>} */
     const instrEntries = Object.entries(instrFactoriesMap).map(
         ([name, factory]) => {
             const instr = factory(instrConfigMap[name]);
@@ -372,36 +387,27 @@ export function startBrowserSdk(cfg = {}) {
     );
 
     // Does the same as `registerInstrumentations` form upstream at the end
-    // disabling the ones with { enabled: false } in configuration or present
-    // in `disableInstrumentations`
+    // disabling the present in `disableInstrumentations`
     for (const entry of instrEntries) {
         const {name, instr} = entry;
-        instr.setLoggerProvider?.(loggerProvider);
-        instr.setTracerProvider(tracerProvider);
-        instr.setMeterProvider(meterProvider);
         instr.enable();
-        if (
-            disableInstrumentations.has(name) ||
-            instr.getConfig().enabled === false
-        ) {
+        if (disableInstrumentations.has(name)) {
             instr.disable();
         }
     }
-
-    // Resolve the session eagerly so `session.start` is emitted on load
-    // rather than with the first piece of telemetry.
-    sessionManager?.getSession();
 
     // Flag as started
     sdkStarted = true;
 
     return {
+        ...createSessionApi(sessionManager),
         shutdown() {
+            stopActivityTracking?.();
+            sessionManager?.shutdown();
             instrEntries.forEach((e) => e.instr.disable());
             return Promise.allSettled([
                 tracesSdk.shutdown(),
                 logsSdk.shutdown(),
-                meterProvider.shutdown(),
             ]).then((results) => {
                 for (const res of results) {
                     if (res.status === 'rejected') {
