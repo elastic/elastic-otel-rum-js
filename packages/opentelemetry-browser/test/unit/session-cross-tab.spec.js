@@ -37,7 +37,7 @@ test('shouldSyncSessionFromStorage - ignores cross-tab activity extension', () =
     assert.strictEqual(shouldSyncSessionFromStorage(stored, announced), false);
 });
 
-test('shouldSyncSessionFromStorage - ignores a removed session when idle', () => {
+test('shouldSyncSessionFromStorage - adopts a removed session by another tab (storage cleared)', () => {
     const announced = session();
     assert.strictEqual(
         shouldSyncSessionFromStorage(undefined, announced),
