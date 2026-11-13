@@ -50,8 +50,7 @@
     if (
         !exportConfig ||
         typeof exportConfig !== 'object' ||
-        (!exportConfig.url &&
-            !(exportConfig.tracesUrl && exportConfig.logsUrl))
+        (!exportConfig.url && !(exportConfig.tracesUrl && exportConfig.logsUrl))
     ) {
         reportInjectionStatus(
             'failed',

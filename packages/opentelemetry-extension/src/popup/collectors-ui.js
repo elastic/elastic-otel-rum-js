@@ -59,10 +59,12 @@ export function initCollectorsUi(root) {
      */
     function fillForm(collector) {
         idInput.value = collector.id;
-        /** @type {HTMLInputElement} */ (root.querySelector('#collector-name')).value =
-            collector.name;
-        /** @type {HTMLInputElement} */ (root.querySelector('#collector-url')).value =
-            collector.url;
+        /** @type {HTMLInputElement} */ (
+            root.querySelector('#collector-name')
+        ).value = collector.name;
+        /** @type {HTMLInputElement} */ (
+            root.querySelector('#collector-url')
+        ).value = collector.url;
         /** @type {HTMLInputElement} */ (
             root.querySelector('#collector-logs-url')
         ).value = collector.logs_url;
@@ -123,7 +125,8 @@ export function initCollectorsUi(root) {
 
             const deleteBtn = document.createElement('button');
             deleteBtn.type = 'button';
-            deleteBtn.className = 'euiButton euiButton--empty euiButton--danger';
+            deleteBtn.className =
+                'euiButton euiButton--empty euiButton--danger';
             deleteBtn.textContent = 'Delete';
             deleteBtn.addEventListener('click', async () => {
                 const n = websites.length;
@@ -162,7 +165,9 @@ export function initCollectorsUi(root) {
             void chrome.runtime.sendMessage({type: 'refresh-injections'});
         } catch (err) {
             const message =
-                err instanceof Error ? err.message : 'Could not save collector.';
+                err instanceof Error
+                    ? err.message
+                    : 'Could not save collector.';
             window.alert(message);
         }
     });

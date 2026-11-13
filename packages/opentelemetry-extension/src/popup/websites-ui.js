@@ -114,7 +114,10 @@ export function initWebsitesUi(root, options = {}) {
      */
     function fillForm(website) {
         idInput.value = website.id;
-        populateCollectorSelect([...collectorsById.values()], website.collector_id);
+        populateCollectorSelect(
+            [...collectorsById.values()],
+            website.collector_id
+        );
         /** @type {HTMLInputElement} */ (root.querySelector('#host')).value =
             website.host;
         /** @type {HTMLInputElement} */ (root.querySelector('#version')).value =
@@ -138,7 +141,10 @@ export function initWebsitesUi(root, options = {}) {
             case 'failed':
                 return {label: 'Failed', healthClass: 'euiHealth--danger'};
             default:
-                return {label: 'Not checked', healthClass: 'euiHealth--subdued'};
+                return {
+                    label: 'Not checked',
+                    healthClass: 'euiHealth--subdued',
+                };
         }
     }
 
@@ -196,7 +202,8 @@ export function initWebsitesUi(root, options = {}) {
 
             const deleteBtn = document.createElement('button');
             deleteBtn.type = 'button';
-            deleteBtn.className = 'euiButton euiButton--empty euiButton--danger';
+            deleteBtn.className =
+                'euiButton euiButton--empty euiButton--danger';
             deleteBtn.textContent = 'Delete';
             deleteBtn.addEventListener('click', async () => {
                 await deleteWebsite(site.id);
