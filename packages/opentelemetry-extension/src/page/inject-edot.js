@@ -43,20 +43,29 @@
     window.__EDOT_EXT_ACTIVE__ = marker;
 
     const v = config.version;
-    const u = config.endpoint;
     const sn = config.service_name;
     const sv = config.service_version;
-    const apiKey = config.api_key;
+    const exportConfig = config.exportConfig;
+
+    if (
+        !exportConfig ||
+        typeof exportConfig !== 'object' ||
+        (!exportConfig.url &&
+            !(exportConfig.tracesUrl && exportConfig.logsUrl))
+    ) {
+        reportInjectionStatus(
+            'failed',
+            'Export configuration is missing or incomplete.'
+        );
+        return;
+    }
 
     const sdkConfig = {
         logLevel: 'debug',
         serviceName: sn,
         serviceVersion: sv,
         exportConfig: {
-            url: u,
-            headers: {
-                Authorization: `ApiKey ${apiKey}`,
-            },
+            ...exportConfig,
         },
         resourceAttributes: {
             'service.name': sn,

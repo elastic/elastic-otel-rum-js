@@ -6,11 +6,11 @@ export type Collector = {
   id: string;
   /** Display label in the UI and website picker. */
   name: string;
-  /** Primary OTLP export URL (same role as the former per-website endpoint). */
+  /** Base OTLP export URL (`exportConfig.url`). Optional when both signal URLs are set. */
   url: string;
-  /** Logs export URL (reserved for future SDK wiring). */
+  /** Full logs export URL (`exportConfig.logsUrl`). */
   logs_url: string;
-  /** Traces export URL (reserved for future SDK wiring). */
+  /** Full traces export URL (`exportConfig.tracesUrl`). */
   traces_url: string;
   /** API key sent as `Authorization: ApiKey …` on export requests. */
   api_key: string;

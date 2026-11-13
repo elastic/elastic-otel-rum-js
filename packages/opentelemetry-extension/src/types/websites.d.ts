@@ -29,14 +29,20 @@ export type WebsitesStorage = {
   websites: MonitoredWebsite[];
 };
 
+/** OTLP export settings passed to EDOT `startBrowserSdk` `exportConfig`. */
+export type EdotInjectExportConfig = {
+  url?: string;
+  tracesUrl?: string;
+  logsUrl?: string;
+  headers?: Record<string, string>;
+};
+
 /** Serializable config passed into the page for injection. */
 export type EdotInjectConfig = Pick<
   MonitoredWebsite,
   'host' | 'version' | 'service_name' | 'service_version'
 > & {
   websiteId: string;
-  /** Resolved from the linked collector's `url`. */
-  endpoint: string;
   /** Resolved from the linked collector. */
-  api_key: string;
+  exportConfig: EdotInjectExportConfig;
 };

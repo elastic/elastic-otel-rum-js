@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import {validateCollectorExportUrls} from '../export-config.js';
 import {getWebsites, saveWebsites} from '../storage.js';
 
 /** @typedef {import('../types/collectors.js').Collector} Collector */
@@ -47,6 +48,7 @@ export async function getCollectorById(id) {
  * @returns {Promise<void>}
  */
 export async function upsertCollector(collector) {
+    validateCollectorExportUrls(collector);
     const collectors = await getCollectors();
     const index = collectors.findIndex((c) => c.id === collector.id);
     if (index === -1) {

@@ -154,11 +154,17 @@ export function initCollectorsUi(root) {
 
     form.addEventListener('submit', async (event) => {
         event.preventDefault();
-        const collector = readForm();
-        await upsertCollector(collector);
-        clearForm();
-        await refresh();
-        void chrome.runtime.sendMessage({type: 'refresh-injections'});
+        try {
+            const collector = readForm();
+            await upsertCollector(collector);
+            clearForm();
+            await refresh();
+            void chrome.runtime.sendMessage({type: 'refresh-injections'});
+        } catch (err) {
+            const message =
+                err instanceof Error ? err.message : 'Could not save collector.';
+            window.alert(message);
+        }
     });
 
     resetBtn.addEventListener('click', () => clearForm());

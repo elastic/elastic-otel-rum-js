@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import {exportConfigFromCollector} from './export-config.js';
 import {describeInjectionError} from './injection-status.js';
 import {findWebsiteForUrl} from './match-host.js';
 import {getCollectorById} from './storage/collectors.js';
@@ -23,8 +24,7 @@ function toInjectConfig(website, collector) {
         websiteId: website.id,
         host: website.host,
         version: website.version,
-        endpoint: collector.url,
-        api_key: collector.api_key,
+        exportConfig: exportConfigFromCollector(collector),
         service_name: website.service_name,
         service_version: website.service_version,
     };
@@ -105,7 +105,19 @@ async function maybeInjectForTab(tabId, url) {
         return;
     }
 
-    await injectEdot(tabId, toInjectConfig(website, collector));
+    let injectConfig;
+    try {
+        injectConfig = toInjectConfig(website, collector);
+    } catch (err) {
+        const message =
+            err instanceof Error
+                ? err.message
+                : 'Collector export URLs are invalid.';
+        await setWebsiteInjectionStatus(website.id, 'failed', message);
+        return;
+    }
+
+    await injectEdot(tabId, injectConfig);
 }
 
 /**
