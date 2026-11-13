@@ -32,13 +32,13 @@ To check for security updates, go to [Security announcements for the Elastic sta
 % ### Chores [edot-browser-X.X.X-chores]
 % *
 
-## version.next [edot-browser-X.X.X-release-notes]
+## version.next [edot-browser-0.5.0-release-notes]
 
 ### Features and enhancements [edot-browser-X.X.X-features-enhancements]
 
 * Add `ignoreFetchUrls` to exclude URLs from fetch, XMLHttpRequest, and resource timing instrumentation. Strings and regular expressions are supported; OTLP export URLs are always ignored.
   Ref: https://github.com/elastic/elastic-otel-rum-js/issues/151
-* Add `exportConfig.tracesUrl`, `exportConfig.logsUrl` and `exportConfig.metricsUrl` to export a signal to a custom URL. The URL is used as is, without appending `/v1/<signal>`.
+* Add `exportConfig.tracesUrl`, `exportConfig.logsUrl` to export a signal to a custom URL. The URL is used as is, without appending `/v1/<signal>`.
   Ref: https://github.com/elastic/elastic-otel-rum-js/issues/166
 * Add `disableInstrumentations` to turn off selected built-in instrumentations by key (for example, `web-vitals` or `resource-timing`). If you set both `disableInstrumentations` and `instrumentations` for the same key, `disableInstrumentations` takes precedence.
   Ref: https://github.com/elastic/elastic-otel-rum-js/pull/170
@@ -49,14 +49,12 @@ To check for security updates, go to [Security announcements for the Elastic sta
 * Add `sdk.endSession()` to end the current session, for example on logout. The next session starts on the next user interaction.
   Ref: https://github.com/elastic/elastic-otel-rum-js/issues/123
 
-### Fixes [edot-browser-X.X.X-fixes]
+### Fixes [edot-browser-0.5.0-fixes]
 
-* Fix cross-tab session handling when another tab calls `endSession()` while this tab is within the activity read throttle. Tabs listen for `storage` events on the shared session key so `onSessionEnded` runs promptly and the next user activity can start a new session.
-  Ref: https://github.com/elastic/elastic-otel-rum-js/issues/176
 * Fix export URLs when `exportConfig.url` has no trailing slash. The path separator was missing, so `https://example.com/api` exported to `https://example.com/apiv1/traces`.
   Ref: https://github.com/elastic/elastic-otel-rum-js/issues/168
 
-### Chores [edot-browser-X.X.X-chores]
+### Chores [edot-browser-0.5.0-chores]
 
 * Emit a message when `instrumentations` configuration option is used to warn users the upstream configurations are unstable.
   Ref: https://github.com/elastic/elastic-otel-rum-js/issues/152

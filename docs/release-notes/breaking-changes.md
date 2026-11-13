@@ -26,7 +26,7 @@ Breaking changes can impact your applications, potentially disrupting normal ope
 % ::::
 % TEMPLATE END
 
-## version.next [edot-browser-X.X.X-breaking-changes]
+## version.next [edot-browser-0.5.0-breaking-changes]
 
 ::::{dropdown} Removal of the metrics signal
 EDOT Browser no longer configures the OpenTelemetry MeterProvider or exports metrics over OTLP. The `exportConfig.metricsUrl` option is removed. Built-in RUM data such as Core Web Vitals and page timing continues on the logs signal.
