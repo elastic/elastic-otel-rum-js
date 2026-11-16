@@ -12,6 +12,11 @@ export function getStorage(name: "localStorage" | "sessionStorage"): Storage | u
  * @returns {string}
  */
 export function getOrCreateTabId(storage: Storage): string;
+/**
+ * @param {string} raw
+ * @returns {SessionState | undefined}
+ */
+export function parseStoredSession(raw: string): SessionState | undefined;
 /** @typedef {import('./state.js').SessionState} SessionState */
 export const SESSION_STORAGE_KEY: "elastic_otel_browser.session";
 export const TAB_STORAGE_KEY: "elastic_otel_browser.tab";

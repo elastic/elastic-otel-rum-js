@@ -9,6 +9,7 @@
  *  scope: {name: string; version: string};
  *  traceId: string;
  *  spanId: string;
+ *  name: string;
  *  kind: string;
  *  status: string;
  *  startTimeUnixNano: string;

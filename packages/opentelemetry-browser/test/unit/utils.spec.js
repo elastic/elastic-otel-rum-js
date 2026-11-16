@@ -79,21 +79,26 @@ test('resolveExportUrls - appends the signal paths to the base url', () => {
         {
             tracesUrl: 'https://example.com/api/v1/traces',
             logsUrl: 'https://example.com/api/v1/logs',
-            metricsUrl: 'https://example.com/api/v1/metrics',
         }
     );
 });
 
 test('resolveExportUrls - uses a per-signal url as is', () => {
-    const urls = resolveExportUrls({
+    let urls = resolveExportUrls({
         url: 'https://example.com/api/',
         tracesUrl: 'https://example.com/custom/t',
         logsUrl: '/custom/l?x=1'.replace(/^/, 'https://example.com'),
     });
     assert.strictEqual(urls.tracesUrl, 'https://example.com/custom/t');
     assert.strictEqual(urls.logsUrl, 'https://example.com/custom/l?x=1');
+
     // signals without an override still derive from the base url
-    assert.strictEqual(urls.metricsUrl, 'https://example.com/api/v1/metrics');
+    urls = resolveExportUrls({
+        url: 'https://example.com/api/',
+        tracesUrl: 'https://example.com/custom/t',
+    });
+    assert.strictEqual(urls.tracesUrl, 'https://example.com/custom/t');
+    assert.strictEqual(urls.logsUrl, 'https://example.com/api/v1/logs');
 });
 
 test('resolveExportUrls - does not need a base url when every signal has its own', () => {
@@ -101,12 +106,10 @@ test('resolveExportUrls - does not need a base url when every signal has its own
         resolveExportUrls({
             tracesUrl: 'https://example.com/t',
             logsUrl: 'https://example.com/l',
-            metricsUrl: 'https://example.com/m',
         }),
         {
             tracesUrl: 'https://example.com/t',
             logsUrl: 'https://example.com/l',
-            metricsUrl: 'https://example.com/m',
         }
     );
 });

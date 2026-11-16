@@ -68,10 +68,6 @@ for (const {name, resourceAttributes, dataset} of [
             // Same global API registry used by the context fixture.
             const api = globalThis[Symbol.for('opentelemetry.js.api.1')];
             api.trace.getTracer('dataset-test').startSpan('dataset-test').end();
-            api.metrics
-                .getMeter('dataset-test')
-                .createCounter('dataset_test_count')
-                .add(1);
             // Flush all providers, including metrics, without waiting for the
             // periodic metric export interval. Session startup supplies a log.
             await globalThis.edotBrowser.shutdown();
@@ -82,7 +78,6 @@ for (const {name, resourceAttributes, dataset} of [
         for (const [signal, resourceKey] of [
             ['traces', 'resourceSpans'],
             ['logs', 'resourceLogs'],
-            ['metrics', 'resourceMetrics'],
         ]) {
             const requests = collector
                 .getRequests()

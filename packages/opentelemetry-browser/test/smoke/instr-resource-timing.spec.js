@@ -10,6 +10,11 @@ test('should export resource timing related logs', async ({page}) => {
     const collector = createCollector(page);
     await page.goto('/fixtures/use-fetch.html');
 
+    // Resource timing logs might take a bit to be reported and could
+    // land in a second batch export. Perform some activity to give it
+    // time
+    await page.click('body > h1');
+
     // Check resource logs at load time
     let logs = await collector.getLogs();
     let resourceLogs = logs.filter(

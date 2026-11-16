@@ -117,18 +117,31 @@ Configuration is passed as an object to `startBrowserSdk`. The following options
 | `resourceAttributes`  | `Record<string, any>`    | Optional resource attributes to attach to telemetry. The dataset defaults to `browser`. Refer to [Data stream routing](#data-stream-routing) for defaults and overrides. |
 | `disabled`            | `boolean`                | If `true`, the SDK does not start. |
 | `instrumentations`    | `Record<string, Object>` | **Not recommended.** Advanced per-instrumentation config passed through to upstream OpenTelemetry Browser instrumentations. EDOT Browser logs a warning when this option is set. Refer to [instrumentations details](#otel_browser_instrumentations-details). |
-| `session`             | `{ sampleRate?: number; inactivityTimeout?: number; maxDuration?: number; activityEvents?: string[] }` | Session tracking and session-level sampling. Refer to [session details](#otel_browser_session-details) for more information. |
-| `pageRoute`           | `((url: URL, inferPageRoute: (url: URL \| string) => string \| undefined) => string \| undefined) \| false` | Function that returns the low-cardinality route of a page, added as `url.template` to spans and log records. Defaults to `inferPageRoute`. Set to `false` to only use routes passed to `setPageRoute`. Refer to [page route details](#otel_browser_page-route-details) for more information. |
-| `exportConfig`    | `{ url?: string; headers?: Record<string, string>}` | Configuration for exporters of the different signals. |
+| `pageRoute`           | `((url: URL, inferPageRoute: (url: URL \| string) => string \| undefined) => string \| undefined) \| false` | Function that returns the low-cardinality route of a page, added as `url.template` to spans and log 
 | `ignoreFetchUrls`     | `(string \| RegExp)[]`   | URLs to exclude from fetch, XMLHttpRequest, and resource timing instrumentation. OTLP export URLs are always ignored. Refer to [`ignoreFetchUrls` details](#otel_browser_ignorefetchurls-details). Optional; defaults to `[]`. |
+| `exportConfig`    | `{ url?: string; tracesUrl?: string; logsUrl?: string; headers?: Record<string, string>}` | Configuration for exporters of the different signals. |
 | `exportConfig.url`    | `string` | Base URL of the OTLP export endpoint (reverse proxy). Do not include signal paths such as `/v1/traces`. Defaults to `http://localhost:4318`. |
-| `exportConfig.tracesUrl`, `exportConfig.logsUrl`, `exportConfig.metricsUrl`    | `string` | Full URL for one signal, used as is without appending `/v1/<signal>`. Overrides `exportConfig.url` for that signal only. Optional. Refer to [Export endpoint configuration](#export-endpoint-configuration). |
+| `exportConfig.tracesUrl`, `exportConfig.logsUrl`    | `string` | Full URL for one signal, used as is without appending `/v1/<signal>`. Overrides `exportConfig.url` for that signal only. Optional. Refer to [Export endpoint configuration](#export-endpoint-configuration). |
 | `exportConfig.headers`    | `Record<string, string>` | Headers to send with export requests. Defaults to `{}`. The reverse proxy typically injects `Authorization`; do not put API keys here in browser code. |
 
 
 ## Export endpoint configuration [export-endpoint-configuration]
 
-Configure `exportConfig.url` to point to a server that accepts OTLP traffic. Use the base URL of the server only: do not include signal paths such as `/v1/traces`, `/v1/metrics`, or `/v1/logs`. The SDK appends these paths when exporting each signal.
+Configure `exportConfig.url` to point to a server that accepts OTLP traffic. Use the base URL of the server only: do not include signal paths such as `/v1/traces` or `/v1/logs`. The SDK appends these paths when exporting each signal.
+
+If your server routes OTLP traffic on paths other than `/v1/traces` and `/v1/logs`, set `exportConfig.tracesUrl` or `exportConfig.logsUrl`. Each one is a full URL and is used exactly as written. A signal without its own URL still uses `exportConfig.url` plus the default path, and you can omit `exportConfig.url` when both are set.
+
+```js
+import { startBrowserSdk } from '@elastic/opentelemetry-browser';
+
+startBrowserSdk({
+  serviceName: 'my-web-app',
+  exportConfig: {
+    tracesUrl: 'https://telemetry.example.com/otlp/t',
+    logsUrl: 'https://telemetry.example.com/otlp/l',
+  },
+});
+```
 
 If your server routes OTLP traffic on paths other than `/v1/traces`, `/v1/logs` and `/v1/metrics`, set `exportConfig.tracesUrl`, `exportConfig.logsUrl` or `exportConfig.metricsUrl`. Each one is a full URL and is used exactly as written. A signal without its own URL still uses `exportConfig.url` plus the default path, and you can omit `exportConfig.url` when all three are set.
 
@@ -204,7 +217,7 @@ Pass an array of instrumentation keys (the same strings as the **Key** column in
 
 - The value must be an array of strings. Other shapes log a warning in the browser console and are ignored.
 - If a string is not a known instrumentation key, EDOT Browser logs a warning and skips that entry.
-- If you set both `disableInstrumentations` and `instrumentations` for the same key, `disableInstrumentations` takes precedence. For example, `disableInstrumentations: ['resource-timing']` keeps resource timing disabled even when `instrumentations['resource-timing']` sets `enabled: true`.
+- If you set both `disableInstrumentations` and `instrumentations` for the same key, `disableInstrumentations` takes precedence. For example, `disableInstrumentations: ['resource-timing']` keeps resource timing disabled even when you also pass other configuration under `instrumentations['resource-timing']`.
 
 ```js
 import { startBrowserSdk } from '@elastic/opentelemetry-browser';
@@ -237,6 +250,8 @@ Session sampling controls whether EDOT Browser exports automatic RUM telemetry (
 
 When a session is **sampled in**, all configured instrumentations run for that session until it ends or rotates. When a session is **sampled out**, EDOT Browser disables automatic instrumentations for that session so the browser does not collect spans or log records that would be dropped anyway.
 
+When an active session is available, traces and logs use that session's sampling decision. If the session manager cannot return an active session—for example after a session expires and before user activity starts a new one—there is no per-session decision to apply. When `session.sampleRate` is `1` (the default), the trace sampler still **samples spans in** and automatic log records continue to be exported. For any rate below `1`, spans are sampled out until a new session starts.
+
 To stop automatic RUM export while keeping session machinery active, set `session.sampleRate` to `0`. With `sampleRate: 0`, session state still exists client-side but automatic export is suppressed.
 
 Metrics your application emits through the OpenTelemetry API are not gated by session sampling today. Refer to [Sessions](telemetry.md#sessions) for signal-specific behavior.
@@ -248,6 +263,8 @@ A tab becoming visible extends an active session but does not start a new one. T
 The object `startBrowserSdk` returns has methods to read the current session and to react when sessions start or end:
 
 ```js
+import { startBrowserSdk } from '@elastic/opentelemetry-browser';
+
 const sdk = startBrowserSdk({/* ... */});
 
 sdk.getSession(); // { id, previousId, startTimestamp, sampled }, or undefined when no session is active

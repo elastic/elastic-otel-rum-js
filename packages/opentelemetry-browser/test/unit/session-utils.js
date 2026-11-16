@@ -3,12 +3,83 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import nodeCrypto from 'node:crypto';
+
 import {diag, DiagLogLevel} from '@opentelemetry/api';
 
 import {SessionManager} from '../../lib/session/manager.js';
+import {SESSION_STORAGE_KEY} from '../../lib/session/storage.js';
 
 export const UUID_V4 =
     /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+
+/** @type {WeakSet<object>} */
+const mockWindows = new WeakSet();
+
+/**
+ * Node unit tests have no `window`; session storage sync attaches listeners here.
+ */
+export function ensureSessionStorageWindow() {
+    if (!globalThis.crypto) {
+        globalThis.crypto = nodeCrypto.webcrypto;
+    }
+    const existing = globalThis.window;
+    // @ts-ignore
+    if (existing?.addEventListener && mockWindows.has(existing)) {
+        return existing;
+    }
+    /** @type {Map<string, Set<EventListener>>} */
+    const listeners = new Map();
+    const win = {
+        crypto: globalThis.crypto,
+        addEventListener(
+            /** @type {string} */ type,
+            /** @type {EventListener} */ fn
+        ) {
+            let set = listeners.get(type);
+            if (!set) {
+                set = new Set();
+                listeners.set(type, set);
+            }
+            set.add(fn);
+        },
+        removeEventListener(
+            /** @type {string} */ type,
+            /** @type {EventListener} */ fn
+        ) {
+            listeners.get(type)?.delete(fn);
+        },
+        dispatchEvent(/** @type {Event} */ event) {
+            const set = listeners.get(event.type);
+            set?.forEach((fn) => fn(/** @type {Event} */ (event)));
+            return true;
+        },
+    };
+    mockWindows.add(win);
+    globalThis.window = /** @type {Window & typeof globalThis} */ (win);
+    return win;
+}
+
+/**
+ * @param {import('./session-utils.js').MemoryStorage} sessionStorage
+ * @param {string | null} [newValue]
+ * @param {string | null} [oldValue]
+ */
+export function dispatchSessionStorage(
+    sessionStorage,
+    newValue,
+    oldValue = null
+) {
+    const win = ensureSessionStorageWindow();
+    win.dispatchEvent({
+        type: 'storage',
+        // @ts-ignore
+        key: SESSION_STORAGE_KEY,
+        newValue,
+        oldValue,
+        storageArea: sessionStorage,
+    });
+}
 
 export class MemoryStorage {
     constructor() {
@@ -47,6 +118,7 @@ export class MemoryStorage {
  * @param {Partial<import('../../lib/session/manager.js').SessionManagerOptions>} [opts]
  */
 export function setup(opts = {}) {
+    ensureSessionStorageWindow();
     const clock = {now: 1_000_000};
     /** @type {import('../../lib/session/state.js').SessionInfo[]} */
     const started = [];

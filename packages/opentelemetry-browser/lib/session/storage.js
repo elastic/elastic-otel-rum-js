@@ -33,10 +33,10 @@ export class SessionStore {
             return this._session;
         }
         // Read storage on every call so sessions rotated by other tabs are
-        // picked up without `storage` event listeners.
+        // picked up; `storage` events only refresh the activity throttle.
         try {
             const raw = this._storage.getItem(SESSION_STORAGE_KEY);
-            this._session = raw ? parseSession(raw) : undefined;
+            this._session = raw ? parseStoredSession(raw) : undefined;
         } catch (err) {
             diag.debug('Session storage read failed', err);
         }
@@ -109,7 +109,7 @@ export function getOrCreateTabId(storage) {
  * @param {string} raw
  * @returns {SessionState | undefined}
  */
-function parseSession(raw) {
+export function parseStoredSession(raw) {
     try {
         const s = JSON.parse(raw);
         if (

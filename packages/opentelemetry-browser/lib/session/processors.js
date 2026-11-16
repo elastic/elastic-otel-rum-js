@@ -56,7 +56,7 @@ export class SessionLogRecordProcessor {
         this._manager = options.manager;
     }
     /**
-     * @param {import('@opentelemetry/sdk-logs').SdkLogRecord} logRecord
+     * @param {import('@opentelemetry/sdk-logs').ReadWriteLogRecord} logRecord
      */
     onEmit(logRecord) {
         const session = this._manager.getSession();

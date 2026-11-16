@@ -45,12 +45,12 @@ function parseUrl(value, name) {
 /**
  * Resolves the export URL of each signal. A per-signal URL is used as is. Any
  * signal without one gets the signal path appended to the base `url`.
- * @param {{url?: string; tracesUrl?: string; logsUrl?: string; metricsUrl?: string}} [exportConfig]
- * @returns {{tracesUrl: string; logsUrl: string; metricsUrl: string}}
+ * @param {{url?: string; tracesUrl?: string; logsUrl?: string}} [exportConfig]
+ * @returns {{tracesUrl: string; logsUrl: string}}
  * @throws {Error} when a value that is going to be used is not a valid URL
  */
 export function resolveExportUrls(exportConfig) {
-    const {url, tracesUrl, logsUrl, metricsUrl} = exportConfig ?? {};
+    const {url, tracesUrl, logsUrl} = exportConfig ?? {};
     /** @type {URL | undefined} */
     let base;
 
@@ -71,6 +71,5 @@ export function resolveExportUrls(exportConfig) {
     return {
         tracesUrl: resolve(tracesUrl, 'tracesUrl', 'v1/traces'),
         logsUrl: resolve(logsUrl, 'logsUrl', 'v1/logs'),
-        metricsUrl: resolve(metricsUrl, 'metricsUrl', 'v1/metrics'),
     };
 }
