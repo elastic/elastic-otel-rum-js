@@ -4,6 +4,7 @@
  */
 export function startBrowserSdk(cfg?: BrowserSdkConfiguration): BrowserSdk;
 export type InstrumentationsConfigMap = {
+    "long-animation-frame": import("@opentelemetry/browser-instrumentation/experimental/long-animation-frame").LongAnimationFrameInstrumentationConfig;
     "navigation": import("@opentelemetry/browser-instrumentation/experimental/navigation").NavigationInstrumentationConfig;
     "navigation-timing": import("@opentelemetry/browser-instrumentation/experimental/navigation-timing").NavigationTimingInstrumentationConfig;
     "resource-timing": import("@opentelemetry/browser-instrumentation/experimental/resource-timing").ResourceTimingInstrumentationConfig;
