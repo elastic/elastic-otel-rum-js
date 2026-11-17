@@ -3,8 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import {diag, DiagLogLevel, metrics, trace} from '@opentelemetry/api';
-import {logs} from '@opentelemetry/api-logs';
+import {diag, DiagLogLevel, logs, trace} from '@opentelemetry/api';
 import {startLogsSdk} from '@opentelemetry/browser-sdk/logs';
 import {startTracesSdk} from '@opentelemetry/browser-sdk/traces';
 
