@@ -2,10 +2,9 @@
  * Public API returned by `startBrowserSdk`. Without a logger (SDK disabled or
  * failed to start) `addAction` is a no-op.
  * @param {import('@opentelemetry/api-logs').Logger | undefined} logger
- * @param {() => string | undefined} [getHref] returns the current page URL
  * @returns {ActionApi}
  */
-export function createActionApi(logger: import("@opentelemetry/api-logs").Logger | undefined, getHref?: () => string | undefined): ActionApi;
+export function createActionApi(logger: import("@opentelemetry/api-logs").Logger | undefined): ActionApi;
 /**
  * @typedef {Object} ActionApi
  * @property {(
@@ -18,12 +17,10 @@ export function createActionApi(logger: import("@opentelemetry/api-logs").Logger
 /** @typedef {string | number | boolean | string[] | number[] | boolean[]} ActionAttributeValue */
 /** Longer names are rejected */
 export const MAX_ACTION_NAME_LENGTH: 128;
-/** Attributes beyond this count are ignored */
-export const MAX_ACTION_ATTRIBUTES: 20;
+/** Attributes beyond this count, and array items beyond it, are ignored */
+export const MAX_ACTION_ITEMS: 20;
 /** Longer string values are truncated */
 export const MAX_ACTION_VALUE_LENGTH: 1024;
-/** Array values are cut to this many items */
-export const MAX_ACTION_ARRAY_LENGTH: 20;
 export type ActionApi = {
     /**
      * Records an app-defined event, such as a search or an

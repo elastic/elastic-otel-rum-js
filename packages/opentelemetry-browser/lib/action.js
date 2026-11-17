@@ -21,12 +21,10 @@ import {ATTR_URL_FULL} from './semconv.js';
 
 /** Longer names are rejected */
 export const MAX_ACTION_NAME_LENGTH = 128;
-/** Attributes beyond this count are ignored */
-export const MAX_ACTION_ATTRIBUTES = 20;
+/** Attributes beyond this count, and array items beyond it, are ignored */
+export const MAX_ACTION_ITEMS = 20;
 /** Longer string values are truncated */
 export const MAX_ACTION_VALUE_LENGTH = 1024;
-/** Array values are cut to this many items */
-export const MAX_ACTION_ARRAY_LENGTH = 20;
 
 const CONTROL_CHARS = /[\u0000-\u001f\u007f]/;
 
@@ -37,13 +35,9 @@ const RESERVED_PREFIXES = ['session.', 'user.', 'url.', 'elastic.', 'event.'];
  * Public API returned by `startBrowserSdk`. Without a logger (SDK disabled or
  * failed to start) `addAction` is a no-op.
  * @param {import('@opentelemetry/api-logs').Logger | undefined} logger
- * @param {() => string | undefined} [getHref] returns the current page URL
  * @returns {ActionApi}
  */
-export function createActionApi(
-    logger,
-    getHref = () => globalThis.location?.href
-) {
+export function createActionApi(logger) {
     return {
         addAction(name, attributes) {
             if (!logger) {
@@ -60,20 +54,16 @@ export function createActionApi(
                 );
                 return;
             }
-            try {
-                // Respects the session sampling decision
-                if (logger.enabled?.() === false) {
-                    return;
-                }
-                const attrs = sanitizeAttributes(attributes);
-                const href = getHref();
-                if (href) {
-                    attrs[ATTR_URL_FULL] = href;
-                }
-                logger.emit({eventName: name, attributes: attrs});
-            } catch (err) {
-                diag.warn(`addAction failed: ${err}`);
+            // Respects the session sampling decision
+            if (logger.enabled?.() === false) {
+                return;
             }
+            const attrs = sanitizeAttributes(attributes);
+            const href = globalThis.location?.href;
+            if (href) {
+                attrs[ATTR_URL_FULL] = href;
+            }
+            logger.emit({eventName: name, attributes: attrs});
         },
     };
 }
@@ -103,7 +93,7 @@ function sanitizeAttributes(attributes) {
             key.length === 0 || isReserved(key)
                 ? undefined
                 : normalizeValue(value);
-        if (normalized === undefined || count === MAX_ACTION_ATTRIBUTES) {
+        if (normalized === undefined || count === MAX_ACTION_ITEMS) {
             ignored.push(key);
             continue;
         }
@@ -134,14 +124,10 @@ function normalizeValue(value) {
     if (!Array.isArray(value)) {
         return normalizeScalar(value);
     }
-    const items = value.slice(0, MAX_ACTION_ARRAY_LENGTH).map(normalizeScalar);
-    if (
-        items.length === 0 ||
-        items.some((i) => i === undefined || typeof i !== typeof items[0])
-    ) {
-        return undefined;
-    }
-    return /** @type {ActionAttributeValue} */ (items);
+    const items = value.slice(0, MAX_ACTION_ITEMS).map(normalizeScalar);
+    return items.every((i) => i !== undefined && typeof i === typeof items[0])
+        ? /** @type {ActionAttributeValue} */ (items)
+        : undefined;
 }
 
 /**
@@ -149,15 +135,13 @@ function normalizeValue(value) {
  * @returns {string | number | boolean | undefined}
  */
 function normalizeScalar(value) {
-    if (typeof value === 'string' && value.length > 0) {
-        return value.length > MAX_ACTION_VALUE_LENGTH
-            ? value.slice(0, MAX_ACTION_VALUE_LENGTH)
-            : value;
+    if (typeof value === 'string') {
+        return value.slice(0, MAX_ACTION_VALUE_LENGTH);
     }
-    if (typeof value === 'boolean') {
-        return value;
-    }
-    if (typeof value === 'number' && Number.isFinite(value)) {
+    if (
+        typeof value === 'boolean' ||
+        (typeof value === 'number' && Number.isFinite(value))
+    ) {
         return value;
     }
     return undefined;

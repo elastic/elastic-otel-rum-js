@@ -210,7 +210,7 @@ The log record has the attributes you pass, plus the usual session, user, and pa
 Limits protect the page and the export payload. Anything outside them is ignored, and a warning lists the attribute names but never their values:
 
 - The action name must be a string of 1 to 128 characters without control characters (such as newlines). Otherwise the call is ignored.
-- Values must be non-empty strings, finite numbers, or booleans, or non-empty arrays of one of those types. String values are truncated to 1024 characters and arrays to their first 20 items. Nested objects are not supported.
+- Values must be strings, finite numbers, or booleans, or arrays of one of those types. String values are truncated to 1024 characters and arrays to their first 20 items. Nested objects are not supported.
 - Only the first 20 attributes are kept.
 - Attribute names starting with `session.`, `user.`, `url.`, `elastic.`, or `event.` (in any letter case) are reserved and ignored.
 
