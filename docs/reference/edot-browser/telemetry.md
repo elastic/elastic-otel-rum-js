@@ -186,6 +186,36 @@ User attributes are not added to metrics to avoid high-cardinality attributes. T
 `email` and `name` are personal data. EDOT Browser only sends what you pass to `setUser`, so pass only the fields you are allowed to collect.
 :::
 
+## Custom actions [custom-actions]
+
+Product analytics needs events that only your application knows about, such as a search, an add-to-cart, or a checkout step. Call `addAction` on the object returned by `startBrowserSdk` to record them. Each call is exported as a log record whose `event.name` is the action name:
+
+```js
+const sdk = startBrowserSdk({ /* ... */ });
+
+// A search, and the result the user picked
+sdk.addAction('product.search', {
+  'search.query': query,
+  'search.result_count': results.length,
+});
+sdk.addAction('product.search.result_click', {
+  'search.query': query,
+  'search.result_position': 3,
+  'product.id': 'p-42',
+});
+```
+
+The log record has the attributes you pass, plus the usual session, user, and page route attributes (`session.id`, `user.*`, `url.template`) and the current page URL as `url.full`. Name actions and attributes in the OpenTelemetry style, lowercase and dot-separated, so they are easy to query.
+
+Limits protect the page and the export payload. Anything outside them is ignored, and a warning lists the attribute names but never their values:
+
+- The action name must be a string of 1 to 128 characters. Otherwise the call is ignored.
+- Values must be non-empty strings, finite numbers, or booleans. String values are truncated to 1024 characters.
+- Only the first 20 attributes are kept.
+- Attribute names starting with `session.`, `user.`, `url.`, `elastic.`, or `event.` are reserved and ignored.
+
+Actions are only exported for sampled sessions, like other telemetry. Don't pass personal data, such as the text a user typed in a form, unless you're allowed to collect it.
+
 ## Next steps [next-steps]
 
 - Refer to [Set up EDOT Browser](setup.md), [Install the agent](install-agent.md), and [Proxy and CORS](proxy-cors.md) for installation and export configuration.
