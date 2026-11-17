@@ -54,7 +54,7 @@ EDOT Browser initializes tracing and registers instrumentations that produce spa
 - Each outgoing request using `fetch` or `XMLHttpRequest` is captured as an `external.http` span with attributes such as URL, HTTP method, and status code. These spans represent the client-side portion of the request.
 
 :::{note}
-Long tasks no longer produce spans. EDOT Browser no longer includes the `@opentelemetry/instrumentation-long-task` instrumentation. A replacement based on [long animation frame](https://developer.mozilla.org/en-US/docs/Web/API/PerformanceLongAnimationFrameTiming) timing is planned for a future release.
+Long tasks no longer produce spans. EDOT Browser no longer includes the `@opentelemetry/instrumentation-long-task` instrumentation. Long main-thread jank is reported on the logs signal as `browser.long_animation_frame` records from the `long-animation-frame` instrumentation (Chromium-based browsers). Refer to [Logs](#logs).
 :::
 
 In 0.4 and later, page and resource load timing, user actions (clicks), and navigation are exported on the logs signal instead of as spans. Refer to [Logs](#logs) for details on each record type. If you're upgrading, refer to [EDOT Browser breaking changes](../../release-notes/breaking-changes.md) for the affected instrumentation keys and migration steps.

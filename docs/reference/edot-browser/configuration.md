@@ -148,6 +148,7 @@ The following keys are supported:
 
 | Instrumentation   | Key                                              | Scope                                            | Configuration |
 |-------------------|--------------------------------------------------|--------------------------------------------------|---------------|
+| Long Animation Frame | `long-animation-frame`                              | `@opentelemetry/browser-instrumentation/long-animation-frame` | [Reference](https://github.com/open-telemetry/opentelemetry-browser/tree/main/packages/instrumentation#long-animation-frames) |
 | Navigation timing | `navigation-timing`                              | `@opentelemetry/browser-instrumentation/navigation-timing` | [Reference](https://github.com/open-telemetry/opentelemetry-browser/tree/main/packages/instrumentation#navigation-timing) |
 | Resource timing   | `resource-timing`                              | `@opentelemetry/browser-instrumentation/resource-timing` | [Reference](https://github.com/open-telemetry/opentelemetry-browser/tree/main/packages/instrumentation#resource-timing) |
 | Fetch             | `fetch`                                          | `@opentelemetry/browser-instrumentation/fetch`   | [Reference](https://github.com/open-telemetry/opentelemetry-browser/tree/main/packages/instrumentation#fetch) |
