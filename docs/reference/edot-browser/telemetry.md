@@ -209,10 +209,10 @@ The log record has the attributes you pass, plus the usual session, user, and pa
 
 Limits protect the page and the export payload. Anything outside them is ignored, and a warning lists the attribute names but never their values:
 
-- The action name must be a string of 1 to 128 characters. Otherwise the call is ignored.
-- Values must be non-empty strings, finite numbers, or booleans. String values are truncated to 1024 characters.
+- The action name must be a string of 1 to 128 characters without control characters (such as newlines). Otherwise the call is ignored.
+- Values must be non-empty strings, finite numbers, or booleans, or non-empty arrays of one of those types. String values are truncated to 1024 characters and arrays to their first 20 items. Nested objects are not supported.
 - Only the first 20 attributes are kept.
-- Attribute names starting with `session.`, `user.`, `url.`, `elastic.`, or `event.` are reserved and ignored.
+- Attribute names starting with `session.`, `user.`, `url.`, `elastic.`, or `event.` (in any letter case) are reserved and ignored.
 
 Actions are only exported for sampled sessions, like other telemetry. Don't pass personal data, such as the text a user typed in a form, unless you're allowed to collect it.
 

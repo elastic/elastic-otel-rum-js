@@ -10,6 +10,7 @@ import {diag, DiagLogLevel} from '@opentelemetry/api';
 
 import {
     createActionApi,
+    MAX_ACTION_ARRAY_LENGTH,
     MAX_ACTION_ATTRIBUTES,
     MAX_ACTION_NAME_LENGTH,
     MAX_ACTION_VALUE_LENGTH,
@@ -102,6 +103,25 @@ test('addAction ignores invalid names with a warning', () => {
     assert.equal(warnings.length, 4);
 });
 
+test('addAction ignores names with control characters', () => {
+    const {api, emitted} = setup();
+    const warnings = captureWarnings(() => {
+        api.addAction('a\nb');
+        api.addAction('a\u0000b');
+        api.addAction('a\tb');
+    });
+    assert.equal(emitted.length, 0);
+    assert.equal(warnings.length, 3);
+});
+
+test('addAction accepts names with punctuation and non-ASCII characters', () => {
+    const {api, emitted} = setup();
+    for (const name of ['checkout:step-2', 'búsqueda', 'a b', '検索']) {
+        api.addAction(name);
+    }
+    assert.equal(emitted.length, 4);
+});
+
 test('addAction keeps a name of the maximum length', () => {
     const {api, emitted} = setup();
     const name = 'x'.repeat(MAX_ACTION_NAME_LENGTH);
@@ -118,14 +138,13 @@ test('addAction drops invalid attribute values and warns by key only', () => {
             nan: NaN,
             inf: Infinity,
             obj: /** @type {any} */ ({secret: 'ada@example.com'}),
-            list: /** @type {any} */ (['x']),
             nil: /** @type {any} */ (null),
             undef: /** @type {any} */ (undefined),
         });
     });
     assert.deepEqual(emitted[0].attributes, {ok: 'yes', 'url.full': HREF});
     assert.equal(warnings.length, 1);
-    assert.match(warnings[0], /empty, nan, inf, obj, list, nil, undef/);
+    assert.match(warnings[0], /empty, nan, inf, obj, nil, undef/);
     assert.doesNotMatch(warnings[0], /ada@example.com/);
 });
 
@@ -167,6 +186,70 @@ test('addAction truncates long string values', () => {
     const {api, emitted} = setup();
     api.addAction('a', {q: 'x'.repeat(MAX_ACTION_VALUE_LENGTH + 10)});
     assert.equal(emitted[0].attributes.q.length, MAX_ACTION_VALUE_LENGTH);
+});
+
+test('addAction accepts homogeneous arrays of primitives', () => {
+    const {api, emitted} = setup();
+    api.addAction('a', {
+        ids: ['p-1', 'p-2'],
+        prices: [1.5, 2],
+        flags: [true, false],
+    });
+    const {attributes} = emitted[0];
+    assert.deepEqual(attributes.ids, ['p-1', 'p-2']);
+    assert.deepEqual(attributes.prices, [1.5, 2]);
+    assert.deepEqual(attributes.flags, [true, false]);
+});
+
+test('addAction drops invalid arrays', () => {
+    const {api, emitted} = setup();
+    const warnings = captureWarnings(() =>
+        api.addAction('a', {
+            ok: ['x'],
+            empty: [],
+            mixed: /** @type {any} */ (['x', 1]),
+            nested: /** @type {any} */ ([['x']]),
+            objects: /** @type {any} */ ([{a: 1}]),
+            nan: [NaN],
+            blank: [''],
+        })
+    );
+    assert.deepEqual(emitted[0].attributes, {ok: ['x'], 'url.full': HREF});
+    assert.equal(warnings.length, 1);
+    assert.match(warnings[0], /empty, mixed, nested, objects, nan, blank/);
+});
+
+test('addAction caps array length and truncates array strings', () => {
+    const {api, emitted} = setup();
+    api.addAction('a', {
+        many: Array.from({length: MAX_ACTION_ARRAY_LENGTH + 5}, (_, i) => i),
+        long: ['x'.repeat(MAX_ACTION_VALUE_LENGTH + 10)],
+    });
+    assert.equal(emitted[0].attributes.many.length, MAX_ACTION_ARRAY_LENGTH);
+    assert.equal(emitted[0].attributes.long[0].length, MAX_ACTION_VALUE_LENGTH);
+});
+
+test('addAction does not hold on to the given arrays', () => {
+    const {api, emitted} = setup();
+    const ids = ['p-1'];
+    api.addAction('a', {ids});
+    ids.push('p-2');
+    assert.deepEqual(emitted[0].attributes.ids, ['p-1']);
+});
+
+test('addAction reserved namespaces are case-insensitive', () => {
+    const {api, emitted} = setup();
+    captureWarnings(() =>
+        api.addAction('a', {
+            'ELASTIC.user.account': 'x',
+            'Session.id': 'x',
+            'User.id': 'x',
+            'URL.full': 'x',
+            'Event.name': 'x',
+            ok: 'y',
+        })
+    );
+    assert.deepEqual(emitted[0].attributes, {ok: 'y', 'url.full': HREF});
 });
 
 test('addAction rejects attributes in reserved namespaces', () => {

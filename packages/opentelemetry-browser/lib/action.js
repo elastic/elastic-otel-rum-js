@@ -11,11 +11,13 @@ import {ATTR_URL_FULL} from './semconv.js';
  * @typedef {Object} ActionApi
  * @property {(
  *  name: string,
- *  attributes?: Record<string, string | number | boolean>
+ *  attributes?: Record<string, ActionAttributeValue>
  * ) => void} addAction Records an app-defined event, such as a search or an
  *  add-to-cart. It is exported as a log event named `name`, with the given
  *  attributes and the usual session, user and page context.
  */
+
+/** @typedef {string | number | boolean | string[] | number[] | boolean[]} ActionAttributeValue */
 
 /** Longer names are rejected */
 export const MAX_ACTION_NAME_LENGTH = 128;
@@ -23,6 +25,10 @@ export const MAX_ACTION_NAME_LENGTH = 128;
 export const MAX_ACTION_ATTRIBUTES = 20;
 /** Longer string values are truncated */
 export const MAX_ACTION_VALUE_LENGTH = 1024;
+/** Array values are cut to this many items */
+export const MAX_ACTION_ARRAY_LENGTH = 20;
+
+const CONTROL_CHARS = /[\u0000-\u001f\u007f]/;
 
 // Set by the SDK, apps can't override them
 const RESERVED_PREFIXES = ['session.', 'user.', 'url.', 'elastic.', 'event.'];
@@ -46,10 +52,11 @@ export function createActionApi(
             if (
                 typeof name !== 'string' ||
                 name.length === 0 ||
-                name.length > MAX_ACTION_NAME_LENGTH
+                name.length > MAX_ACTION_NAME_LENGTH ||
+                CONTROL_CHARS.test(name)
             ) {
                 diag.warn(
-                    `addAction requires a name of 1 to ${MAX_ACTION_NAME_LENGTH} characters`
+                    `addAction requires a name of 1 to ${MAX_ACTION_NAME_LENGTH} characters without control characters`
                 );
                 return;
             }
@@ -92,19 +99,15 @@ function sanitizeAttributes(attributes) {
     const ignored = [];
     let count = 0;
     for (const [key, value] of Object.entries(attributes)) {
-        if (
-            key.length === 0 ||
-            RESERVED_PREFIXES.some((p) => key.startsWith(p)) ||
-            !isAttributeValue(value) ||
-            count === MAX_ACTION_ATTRIBUTES
-        ) {
+        const normalized =
+            key.length === 0 || isReserved(key)
+                ? undefined
+                : normalizeValue(value);
+        if (normalized === undefined || count === MAX_ACTION_ATTRIBUTES) {
             ignored.push(key);
             continue;
         }
-        result[key] =
-            typeof value === 'string' && value.length > MAX_ACTION_VALUE_LENGTH
-                ? value.slice(0, MAX_ACTION_VALUE_LENGTH)
-                : value;
+        result[key] = normalized;
         count++;
     }
     if (ignored.length > 0) {
@@ -115,14 +118,47 @@ function sanitizeAttributes(attributes) {
     return result;
 }
 
+/** @param {string} key */
+function isReserved(key) {
+    const lower = key.toLowerCase();
+    return RESERVED_PREFIXES.some((p) => lower.startsWith(p));
+}
+
+/**
+ * Returns a copy that is safe to export, or undefined if the value is not
+ * valid. Arrays must be homogeneous, as OpenTelemetry requires.
+ * @param {unknown} value
+ * @returns {ActionAttributeValue | undefined}
+ */
+function normalizeValue(value) {
+    if (!Array.isArray(value)) {
+        return normalizeScalar(value);
+    }
+    const items = value.slice(0, MAX_ACTION_ARRAY_LENGTH).map(normalizeScalar);
+    if (
+        items.length === 0 ||
+        items.some((i) => i === undefined || typeof i !== typeof items[0])
+    ) {
+        return undefined;
+    }
+    return /** @type {ActionAttributeValue} */ (items);
+}
+
 /**
  * @param {unknown} value
- * @returns {value is string | number | boolean}
+ * @returns {string | number | boolean | undefined}
  */
-function isAttributeValue(value) {
-    return (
-        (typeof value === 'string' && value.length > 0) ||
-        typeof value === 'boolean' ||
-        (typeof value === 'number' && Number.isFinite(value))
-    );
+function normalizeScalar(value) {
+    if (typeof value === 'string' && value.length > 0) {
+        return value.length > MAX_ACTION_VALUE_LENGTH
+            ? value.slice(0, MAX_ACTION_VALUE_LENGTH)
+            : value;
+    }
+    if (typeof value === 'boolean') {
+        return value;
+    }
+    if (typeof value === 'number' && Number.isFinite(value)) {
+        return value;
+    }
+    return undefined;
 }
