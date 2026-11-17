@@ -45,6 +45,7 @@ export type BrowserSdk = {
     getSession: import("./session.js").SessionApi["getSession"];
     addObserver: import("./session.js").SessionApi["addObserver"];
     endSession: import("./session.js").SessionApi["endSession"];
+    addAction: import("./action.js").ActionApi["addAction"];
     /**
      * Sets the
      * low-cardinality route of the current page (e.g. `/product/{id}`), added as

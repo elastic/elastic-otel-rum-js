@@ -17,6 +17,7 @@ import {XhrInstrumentation} from '@opentelemetry/browser-instrumentation/experim
 import {ErrorsInstrumentation} from '@opentelemetry/browser-instrumentation/experimental/errors';
 import {WebVitalsInstrumentation} from '@opentelemetry/browser-instrumentation/experimental/web-vitals';
 
+import {createActionApi} from './action.js';
 import {AsyncApisContextManager} from './context.js';
 import {createLogger} from './logging.js';
 import {detectResource} from './detector.js';
@@ -93,6 +94,7 @@ const EDOT_SCOPE_NAME = '@elastic/opentelemetry-browser';
  * @property {import('./session.js').SessionApi['getSession']} getSession
  * @property {import('./session.js').SessionApi['addObserver']} addObserver
  * @property {import('./session.js').SessionApi['endSession']} endSession
+ * @property {import('./action.js').ActionApi['addAction']} addAction
  * @property {(route: string | undefined) => void} setPageRoute Sets the
  *  low-cardinality route of the current page (e.g. `/product/{id}`), added as
  *  `url.template` to spans and log records. The route applies until the page
@@ -117,6 +119,7 @@ const NOOP_SDK = {
     shutdown: () => Promise.resolve(),
     ...createUserApi(userManager),
     ...createSessionApi(undefined),
+    ...createActionApi(undefined),
     setPageRoute() {},
 };
 
@@ -322,6 +325,11 @@ export function startBrowserSdk(cfg = {}) {
         };
     }
 
+    // After the patch above so the logger honors the session sampling
+    const actionApi = createActionApi(
+        loggerProvider.getLogger(EDOT_SCOPE_NAME, EDOT_VERSION)
+    );
+
     // Start eagerly so `session.start` is emitted on load rather than with
     // the first piece of telemetry.
     sessionManager?.start();
@@ -443,6 +451,7 @@ export function startBrowserSdk(cfg = {}) {
     return {
         ...createUserApi(userManager),
         ...createSessionApi(sessionManager),
+        ...actionApi,
         shutdown() {
             pageRouteManager.setResolver(undefined);
             stopActivityTracking?.();
