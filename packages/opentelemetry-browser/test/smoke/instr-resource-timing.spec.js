@@ -48,6 +48,7 @@ test('should export resource timing related to fetch requests', async ({
     // Get the 1st batch fo logs from the navigation
     let logs = await collector.getLogs();
     expect(logs.length).toBeGreaterThan(0);
+    collector.clear();
 
     // Now do the fetch and check
     await page.click('#same-origin');
@@ -85,6 +86,7 @@ test('should export resource timing related to XHR requests', async ({
     // Get the 1st batch fo logs from the navigation
     let logs = await collector.getLogs();
     expect(logs.length).toBeGreaterThan(0);
+    collector.clear();
 
     // Now do the fetch and check
     await page.click('#same-origin');

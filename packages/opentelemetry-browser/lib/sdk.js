@@ -7,6 +7,7 @@ import {diag, DiagLogLevel, logs, trace} from '@opentelemetry/api';
 import {startLogsSdk} from '@opentelemetry/browser-sdk/logs';
 import {startTracesSdk} from '@opentelemetry/browser-sdk/traces';
 
+import {DocumentLoadInstrumentation} from '@opentelemetry/browser-instrumentation/experimental/document-load';
 import {LongAnimationFrameInstrumentation} from '@opentelemetry/browser-instrumentation/experimental/long-animation-frame';
 import {NavigationInstrumentation} from '@opentelemetry/browser-instrumentation/experimental/navigation';
 import {NavigationTimingInstrumentation} from '@opentelemetry/browser-instrumentation/experimental/navigation-timing';
@@ -38,6 +39,7 @@ import {EDOT_VERSION, OTEL_BROWSER_INSTRUMENTATION_VERSION} from './version.js';
 
 /**
  * @typedef {{
+ *  "document-load": import('@opentelemetry/browser-instrumentation/experimental/document-load').DocumentLoadInstrumentationConfig;
  *  "long-animation-frame": import('@opentelemetry/browser-instrumentation/experimental/long-animation-frame').LongAnimationFrameInstrumentationConfig;
  *  "navigation": import('@opentelemetry/browser-instrumentation/experimental/navigation').NavigationInstrumentationConfig;
  *  "navigation-timing": import('@opentelemetry/browser-instrumentation/experimental/navigation-timing').NavigationTimingInstrumentationConfig;
@@ -318,6 +320,7 @@ export function startBrowserSdk(cfg = {}) {
     // goes to which instrumentation
     /** @type {Record<keyof InstrumentationsConfigMap, (cfg: any) => any>} */
     const instrFactoriesMap = {
+        'document-load': (cfg) => new DocumentLoadInstrumentation(cfg),
         'long-animation-frame': (cfg) =>
             new LongAnimationFrameInstrumentation(cfg),
         navigation: (cfg) => new NavigationInstrumentation(cfg),
