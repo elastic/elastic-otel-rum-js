@@ -4,6 +4,8 @@ Chrome extension for developers who want to try [EDOT Browser](https://www.elast
 
 This is a **development and testing tool**. It is not a replacement for integrating EDOT into your app build or for production RUM rollout.
 
+> **Support notice:** This extension is provided for experimentation and learning with EDOT Browser. It is not a finished product; expect **minimal support**, and breaking changes or removal without long-term commitment. For supported browser observability, integrate EDOT in your application and follow [Elastic’s product documentation](https://www.elastic.co/docs/reference/opentelemetry/edot-sdks/browser).
+
 ## What it does
 
 1. **Stores OTLP collectors** in the browser (Chrome local storage). Each collector holds your export URL(s), API key, and a display name. Multiple websites can share one collector.
