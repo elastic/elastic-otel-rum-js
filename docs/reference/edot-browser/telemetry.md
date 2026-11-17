@@ -188,7 +188,7 @@ User attributes are not added to metrics to avoid high-cardinality attributes. T
 
 ## Custom actions [custom-actions]
 
-Product analytics needs events that only your application knows about, such as a search, an add-to-cart, or a checkout step. Call `addAction` on the object returned by `startBrowserSdk` to record them. Each call is exported as a log record whose `event.name` is the action name:
+Product analytics needs events that only your application knows about, such as a search, an add-to-cart, or a checkout step. Call `addAction` on the object returned by `startBrowserSdk` to record them. Each call is exported as a log record whose `event.name` is the action name with an `action.` prefix (for example `action.product.search`), so it never clashes with the events EDOT Browser emits:
 
 ```js
 const sdk = startBrowserSdk({ /* ... */ });

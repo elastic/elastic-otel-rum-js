@@ -13,7 +13,7 @@ import {ATTR_URL_FULL} from './semconv.js';
  *  name: string,
  *  attributes?: Record<string, ActionAttributeValue>
  * ) => void} addAction Records an app-defined event, such as a search or an
- *  add-to-cart. It is exported as a log event named `name`, with the given
+ *  add-to-cart. It is exported as a log event named `action.<name>`, with the given
  *  attributes and the usual session, user and page context.
  */
 
@@ -25,6 +25,9 @@ export const MAX_ACTION_NAME_LENGTH = 128;
 export const MAX_ACTION_ITEMS = 20;
 /** Longer string values are truncated */
 export const MAX_ACTION_VALUE_LENGTH = 1024;
+
+// Keeps app names apart from the SDK's own events, such as `session.start`
+const EVENT_NAME_PREFIX = 'action.';
 
 const CONTROL_CHARS = /[\u0000-\u001f\u007f]/;
 
@@ -54,16 +57,24 @@ export function createActionApi(logger) {
                 );
                 return;
             }
-            // Respects the session sampling decision
-            if (logger.enabled?.() === false) {
-                return;
+            // Best effort: analytics must not break the app
+            try {
+                // Respects the session sampling decision
+                if (logger.enabled?.() === false) {
+                    return;
+                }
+                const attrs = sanitizeAttributes(attributes);
+                const href = globalThis.location?.href;
+                if (href) {
+                    attrs[ATTR_URL_FULL] = href;
+                }
+                logger.emit({
+                    eventName: EVENT_NAME_PREFIX + name,
+                    attributes: attrs,
+                });
+            } catch (err) {
+                diag.warn(`addAction failed: ${err}`);
             }
-            const attrs = sanitizeAttributes(attributes);
-            const href = globalThis.location?.href;
-            if (href) {
-                attrs[ATTR_URL_FULL] = href;
-            }
-            logger.emit({eventName: name, attributes: attrs});
         },
     };
 }

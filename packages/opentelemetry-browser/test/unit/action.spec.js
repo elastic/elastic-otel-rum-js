@@ -68,7 +68,7 @@ test('addAction emits a log event named after the action', () => {
     api.addAction('checkout.started');
     assert.deepEqual(emitted, [
         {
-            eventName: 'product.search',
+            eventName: 'action.product.search',
             attributes: {
                 'search.query': 'shoes',
                 'search.result_count': 12,
@@ -77,7 +77,7 @@ test('addAction emits a log event named after the action', () => {
                 'url.full': HREF,
             },
         },
-        {eventName: 'checkout.started', attributes: {'url.full': HREF}},
+        {eventName: 'action.checkout.started', attributes: {'url.full': HREF}},
     ]);
 });
 
@@ -106,7 +106,7 @@ test('addAction validates names', () => {
     });
     assert.deepEqual(
         emitted.map((e) => e.eventName),
-        valid
+        valid.map((n) => `action.${n}`)
     );
     assert.equal(warnings.length, invalid.length);
 });
@@ -205,6 +205,33 @@ test('addAction skips the event when the logger is disabled', () => {
     const {api, emitted} = setup({enabled: () => false});
     api.addAction('a');
     assert.equal(emitted.length, 0);
+});
+
+test('addAction prefixes names so they can not clash with SDK events', () => {
+    const {api, emitted} = setup();
+    api.addAction('session.start');
+    assert.equal(emitted[0].eventName, 'action.session.start');
+});
+
+test('addAction never throws', () => {
+    const logger = {
+        emit() {
+            throw new Error('boom');
+        },
+    };
+    const api = createActionApi(/** @type {any} */ (logger));
+    const throwing = {
+        get x() {
+            throw new Error('getter');
+        },
+    };
+    const warnings = captureWarnings(() => {
+        assert.doesNotThrow(() => api.addAction('a'));
+        assert.doesNotThrow(() =>
+            api.addAction('a', /** @type {any} */ (throwing))
+        );
+    });
+    assert.equal(warnings.length, 2);
 });
 
 test('action api is a no-op without a logger', () => {

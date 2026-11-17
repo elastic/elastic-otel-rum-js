@@ -41,7 +41,7 @@ test('should export addAction as a log event with session, user and page context
         });
     });
 
-    const action = await waitForEvent(collector, 'product.search');
+    const action = await waitForEvent(collector, 'action.product.search');
     const attrs = action?.attributes ?? {};
     expect(attrs['search.query']).toStrictEqual('shoes');
     expect(attrs['search.result_count']).toStrictEqual(12);

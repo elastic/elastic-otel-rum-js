@@ -11,7 +11,7 @@ export function createActionApi(logger: import("@opentelemetry/api-logs").Logger
  *  name: string,
  *  attributes?: Record<string, ActionAttributeValue>
  * ) => void} addAction Records an app-defined event, such as a search or an
- *  add-to-cart. It is exported as a log event named `name`, with the given
+ *  add-to-cart. It is exported as a log event named `action.<name>`, with the given
  *  attributes and the usual session, user and page context.
  */
 /** @typedef {string | number | boolean | string[] | number[] | boolean[]} ActionAttributeValue */
@@ -24,7 +24,7 @@ export const MAX_ACTION_VALUE_LENGTH: 1024;
 export type ActionApi = {
     /**
      * Records an app-defined event, such as a search or an
-     * add-to-cart. It is exported as a log event named `name`, with the given
+     * add-to-cart. It is exported as a log event named `action.<name>`, with the given
      * attributes and the usual session, user and page context.
      */
     addAction: (name: string, attributes?: Record<string, ActionAttributeValue>) => void;
