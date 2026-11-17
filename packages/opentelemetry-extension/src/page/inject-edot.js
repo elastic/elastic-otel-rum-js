@@ -15,6 +15,7 @@
         return;
     }
 
+    const {websiteId, host} = config;
     /**
      * @param {'active' | 'failed'} status
      * @param {string} message
@@ -24,8 +25,8 @@
             {
                 source: REPORT_SOURCE,
                 type: 'injection-status',
-                websiteId: config.websiteId,
-                host: config.host,
+                websiteId: websiteId,
+                host: host,
                 status,
                 message,
             },

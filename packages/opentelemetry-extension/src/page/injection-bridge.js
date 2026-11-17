@@ -10,9 +10,11 @@
 (function edotInjectionBridge() {
     const REPORT_SOURCE = 'edot-browser-extension';
 
+    // @ts-expect-error -- custom flag added to global scope
     if (globalThis.__EDOT_EXT_BRIDGE_ACTIVE__) {
         return;
     }
+    // @ts-expect-error -- custom flag added to global scope
     globalThis.__EDOT_EXT_BRIDGE_ACTIVE__ = true;
 
     window.addEventListener('message', (event) => {
