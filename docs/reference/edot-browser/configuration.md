@@ -119,6 +119,7 @@ Configuration is passed as an object to `startBrowserSdk`. The following options
 | `instrumentations`    | `Record<string, Object>` | **Not recommended.** Advanced per-instrumentation config passed through to upstream OpenTelemetry Browser instrumentations. EDOT Browser logs a warning when this option is set. Refer to [instrumentations details](#otel_browser_instrumentations-details). |
 | `pageRoute`           | `((url: URL, inferPageRoute: (url: URL \| string) => string \| undefined) => string \| undefined) \| false` | Function that returns the low-cardinality route of a page, added as `url.template` to spans and log 
 | `ignoreFetchUrls`     | `(string \| RegExp)[]`   | URLs to exclude from fetch, XMLHttpRequest, and resource timing instrumentation. OTLP export URLs are always ignored. Refer to [`ignoreFetchUrls` details](#otel_browser_ignorefetchurls-details). Optional; defaults to `[]`. |
+| `frustration`         | `boolean \| { ignoreSelectors?: string[] }` | Reports rage, dead, and error clicks. Set to `false` to turn it off. Refer to [`frustration` details](#otel_browser_frustration-details). Optional; defaults to `true`. |
 | `exportConfig`    | `{ url?: string; tracesUrl?: string; logsUrl?: string; headers?: Record<string, string>}` | Configuration for exporters of the different signals. |
 | `exportConfig.url`    | `string` | Base URL of the OTLP export endpoint (reverse proxy). Do not include signal paths such as `/v1/traces`. Defaults to `http://localhost:4318`. |
 | `exportConfig.tracesUrl`, `exportConfig.logsUrl`    | `string` | Full URL for one signal, used as is without appending `/v1/<signal>`. Overrides `exportConfig.url` for that signal only. Optional. Refer to [Export endpoint configuration](#export-endpoint-configuration). |
@@ -358,6 +359,23 @@ startBrowserSdk({
   ],
 });
 ```
+
+### `frustration` details [otel_browser_frustration-details]
+
+EDOT Browser reports [frustration signals](telemetry.md#frustration-signals) by default. Set `frustration` to `false` to turn them off.
+
+Some elements react to repeated clicks by design, such as quantity steppers, carousels, or maps. Add their CSS selectors to `ignoreSelectors` so clicks on them, or inside them, are not reported:
+
+```js
+startBrowserSdk({
+  serviceName: 'my-web-app',
+  frustration: {
+    ignoreSelectors: ['.quantity-stepper', '[data-no-frustration]'],
+  },
+});
+```
+
+Invalid selectors are ignored with a warning.
 
 ## Next steps [next-steps]
 

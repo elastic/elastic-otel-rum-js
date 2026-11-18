@@ -22,6 +22,11 @@ import {AsyncApisContextManager} from './context.js';
 import {createLogger} from './logging.js';
 import {detectResource} from './detector.js';
 import {
+    ClientSpanActivityProcessor,
+    resolveFrustrationConfig,
+    startFrustrationDetection,
+} from './frustration.js';
+import {
     PageRouteLogRecordProcessor,
     PageRouteManager,
     PageRouteSpanProcessor,
@@ -79,6 +84,7 @@ import {EDOT_VERSION, OTEL_BROWSER_INSTRUMENTATION_VERSION} from './version.js';
  * @property {Partial<InstrumentationsConfigMap>} [instrumentations]
  * @property {import('./session.js').SessionConfig} [session]
  * @property {import('./page-route.js').PageRouteResolver | false} [pageRoute] // defaults to `inferPageRoute`
+ * @property {boolean | import('./frustration.js').FrustrationConfig} [frustration] // rage, dead and error clicks, defaults to `true`
  * @property {Array<string | RegExp>} [ignoreFetchUrls]
  * @property {Array<keyof InstrumentationsConfigMap>} [disableInstrumentations]
  */
@@ -205,6 +211,7 @@ export function startBrowserSdk(cfg = {}) {
     const pageRouteManager = new PageRouteManager();
     pageRouteManager.setResolver(resolvePageRouteConfig(config.pageRoute));
     const sessionManager = createSessionManager(config.session);
+    const frustrationConfig = resolveFrustrationConfig(config.frustration);
 
     // Disable our logger to let the upstream take its place
     // TODO: if upstream exports its method to register a logger
@@ -235,6 +242,13 @@ export function startBrowserSdk(cfg = {}) {
         new UserSpanProcessor(userManager),
         new PageRouteSpanProcessor(pageRouteManager),
     ];
+    /** @type {ReturnType<typeof startFrustrationDetection> | undefined} */
+    let frustration;
+    if (frustrationConfig) {
+        spanProcessors.push(
+            new ClientSpanActivityProcessor(() => frustration?.recordActivity())
+        );
+    }
     // By default the Span sampler is allways on
     /** @type {(...args: any[]) => import('@opentelemetry/sdk-trace').SamplingResult} */
     let shouldSample = () => ({decision: 2});
@@ -329,6 +343,12 @@ export function startBrowserSdk(cfg = {}) {
     const actionApi = createActionApi(
         loggerProvider.getLogger(EDOT_SCOPE_NAME, EDOT_VERSION)
     );
+    if (frustrationConfig) {
+        frustration = startFrustrationDetection(
+            loggerProvider.getLogger(EDOT_SCOPE_NAME, EDOT_VERSION),
+            frustrationConfig
+        );
+    }
 
     // Start eagerly so `session.start` is emitted on load rather than with
     // the first piece of telemetry.
@@ -454,6 +474,7 @@ export function startBrowserSdk(cfg = {}) {
         ...actionApi,
         shutdown() {
             pageRouteManager.setResolver(undefined);
+            frustration?.stop();
             stopActivityTracking?.();
             sessionManager?.shutdown();
             instrEntries.forEach((e) => e.instr.disable());
