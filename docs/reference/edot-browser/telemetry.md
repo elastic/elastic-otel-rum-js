@@ -89,6 +89,7 @@ Automatic log records include:
 - **Page and resource timing**: Navigation timing and resource timing are captured as log records. This replaces the former document load spans.
 - **Core Web Vitals**: Core Web Vitals (for example LCP, CLS, and INP) are captured as log records, with the measurements in `browser.web_vital.*` attributes. The values are aggregated in {{product.observability}} rather than in the browser.
 - **Errors**: Uncaught errors and unhandled promise rejections are captured as `exception` log records.
+- **Frustration signals**: Rage, dead, and error clicks are captured as `browser.frustration.*` log records. Refer to [Frustration signals](#frustration-signals).
 
 In addition, your application can emit its own records:
 
@@ -215,6 +216,47 @@ Limits protect the page and the export payload. Anything outside them is ignored
 - Attribute names starting with `session.`, `user.`, `url.`, `elastic.`, or `event.` (in any letter case) are reserved and ignored.
 
 Actions are only exported for sampled sessions, like other telemetry. Don't pass personal data, such as the text a user typed in a form, unless you're allowed to collect it.
+
+## Frustration signals [frustration-signals]
+
+EDOT Browser detects clicks that show a user is struggling with the page and reports them as log records. Use them to find the sessions worth replaying and the elements that frustrate users the most.
+
+| Event | When |
+|---|---|
+| `browser.frustration.rage_click` | The user clicked the same element 3 or more times within 1 second. Reported once per burst. |
+| `browser.frustration.dead_click` | The user clicked an element that looks clickable and the page did not react within 1 second. |
+| `browser.frustration.error_click` | An uncaught error or unhandled promise rejection happened within 1 second of a click, or within 1 second of the response to a request the click started, up to 10 seconds after the click. |
+
+A burst of clicks can produce more than one of these events, for example a rage click on a button that also does nothing. Each log record has these attributes, plus the usual session, user, and page route attributes:
+
+- `browser.css_selector`: the clicked element, in the same format as `browser.user_action.click` records. Clicks inside a button or link, such as on its icon, are reported on the button or link.
+- `browser.tag_name`: the tag of the clicked element, such as `BUTTON`.
+- `browser.page.x`, `browser.page.y`: where the first click happened.
+- `url.full`: the page URL when the user clicked.
+- `browser.frustration.click_count`: on rage clicks, the number of clicks in the burst.
+- `exception.type`, `exception.message`: on error clicks, the first error after the click.
+
+The timestamp of the log record is the time of the first click, so it points to the start of the problem in a session replay.
+
+Detection follows these rules to avoid false positives:
+
+- A click is not dead if the page reacts: the DOM changes, a `fetch` or `XMLHttpRequest` request starts, the page scrolls, the URL changes, or the page loses focus or is hidden. The reaction can come from anything on the page, not only from the click.
+- Only elements that look clickable can produce dead clicks: links, buttons, elements with a button-like ARIA role or an `onclick` attribute, and elements with a pointer cursor.
+- Clicks on form fields, labels, editable content, `canvas`, `video`, and `audio` are ignored, since their reaction doesn't change the DOM and repeated clicks on them are normal.
+- Clicks that select text (double and triple clicks) are not rage or dead clicks. Clicks with a modifier key and on links that open in another tab or download a file are not dead clicks.
+- Clicks dispatched by scripts are ignored.
+
+Use `frustration.ignoreSelectors` to ignore elements that react to repeated clicks by design, such as quantity steppers. Refer to [`frustration` details](configuration.md#otel_browser_frustration-details).
+
+### Known limitations of frustration signals [frustration-signals-limitations]
+
+- Any DOM change counts as a reaction, so pages that change constantly, such as with an animated carousel or a live ticker, report fewer dead clicks.
+- Requests are only detected through the `fetch` and `xhr` instrumentations. With those disabled, a click whose only reaction is a request that takes more than 1 second, without any DOM change, is reported as dead, and errors when the request responds are not error clicks.
+- Any request that starts within 1 second of a click is treated as started by it, so an error when an unrelated request responds can be reported as an error click.
+- Clicks on elements that react without changing the DOM, such as a button that only plays a sound or copies to the clipboard, are reported as dead. Add them to `frustration.ignoreSelectors`.
+- Clicks inside web components (custom elements or shadow DOM) don't produce dead clicks, since changes inside them can't be observed. Clicks inside iframes are not detected.
+- When the page is hidden or closed during a burst, rage and error clicks are reported right away, and dead clicks are not reported.
+- Frustration signals are not part of the OpenTelemetry semantic conventions yet. EDOT Browser uses these names until the Browser SIG defines them.
 
 ## Next steps [next-steps]
 

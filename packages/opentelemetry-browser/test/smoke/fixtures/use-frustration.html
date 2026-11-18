@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>Frustration Signals Test</title>
+        <!-- EDOT_PLACEHOLDER (DO NOT REMOVE)-->
+    </head>
+    <body>
+        <h1>Frustration Signals Test</h1>
+        <button id="dead">Does nothing</button>
+        <button id="reacts">Updates the page</button>
+        <button id="slow">Slow request</button>
+        <button id="broken">Throws</button>
+        <button id="slow-broken">Throws on a slow response</button>
+        <button id="odd-rejection">Rejects with an object without prototype</button>
+        <x-counter id="counter" style="cursor: pointer"></x-counter>
+        <button id="wrapped"><span class="icon">+</span></button>
+        <div id="pointer" style="cursor: pointer">Looks clickable</div>
+        <div class="map" style="cursor: pointer">Ignored widget</div>
+        <p id="text">Plain text</p>
+        <input id="field" type="text">
+        <p id="status"></p>
+        <script>
+            const status = document.getElementById('status');
+            document.getElementById('reacts').addEventListener('click', () => {
+                status.textContent = `clicked at ${Date.now()}`;
+            });
+            document.getElementById('slow').addEventListener('click', () => {
+                fetch('/api/slow');
+            });
+            document.getElementById('broken').addEventListener('click', () => {
+                throw new Error('boom');
+            });
+            document.getElementById('odd-rejection').addEventListener('click', () => {
+                Promise.reject(Object.create(null));
+            });
+            // Reacts only inside its shadow root
+            customElements.define('x-counter', class extends HTMLElement {
+                connectedCallback() {
+                    const root = this.attachShadow({mode: 'open'});
+                    root.innerHTML = '<button>0</button>';
+                    const button = root.querySelector('button');
+                    button.addEventListener('click', () => {
+                        button.textContent = String(Number(button.textContent) + 1);
+                    });
+                }
+            });
+            document.getElementById('slow-broken').addEventListener('click', () => {
+                fetch('/api/slow').then(() => {
+                    throw new TypeError('bad response');
+                });
+            });
+        </script>
+    </body>
+</html>
