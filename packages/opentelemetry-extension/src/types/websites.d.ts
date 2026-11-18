@@ -9,7 +9,10 @@ export type MonitoredWebsite = {
   id: string;
   /** Host part of the URL used to match tabs (e.g. `example.com`). */
   host: string;
-  /** npm version of `@elastic/opentelemetry-browser` without the package name. */
+  /**
+   * npm version of `@elastic/opentelemetry-browser` without the package name
+   * (recommended stable value: `1.0.0`).
+   */
   version: string;
   /** Id of the collector that supplies export URLs and API key. */
   collector_id: string;
