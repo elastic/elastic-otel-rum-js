@@ -185,7 +185,7 @@ EDOT Browser adds `session.id`, `session.previous_id` (after a session rotates),
 
 | Option              | Type      | Description |
 |---------------------|-----------|-------------|
-| `sampleRate`        | `number`  | Fraction of sessions to record, in the range 0–1. Defaults to `1` (100%). The decision is made when a session starts and stays fixed until the session rotates. Invalid values log a warning and fall back to the default; out-of-range values are clamped. Values are truncated to four decimal places (minimum step 0.0001). At `0`, automatic RUM instrumentations are disabled for that session and the `session.start` log record is not emitted. |
+| `sampleRate`        | `number`  | Fraction of sessions to record, in the range 0–1. Defaults to `1` (100%). The decision is made when a session starts and stays fixed until the session rotates. Invalid values log a warning and fall back to the default; out-of-range values are clamped. Values are truncated to four decimal places (minimum step 0.0001). At `0`, traces and logs—including spans and log records from your application code—are not exported for that session and the `session.start` log record is not emitted. |
 | `inactivityTimeout` | `number`  | Seconds without telemetry after which the session ends. Defaults to `1800` (30 minutes). Must be between `300` (5 minutes) and `maxDuration`. |
 | `maxDuration`       | `number`  | Maximum session length in seconds, regardless of activity. Defaults to `14400` (4 hours). Must be between `1800` (30 minutes) and `86400` (24 hours). |
 
@@ -193,13 +193,13 @@ Incorrect values for `inactivityTimeout` and `maxDuration` fall back to the defa
 
 #### Session sampling [otel_browser_session-sampling]
 
-Session sampling controls whether EDOT Browser exports automatic RUM telemetry (instrumentation spans and log records) for a given user session. The sampling rate is configured with `session.sampleRate`, not a top-level `sampleRate` option.
+Session sampling controls whether EDOT Browser **exports** traces and logs for a given user session. That includes automatic instrumentation and telemetry your application emits through the OpenTelemetry Traces and Logs APIs. The sampling rate is configured with `session.sampleRate`, not a top-level `sampleRate` option.
 
-When a session is **sampled in**, all configured instrumentations run for that session until it ends or rotates. When a session is **sampled out**, EDOT Browser disables automatic instrumentations for that session so the browser does not collect spans or log records that would be dropped anyway.
+When a session is **sampled in**, OTLP export proceeds for that session until it ends or rotates. When a session is **sampled out**, the SDK does not export spans or log records for that session (instrumentation may still run, but export is dropped at the trace sampler and logger).
 
-When an active session is available, traces and logs use that session's sampling decision. If the session manager cannot return an active session—for example after a session expires and before user activity starts a new one—there is no per-session decision to apply. When `session.sampleRate` is `1` (the default), the trace sampler still **samples spans in** and automatic log records continue to be exported. For any rate below `1`, spans are sampled out until a new session starts.
+When an active session is available, traces and logs use that session's sampling decision. If the session manager cannot return an active session—for example after a session expires and before user activity starts a new one—there is no per-session decision to apply. When `session.sampleRate` is `1` (the default), the trace sampler still **samples spans in** and log records continue to be exported. For any rate below `1`, spans and logs are not exported until a new session starts.
 
-To stop automatic RUM export while keeping session machinery active, set `session.sampleRate` to `0`. With `sampleRate: 0`, session state still exists client-side but automatic export is suppressed.
+To stop trace and log export while keeping session machinery active, set `session.sampleRate` to `0`. With `sampleRate: 0`, session state still exists client-side but OTLP export for traces and logs is suppressed.
 
 Metrics your application emits through the OpenTelemetry API are not gated by session sampling today. Refer to [Sessions](telemetry.md#sessions) for signal-specific behavior.
 
