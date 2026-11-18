@@ -124,6 +124,7 @@ test('should not export resource timing related to export requests', async ({
     // Get the 1st batch fo logs from the navigation
     let logs = await collector.getLogs();
     expect(logs.length).toBeGreaterThan(0);
+    collector.clear();
 
     // Now do the fetch and check
     await page.click('#same-origin');
