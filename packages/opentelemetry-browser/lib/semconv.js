@@ -52,13 +52,6 @@ export const ATTR_BROWSER_MOBILE = 'browser.mobile';
 export const ATTR_BROWSER_PLATFORM = 'browser.platform';
 
 /**
- * This event describes the website performance metrics introduced by Google, See [web vitals](https://web.dev/vitals).
- *
- * @experimental This event is experimental and is subject to breaking changes in minor releases of `@opentelemetry/semantic-conventions`.
- */
-export const EVENT_BROWSER_WEB_VITAL = 'browser.web_vital';
-
-/**
  * Value of the [HTTP User-Agent](https://www.rfc-editor.org/rfc/rfc9110.html#field.user-agent) header sent by the client.
  *
  * @example CERN-LineMode/2.15 libwww/2.17b3
@@ -100,3 +93,12 @@ export const EVENT_SESSION_START = 'session.start';
  * @note Not defined in semantic conventions yet. EDOT specific until the Browser SIG settles on a name.
  */
 export const ATTR_BROWSER_TAB_ID = 'browser.tab.id';
+
+/**
+ * The value of the sampling rate for sessions. Necessary to calculate metrics
+ *
+ * @example 0.1234
+ *
+ * @experimental This attribute is experimental and is subject to breaking changes in minor releases of `@opentelemetry/semantic-conventions`.
+ */
+export const ATTR_SESSION_SAMPLING_RATE = 'session.sampling_rate';

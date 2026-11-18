@@ -1,13 +1,11 @@
 /**
  * @param {BrowserSdkConfiguration} cfg
- * @returns {{
- *      shutdown: () => Promise<void>;
- * }}
+ * @returns {BrowserSdk}
  */
-export function startBrowserSdk(cfg?: BrowserSdkConfiguration): {
-    shutdown: () => Promise<void>;
-};
+export function startBrowserSdk(cfg?: BrowserSdkConfiguration): BrowserSdk;
 export type InstrumentationsConfigMap = {
+    "document-load": import("@opentelemetry/browser-instrumentation/experimental/document-load").DocumentLoadInstrumentationConfig;
+    "long-animation-frame": import("@opentelemetry/browser-instrumentation/experimental/long-animation-frame").LongAnimationFrameInstrumentationConfig;
     "navigation": import("@opentelemetry/browser-instrumentation/experimental/navigation").NavigationInstrumentationConfig;
     "navigation-timing": import("@opentelemetry/browser-instrumentation/experimental/navigation-timing").NavigationTimingInstrumentationConfig;
     "resource-timing": import("@opentelemetry/browser-instrumentation/experimental/resource-timing").ResourceTimingInstrumentationConfig;
@@ -22,12 +20,14 @@ export type InstrumentationsConfigMap = {
  */
 export type SdkConfig = {
     disabled?: boolean | undefined;
-    logLevel?: "warn" | "none" | "error" | "info" | "debug" | "verbose" | "all" | undefined;
+    logLevel?: "warn" | "error" | "none" | "info" | "debug" | "verbose" | "all" | undefined;
     serviceName?: string | undefined;
     serviceVersion?: string | undefined;
     resourceAttributes?: import("@opentelemetry/api").Attributes | undefined;
     exportConfig?: {
         url?: string;
+        tracesUrl?: string;
+        logsUrl?: string;
         headers?: Record<string, string>;
     } | undefined;
 };
@@ -35,9 +35,16 @@ export type SdkConfig = {
  * Configuration properties that are only in EDOT
  */
 export type EdotConfig = {
-    sampleRate?: number | undefined;
     instrumentations?: Partial<InstrumentationsConfigMap> | undefined;
-    session?: import("./session.js").SessionConfig | undefined;
+    session?: import("./session/config.js").SessionConfig | undefined;
+    ignoreFetchUrls?: (string | RegExp)[] | undefined;
+    disableInstrumentations?: (keyof InstrumentationsConfigMap)[] | undefined;
 };
 export type BrowserSdkConfiguration = SdkConfig & EdotConfig;
-export type DefaultConfigProps = "logLevel" | "serviceName" | "resourceAttributes" | "sampleRate" | "exportConfig";
+export type BrowserSdk = {
+    shutdown: () => Promise<void>;
+    getSession: import("./session.js").SessionApi["getSession"];
+    addObserver: import("./session.js").SessionApi["addObserver"];
+    endSession: import("./session.js").SessionApi["endSession"];
+};
+export type DefaultConfigProps = "logLevel" | "serviceName" | "resourceAttributes" | "exportConfig";

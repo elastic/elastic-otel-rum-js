@@ -2,9 +2,9 @@
 navigation_title: Troubleshooting
 description: Troubleshoot EDOT Browser telemetry export and common issues.
 applies_to:
-  stack: ga
+  stack:
   serverless:
-    observability: ga
+    observability:
   product:
     edot_browser: preview
 products:

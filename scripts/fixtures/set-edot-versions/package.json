@@ -1,0 +1,7 @@
+{
+  "name": "@elastic/opentelemetry-browser",
+  "version": "1.2.3",
+  "dependencies": {
+    "@opentelemetry/browser-instrumentation": "^0.9.4"
+  }
+}

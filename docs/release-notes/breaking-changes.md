@@ -15,8 +15,6 @@ products:
 
 Breaking changes can impact your applications, potentially disrupting normal operations. Before you upgrade, carefully review the {{edot}} breaking changes and take the necessary steps to mitigate any issues.
 
-% ## Next version [edot-browser-X.X.X-breaking-changes]
-
 % Use the following template to add entries to this document.
 
 % TEMPLATE START
@@ -28,7 +26,44 @@ Breaking changes can impact your applications, potentially disrupting normal ope
 % ::::
 % TEMPLATE END
 
-## Next version [edot-browser-X.X.X-breaking-changes]
+## 0.5.0 [edot-browser-0.5.0-breaking-changes]
+
+::::{dropdown} Removal of the metrics signal
+EDOT Browser no longer configures the OpenTelemetry MeterProvider or exports metrics over OTLP. The `exportConfig.metricsUrl` option is removed. Built-in RUM data such as Core Web Vitals and page timing continues on the logs signal.
+**Impact**<br>
+- Application metrics created with the OpenTelemetry Metrics API (`metrics.getMeter()`, counters, histograms, and so on) are no longer exported to `/v1/metrics`.
+- TypeScript users see a compilation error if they still set `exportConfig.metricsUrl`.
+- At runtime, `exportConfig.metricsUrl` is ignored.
+**Action**<br>
+- Remove `exportConfig.metricsUrl` from your configuration.
+- If you need the metrics signal, configure a MeterProvider and OTLP metrics export separately with the OpenTelemetry Metrics SDK.
+- Update dashboards or pipelines that expected OTLP metrics from EDOT Browser. Built-in RUM measurements remain available as log records; refer to [Metrics, traces, and logs](../reference/edot-browser/telemetry.md).
+::::
+
+::::{dropdown} Removal of `enabled` in instrumentation configuration
+With the update to `@opentelemetry/browser-instrumentation` 0.11.0, per-instrumentation configuration objects no longer support an `enabled` option. EDOT Browser always registers the built-in instrumentations and uses `disableInstrumentations` to turn off selected defaults.
+**Impact**<br>
+- TypeScript users see a compilation error if `instrumentations` entries still include `enabled`.
+- At runtime, `enabled: false` is ignored and the instrumentation keeps running unless its key is listed in `disableInstrumentations`.
+- Other options under `instrumentations['<key>']` continue to apply when the instrumentation is enabled.
+**Action**<br>
+- Replace patterns such as `instrumentations: { 'web-vitals': { enabled: false } }` with `disableInstrumentations: ['web-vitals']`.
+- Use `instrumentations` only for upstream passthrough options, not to enable or disable defaults. Refer to [Configure EDOT Browser](../reference/edot-browser/configuration.md#otel_browser_disableinstrumentations-details).
+::::
+
+## 0.4.0 [edot-browser-0-4-0-breaking-changes]
+
+::::{dropdown} Session sampling replaces root `sampleRate`
+EDOT Browser now applies sampling at **session** scope. Configure the rate with `session.sampleRate` (0–1). The former top-level `sampleRate` option (trace-ID ratio sampling) is removed.
+**Impact**<br>
+- Top-level `sampleRate` is ignored at runtime. TypeScript types may still list it until updated.
+- Sampling is **per session**, not per trace ID. For a sampled session, automatic spans and log records are collected for the whole session; for an unsampled session, instrumentations are disabled.
+**Action**<br>
+- Move `sampleRate` into `session: { sampleRate: … }`.
+- Revisit dashboards and volume estimates if you relied on trace-ID sampling for partial span volume within a single user session.
+Refer to [PR #128](https://github.com/elastic/elastic-otel-rum-js/pull/128).
+::::
+
 
 ::::{dropdown} Replacement of document load instrumentation for navigation timing
 Document instrumentation (@opentelemetry/instrumentation-document-load) has been replaced by `navigation-timing` from `@opentelemetry/browser-instrumentation`. The new instrumentation emits a log records instead of a trace Span to report the timings.
@@ -43,6 +78,9 @@ Document instrumentation (@opentelemetry/instrumentation-document-load) has been
 Refer to [PR #102](https://github.com/elastic/elastic-otel-rum-js/pull/102).
 ::::
 
+:::{note}
+Starting with the next release, the `document-load` instrumentation emits a `documentLoad` span again (root span, no resource child spans). Load timing details stay on the `navigation-timing` log records.
+:::
 
 ::::{dropdown} Switch to new user action instrumentation
 User interaction instrumentation (@opentelemetry/instrumentation-user-interaction) has been replaced by `user-action` from `@opentelemetry/browser-instrumentation`. The new instrumentation emits log records (for example browser.user_action.click) instead of trace spans.
@@ -133,3 +171,12 @@ will be ignored if using the old configuration key.
 Refer to [PR #95](https://github.com/elastic/elastic-otel-rum-js/pull/95).
 ::::
 
+::::{dropdown} Configuration change in web vitals instrumentation
+The configuration key for `web-vitals` instrumentation has changed from `@opentelemetry/instrumentation-web-vitals`
+to a shorter name `web-vitals`.
+**Impact**<br> This change produces a compilation error if you use the SDK with TypeScript. At runtime the configuration
+will be ignored if using the old configuration key: web vitals turned off with `{ enabled: false }` are collected again,
+and hooks such as `applyCustomLogRecordData` stop running.
+**Action**<br> Change the configuration key to `web-vitals`.
+Refer to [PR #107](https://github.com/elastic/elastic-otel-rum-js/pull/107).
+::::
