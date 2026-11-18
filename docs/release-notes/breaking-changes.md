@@ -78,6 +78,9 @@ Document instrumentation (@opentelemetry/instrumentation-document-load) has been
 Refer to [PR #102](https://github.com/elastic/elastic-otel-rum-js/pull/102).
 ::::
 
+:::{note}
+Starting with the next release, the `document-load` instrumentation emits a `documentLoad` span again (root span, no resource child spans). Load timing details stay on the `navigation-timing` log records.
+:::
 
 ::::{dropdown} Switch to new user action instrumentation
 User interaction instrumentation (@opentelemetry/instrumentation-user-interaction) has been replaced by `user-action` from `@opentelemetry/browser-instrumentation`. The new instrumentation emits log records (for example browser.user_action.click) instead of trace spans.

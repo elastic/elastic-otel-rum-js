@@ -27,6 +27,8 @@ To check for security updates, go to [Security announcements for the Elastic sta
 
 * Enable the `long-animation-frame` instrumentation by default. It emits `browser.long_animation_frame` log records from the browser [Long Animation Frames API](https://developer.mozilla.org/en-US/docs/Web/API/PerformanceLongAnimationFrameTiming). The API is available in Chromium-based browsers; other browsers skip reporting. Turn it off with `disableInstrumentations: ['long-animation-frame']`. Refer to [Configure EDOT Browser](../reference/edot-browser/configuration.md#otel_browser_instrumentations-details).
   Ref: https://github.com/elastic/elastic-otel-rum-js/issues/77
+* Enable the `document-load` instrumentation by default. It emits a `documentLoad` trace span for the initial HTML document load (from navigation `fetchStart` to `loadEventEnd`). Upstream ships this instrumentation under `@opentelemetry/browser-instrumentation/experimental/document-load`. Turn it off with `disableInstrumentations: ['document-load']`. Refer to [Configure EDOT Browser](../reference/edot-browser/configuration.md#otel_browser_instrumentations-details).
+  Ref: https://github.com/elastic/elastic-otel-rum-js/issues/76
 
 ## 0.5.0 [edot-browser-0.5.0-release-notes]
 
