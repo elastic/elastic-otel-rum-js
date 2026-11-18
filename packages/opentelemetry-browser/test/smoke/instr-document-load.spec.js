@@ -20,8 +20,13 @@ test('should export document load spans', async ({page}) => {
     expect(spans.length).toEqual(1);
 
     const span = spans[0];
+    // The instrumentation doe not get the traceId from the meta tag (the former instr did)
+    expect(span.traceId).not.toEqual(traceId);
     expect(span.scope.name).toEqual(
         '@opentelemetry/browser-instrumentation/document-load'
     );
     expect(span.name).toEqual('documentLoad');
+    expect(span.attributes['url.full']).toMatch(
+        /\/fixtures\/use-navigation-timing\.html$/
+    );
 });
