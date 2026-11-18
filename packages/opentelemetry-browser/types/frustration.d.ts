@@ -7,10 +7,15 @@ export function resolveFrustrationConfig(config: boolean | FrustrationConfig | u
  * Reports rage, dead and error clicks as log events.
  * @param {import('@opentelemetry/api-logs').Logger} logger
  * @param {FrustrationConfig} config
- * @returns {{recordActivity: () => void, stop: () => void}}
+ * @returns {{
+ *  requestStarted: (request: object) => void,
+ *  requestEnded: (request: object) => void,
+ *  stop: () => void,
+ * }}
  */
 export function startFrustrationDetection(logger: import("@opentelemetry/api-logs").Logger, config: FrustrationConfig): {
-    recordActivity: () => void;
+    requestStarted: (request: object) => void;
+    requestEnded: (request: object) => void;
     stop: () => void;
 };
 /**
@@ -45,6 +50,7 @@ export function cssSelector(element: Element): string;
  * @property {boolean} selectsText
  * @property {boolean} active
  * @property {Attributes | undefined} error
+ * @property {Set<object>} requests started during the chain, still pending
  * @property {Attributes} attributes
  * @property {ReturnType<typeof setTimeout>} [timer]
  */
@@ -57,10 +63,12 @@ export function cssSelector(element: Element): string;
 /**
  * A chain ends when its target gets no click for this long. It is also how
  * long the page has to react to a click and how long an error is attributed
- * to it.
+ * to it, or to the end of a request it started.
  */
 export const CLICK_CHAIN_WINDOW_MS: 1000;
 export const RAGE_CLICK_MIN_COUNT: 3;
+/** Errors after this, since the first click, are never attributed to it */
+export const MAX_ERROR_WINDOW_MS: 10000;
 /**
  * Groups clicks on the same target and classifies each group when it ends.
  * DOM agnostic so the rules can be unit tested.
@@ -83,10 +91,20 @@ export class ClickChainDetector {
     };
     /** @type {ClickChain[]} */
     _chains: ClickChain[];
+    /**
+     * Ended chains whose requests are still pending: an error when they
+     * respond is still an error click.
+     * @type {ClickChain[]}
+     */
+    _waiting: ClickChain[];
     /** @param {Click} click */
     click(click: Click): void;
     /** The page reacted: DOM change, request, scroll... */
     activity(): void;
+    /** @param {object} request */
+    requestStarted(request: object): void;
+    /** @param {object} request */
+    requestEnded(request: object): void;
     /** @param {Attributes} attributes of the error */
     error(attributes: Attributes): void;
     /**
@@ -99,20 +117,44 @@ export class ClickChainDetector {
      * @param {boolean} leaving
      */
     _end(chain: ClickChain, leaving: boolean): void;
+    /**
+     * @param {ClickChain} chain
+     * @param {number} ms capped by the max error window
+     */
+    _wait(chain: ClickChain, ms: number): void;
+    /** @param {ClickChain} chain */
+    _stopWaiting(chain: ClickChain): void;
+    /** @param {ClickChain} chain */
+    _emitError(chain: ClickChain): void;
 }
 /**
- * Tells the detector about requests as they start, through the spans of the
- * fetch and XHR instrumentations, so a slow response is not a dead click.
+ * Tells the detector about requests through the spans of the fetch and XHR
+ * instrumentations: a request start is a reaction, so a slow response is not
+ * a dead click, and an error once it responds is an error click.
  */
-export class ClientSpanActivityProcessor {
-    /** @param {() => void} onActivity */
-    constructor(onActivity: () => void);
-    _onActivity: () => void;
+export class RequestSpanProcessor {
+    /**
+     * @param {{
+     *  requestStarted: (span: object) => void,
+     *  requestEnded: (span: object) => void,
+     * }} listener
+     */
+    constructor(listener: {
+        requestStarted: (span: object) => void;
+        requestEnded: (span: object) => void;
+    });
+    _listener: {
+        requestStarted: (span: object) => void;
+        requestEnded: (span: object) => void;
+    };
     /** @param {{kind?: SpanKind}} span */
     onStart(span: {
         kind?: SpanKind;
     }): void;
-    onEnd(): void;
+    /** @param {{kind?: SpanKind}} span */
+    onEnd(span: {
+        kind?: SpanKind;
+    }): void;
     forceFlush(): Promise<void>;
     shutdown(): Promise<void>;
 }
@@ -156,6 +198,10 @@ export type ClickChain = {
     selectsText: boolean;
     active: boolean;
     error: Attributes | undefined;
+    /**
+     * started during the chain, still pending
+     */
+    requests: Set<object>;
     attributes: Attributes;
     timer?: number | undefined;
 };

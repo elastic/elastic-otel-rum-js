@@ -107,6 +107,21 @@ test('reports error clicks with the error', async ({page}) => {
     expect(errorClick?.attributes['exception.message']).toStrictEqual('boom');
 });
 
+test('reports error clicks when a slow request the click started fails', async ({
+    page,
+}) => {
+    const collector = await open(page);
+
+    await page.click('#slow-broken');
+    // The response takes 2s
+    await page.waitForTimeout(2000);
+
+    const logs = await frustrationLogs(page, collector);
+    expect(
+        logs.map((l) => [l.eventName, l.attributes['exception.message']])
+    ).toStrictEqual([[ERROR, 'bad response']]);
+});
+
 test('exports a rage click when the page is hidden right after it', async ({
     page,
 }) => {

@@ -225,7 +225,7 @@ EDOT Browser detects clicks that show a user is struggling with the page and rep
 |---|---|
 | `browser.frustration.rage_click` | The user clicked the same element 3 or more times within 1 second. Reported once per burst. |
 | `browser.frustration.dead_click` | The user clicked an element that looks clickable and the page did not react within 1 second. |
-| `browser.frustration.error_click` | An uncaught error or unhandled promise rejection happened within 1 second of a click. |
+| `browser.frustration.error_click` | An uncaught error or unhandled promise rejection happened within 1 second of a click, or within 1 second of the response to a request the click started, up to 10 seconds after the click. |
 
 A burst of clicks can produce more than one of these events, for example a rage click on a button that also does nothing. Each log record has these attributes, plus the usual session, user, and page route attributes:
 
@@ -251,7 +251,8 @@ Use `frustration.ignoreSelectors` to ignore elements that react to repeated clic
 ### Known limitations of frustration signals [frustration-signals-limitations]
 
 - Any DOM change counts as a reaction, so pages that change constantly, such as with an animated carousel or a live ticker, report fewer dead clicks.
-- Requests are only detected through the `fetch` and `xhr` instrumentations. With those disabled, a click whose only reaction is a request that takes more than 1 second, without any DOM change, is reported as dead.
+- Requests are only detected through the `fetch` and `xhr` instrumentations. With those disabled, a click whose only reaction is a request that takes more than 1 second, without any DOM change, is reported as dead, and errors when the request responds are not error clicks.
+- Any request that starts within 1 second of a click is treated as started by it, so an error when an unrelated request responds can be reported as an error click.
 - Clicks on elements that react without changing the DOM, such as a button that only plays a sound or copies to the clipboard, are reported as dead. Add them to `frustration.ignoreSelectors`.
 - When the page is hidden or closed during a burst, rage and error clicks are reported right away, and dead clicks are not reported.
 - Frustration signals are not part of the OpenTelemetry semantic conventions yet. EDOT Browser uses these names until the Browser SIG defines them.

@@ -22,7 +22,7 @@ import {AsyncApisContextManager} from './context.js';
 import {createLogger} from './logging.js';
 import {detectResource} from './detector.js';
 import {
-    ClientSpanActivityProcessor,
+    RequestSpanProcessor,
     resolveFrustrationConfig,
     startFrustrationDetection,
 } from './frustration.js';
@@ -246,7 +246,10 @@ export function startBrowserSdk(cfg = {}) {
     let frustration;
     if (frustrationConfig) {
         spanProcessors.push(
-            new ClientSpanActivityProcessor(() => frustration?.recordActivity())
+            new RequestSpanProcessor({
+                requestStarted: (span) => frustration?.requestStarted(span),
+                requestEnded: (span) => frustration?.requestEnded(span),
+            })
         );
     }
     // By default the Span sampler is allways on

@@ -11,6 +11,7 @@
         <button id="reacts">Updates the page</button>
         <button id="slow">Slow request</button>
         <button id="broken">Throws</button>
+        <button id="slow-broken">Throws on a slow response</button>
         <button id="wrapped"><span class="icon">+</span></button>
         <div id="pointer" style="cursor: pointer">Looks clickable</div>
         <div class="map" style="cursor: pointer">Ignored widget</div>
@@ -27,6 +28,11 @@
             });
             document.getElementById('broken').addEventListener('click', () => {
                 throw new Error('boom');
+            });
+            document.getElementById('slow-broken').addEventListener('click', () => {
+                fetch('/api/slow').then(() => {
+                    throw new TypeError('bad response');
+                });
             });
         </script>
     </body>

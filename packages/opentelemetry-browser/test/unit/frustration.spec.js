@@ -11,7 +11,8 @@ import {SpanKind} from '@opentelemetry/api';
 import {
     CLICK_CHAIN_WINDOW_MS,
     ClickChainDetector,
-    ClientSpanActivityProcessor,
+    MAX_ERROR_WINDOW_MS,
+    RequestSpanProcessor,
     resolveFrustrationConfig,
 } from '../../lib/frustration.js';
 
@@ -250,12 +251,85 @@ test('hooks run when the first chain starts and the last one ends', () => {
     assert.deepEqual(hooks, {busy: 2, idle: 1});
 });
 
-test('client spans count as page activity', () => {
-    let count = 0;
-    const processor = new ClientSpanActivityProcessor(() => count++);
+test('a request started by the click is a reaction', () => {
+    const {detector, click, names} = setup();
+    click();
+    detector.requestStarted({});
+    tick(CLICK_CHAIN_WINDOW_MS);
+    assert.deepEqual(names(), []);
+});
+
+test('an error when a slow request responds is an error click', () => {
+    const {detector, click, names} = setup();
+    const request = {};
+    click();
+    detector.requestStarted(request);
+    tick(3000);
+    detector.requestEnded(request);
+    tick(CLICK_CHAIN_WINDOW_MS - 1);
+    detector.error({'exception.message': 'bad response'});
+    assert.deepEqual(names(), [ERROR]);
+});
+
+test('errors more than 1s after the requests responded are not attributed', () => {
+    const {detector, click, names} = setup();
+    const a = {};
+    const b = {};
+    click();
+    detector.requestStarted(a);
+    detector.requestStarted(b);
+    tick(2000);
+    detector.requestEnded(a);
+    tick(2000);
+    // still waiting for `b`
+    detector.requestEnded(b);
+    tick(CLICK_CHAIN_WINDOW_MS);
+    detector.error({'exception.message': 'late'});
+    assert.deepEqual(names(), []);
+});
+
+test('errors are never attributed more than 10s after the click', () => {
+    const {detector, click, names} = setup();
+    click();
+    detector.requestStarted({});
+    tick(MAX_ERROR_WINDOW_MS);
+    detector.error({'exception.message': 'late'});
+    assert.deepEqual(names(), []);
+});
+
+test('requests started after the chain ended do not extend it', () => {
+    const {detector, click, names} = setup();
+    click();
+    detector.activity();
+    tick(CLICK_CHAIN_WINDOW_MS);
+    detector.requestStarted({});
+    tick(500);
+    detector.error({'exception.message': 'unrelated'});
+    assert.deepEqual(names(), []);
+});
+
+test('flush stops waiting for requests', () => {
+    const {detector, click, names} = setup();
+    click();
+    detector.requestStarted({});
+    tick(CLICK_CHAIN_WINDOW_MS);
+    detector.flush();
+    detector.error({'exception.message': 'after leaving'});
+    assert.deepEqual(names(), []);
+});
+
+test('the span processor reports client spans as requests', () => {
+    /** @type {string[]} */
+    const calls = [];
+    const processor = new RequestSpanProcessor({
+        requestStarted: () => calls.push('start'),
+        requestEnded: () => calls.push('end'),
+    });
     processor.onStart({kind: SpanKind.CLIENT});
     processor.onStart({kind: SpanKind.INTERNAL});
-    assert.equal(count, 1);
+    processor.onEnd({kind: SpanKind.CLIENT});
+    processor.onEnd({kind: SpanKind.INTERNAL});
+    assert.deepEqual(calls, ['start', 'end']);
 });
 
 test('resolveFrustrationConfig', () => {

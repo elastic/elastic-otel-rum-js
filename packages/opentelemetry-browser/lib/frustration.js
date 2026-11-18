@@ -47,6 +47,7 @@ import {
  * @property {boolean} selectsText
  * @property {boolean} active
  * @property {Attributes | undefined} error
+ * @property {Set<object>} requests started during the chain, still pending
  * @property {Attributes} attributes
  * @property {ReturnType<typeof setTimeout>} [timer]
  */
@@ -61,10 +62,12 @@ import {
 /**
  * A chain ends when its target gets no click for this long. It is also how
  * long the page has to react to a click and how long an error is attributed
- * to it.
+ * to it, or to the end of a request it started.
  */
 export const CLICK_CHAIN_WINDOW_MS = 1000;
 export const RAGE_CLICK_MIN_COUNT = 3;
+/** Errors after this, since the first click, are never attributed to it */
+export const MAX_ERROR_WINDOW_MS = 10_000;
 
 // Their reaction (typing, a toggle, focus, native UI) doesn't change the DOM,
 // and repeated clicks on them are normal (placing the caret, selecting text).
@@ -108,6 +111,12 @@ export class ClickChainDetector {
         this._hooks = hooks;
         /** @type {ClickChain[]} */
         this._chains = [];
+        /**
+         * Ended chains whose requests are still pending: an error when they
+         * respond is still an error click.
+         * @type {ClickChain[]}
+         */
+        this._waiting = [];
     }
 
     /** @param {Click} click */
@@ -136,6 +145,7 @@ export class ClickChainDetector {
                 href: globalThis.location?.href,
                 active: false,
                 error: undefined,
+                requests: new Set(),
             };
             this._chains.push(chain);
             if (this._chains.length === 1) {
@@ -156,10 +166,34 @@ export class ClickChainDetector {
         }
     }
 
+    /** @param {object} request */
+    requestStarted(request) {
+        this.activity();
+        for (const chain of this._chains) {
+            chain.requests.add(request);
+        }
+    }
+
+    /** @param {object} request */
+    requestEnded(request) {
+        for (const chain of this._chains) {
+            chain.requests.delete(request);
+        }
+        for (const chain of this._waiting) {
+            if (chain.requests.delete(request) && !chain.requests.size) {
+                this._wait(chain, CLICK_CHAIN_WINDOW_MS);
+            }
+        }
+    }
+
     /** @param {Attributes} attributes of the error */
     error(attributes) {
         for (const chain of this._chains) {
             chain.error ??= attributes;
+        }
+        for (const chain of [...this._waiting]) {
+            chain.error = attributes;
+            this._stopWaiting(chain);
         }
     }
 
@@ -171,6 +205,9 @@ export class ClickChainDetector {
         for (const chain of [...this._chains]) {
             clearTimeout(chain.timer);
             this._end(chain, true);
+        }
+        for (const chain of [...this._waiting]) {
+            this._stopWaiting(chain);
         }
     }
 
@@ -202,32 +239,73 @@ export class ClickChainDetector {
         ) {
             this._emit(EVENT_FRUSTRATION_DEAD_CLICK, attributes, timestamp);
         }
+        if (chain.error || leaving || !chain.requests.size) {
+            this._emitError(chain);
+            return;
+        }
+        this._waiting.push(chain);
+        this._wait(chain, MAX_ERROR_WINDOW_MS);
+    }
+
+    /**
+     * @param {ClickChain} chain
+     * @param {number} ms capped by the max error window
+     */
+    _wait(chain, ms) {
+        clearTimeout(chain.timer);
+        const left = chain.timestamp + MAX_ERROR_WINDOW_MS - Date.now();
+        chain.timer = setTimeout(
+            () => this._stopWaiting(chain),
+            Math.min(ms, left)
+        );
+    }
+
+    /** @param {ClickChain} chain */
+    _stopWaiting(chain) {
+        clearTimeout(chain.timer);
+        this._waiting.splice(this._waiting.indexOf(chain), 1);
+        this._emitError(chain);
+    }
+
+    /** @param {ClickChain} chain */
+    _emitError(chain) {
         if (chain.error) {
             this._emit(
                 EVENT_FRUSTRATION_ERROR_CLICK,
-                {...attributes, ...chain.error},
-                timestamp
+                {...chain.attributes, ...chain.error},
+                chain.timestamp
             );
         }
     }
 }
 
 /**
- * Tells the detector about requests as they start, through the spans of the
- * fetch and XHR instrumentations, so a slow response is not a dead click.
+ * Tells the detector about requests through the spans of the fetch and XHR
+ * instrumentations: a request start is a reaction, so a slow response is not
+ * a dead click, and an error once it responds is an error click.
  */
-export class ClientSpanActivityProcessor {
-    /** @param {() => void} onActivity */
-    constructor(onActivity) {
-        this._onActivity = onActivity;
+export class RequestSpanProcessor {
+    /**
+     * @param {{
+     *  requestStarted: (span: object) => void,
+     *  requestEnded: (span: object) => void,
+     * }} listener
+     */
+    constructor(listener) {
+        this._listener = listener;
     }
     /** @param {{kind?: SpanKind}} span */
     onStart(span) {
         if (span.kind === SpanKind.CLIENT) {
-            this._onActivity();
+            this._listener.requestStarted(span);
         }
     }
-    onEnd() {}
+    /** @param {{kind?: SpanKind}} span */
+    onEnd(span) {
+        if (span.kind === SpanKind.CLIENT) {
+            this._listener.requestEnded(span);
+        }
+    }
     forceFlush() {
         return Promise.resolve();
     }
@@ -267,13 +345,17 @@ export function resolveFrustrationConfig(config) {
  * Reports rage, dead and error clicks as log events.
  * @param {import('@opentelemetry/api-logs').Logger} logger
  * @param {FrustrationConfig} config
- * @returns {{recordActivity: () => void, stop: () => void}}
+ * @returns {{
+ *  requestStarted: (request: object) => void,
+ *  requestEnded: (request: object) => void,
+ *  stop: () => void,
+ * }}
  */
 export function startFrustrationDetection(logger, config) {
     const win = globalThis.window;
     const doc = globalThis.document;
     if (!win || !doc) {
-        return {recordActivity() {}, stop() {}};
+        return {requestStarted() {}, requestEnded() {}, stop() {}};
     }
 
     const ignoredSelector = [
@@ -373,7 +455,8 @@ export function startFrustrationDetection(logger, config) {
     win.addEventListener('pagehide', onHide, hideOptions);
 
     return {
-        recordActivity: onActivity,
+        requestStarted: (request) => detector.requestStarted(request),
+        requestEnded: (request) => detector.requestEnded(request),
         stop() {
             doc.removeEventListener('click', onClick, passive);
             win.removeEventListener('scroll', onActivity, passive);
