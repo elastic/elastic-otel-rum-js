@@ -76,10 +76,11 @@ Document instrumentation (@opentelemetry/instrumentation-document-load) has been
 - Remove instrumentations['@opentelemetry/instrumentation-document-load'] configutration option.
 - Update dashboards/queries that relied on document-load spans to use navigation-timing log events instead.
 Refer to [PR #102](https://github.com/elastic/elastic-otel-rum-js/pull/102).
-NOTE: the new document load instrumentation has been added as part of the upstream browser instrumentations (@opentelemetry/browser-instrumentation)
-and EDOT 1.0 will include it. This restores the root `documentLoad` span with the timings.
 ::::
 
+:::{note}
+Starting with the next release, the `document-load` instrumentation emits a `documentLoad` span again (root span, no resource child spans). Load timing details stay on the `navigation-timing` log records.
+:::
 
 ::::{dropdown} Switch to new user action instrumentation
 User interaction instrumentation (@opentelemetry/instrumentation-user-interaction) has been replaced by `user-action` from `@opentelemetry/browser-instrumentation`. The new instrumentation emits log records (for example browser.user_action.click) instead of trace spans.
