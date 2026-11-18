@@ -12,6 +12,8 @@
         <button id="slow">Slow request</button>
         <button id="broken">Throws</button>
         <button id="slow-broken">Throws on a slow response</button>
+        <button id="odd-rejection">Rejects with an object without prototype</button>
+        <x-counter id="counter" style="cursor: pointer"></x-counter>
         <button id="wrapped"><span class="icon">+</span></button>
         <div id="pointer" style="cursor: pointer">Looks clickable</div>
         <div class="map" style="cursor: pointer">Ignored widget</div>
@@ -28,6 +30,20 @@
             });
             document.getElementById('broken').addEventListener('click', () => {
                 throw new Error('boom');
+            });
+            document.getElementById('odd-rejection').addEventListener('click', () => {
+                Promise.reject(Object.create(null));
+            });
+            // Reacts only inside its shadow root
+            customElements.define('x-counter', class extends HTMLElement {
+                connectedCallback() {
+                    const root = this.attachShadow({mode: 'open'});
+                    root.innerHTML = '<button>0</button>';
+                    const button = root.querySelector('button');
+                    button.addEventListener('click', () => {
+                        button.textContent = String(Number(button.textContent) + 1);
+                    });
+                }
             });
             document.getElementById('slow-broken').addEventListener('click', () => {
                 fetch('/api/slow').then(() => {

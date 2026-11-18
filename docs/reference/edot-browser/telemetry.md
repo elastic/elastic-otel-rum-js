@@ -254,6 +254,7 @@ Use `frustration.ignoreSelectors` to ignore elements that react to repeated clic
 - Requests are only detected through the `fetch` and `xhr` instrumentations. With those disabled, a click whose only reaction is a request that takes more than 1 second, without any DOM change, is reported as dead, and errors when the request responds are not error clicks.
 - Any request that starts within 1 second of a click is treated as started by it, so an error when an unrelated request responds can be reported as an error click.
 - Clicks on elements that react without changing the DOM, such as a button that only plays a sound or copies to the clipboard, are reported as dead. Add them to `frustration.ignoreSelectors`.
+- Clicks inside web components (custom elements or shadow DOM) don't produce dead clicks, since changes inside them can't be observed. Clicks inside iframes are not detected.
 - When the page is hidden or closed during a burst, rage and error clicks are reported right away, and dead clicks are not reported.
 - Frustration signals are not part of the OpenTelemetry semantic conventions yet. EDOT Browser uses these names until the Browser SIG defines them.
 

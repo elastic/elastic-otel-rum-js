@@ -6,15 +6,11 @@
 import assert from 'node:assert';
 import {afterEach, beforeEach, mock, test} from 'node:test';
 
-import {SpanKind} from '@opentelemetry/api';
-
 import {
     CLICK_CHAIN_WINDOW_MS,
     ClickChainDetector,
     MAX_ERROR_WINDOW_MS,
-    RequestSpanProcessor,
-    resolveFrustrationConfig,
-} from '../../lib/frustration.js';
+} from '../../lib/frustration/detector.js';
 
 const RAGE = 'browser.frustration.rage_click';
 const DEAD = 'browser.frustration.dead_click';
@@ -32,14 +28,14 @@ afterEach(() => {
 function setup() {
     /** @type {Array<{eventName: string, attributes: any, timestamp: number}>} */
     const emitted = [];
-    const hooks = {busy: 0, idle: 0};
+    const hooks = {watch: 0, unwatch: 0};
     const detector = new ClickChainDetector(
         (eventName, attributes, timestamp) =>
             emitted.push({eventName, attributes, timestamp}),
-        {onBusy: () => hooks.busy++, onIdle: () => hooks.idle++}
+        {watch: () => hooks.watch++, unwatch: () => hooks.unwatch++}
     );
     const button = {};
-    /** @param {Partial<import('../../lib/frustration.js').Click>} [opts] */
+    /** @param {Partial<import('../../lib/frustration/detector.js').Click>} [opts] */
     const click = (opts = {}) =>
         detector.click({
             target: button,
@@ -240,15 +236,17 @@ test('flush ends chains now and does not report dead clicks', () => {
     assert.deepEqual(names(), [RAGE, ERROR]);
 });
 
-test('hooks run when the first chain starts and the last one ends', () => {
-    const {click, hooks} = setup();
+test('the page is watched only while a click waits for a reaction', () => {
+    const {detector, click, hooks} = setup();
     click({target: {}});
     click({target: {}});
-    assert.deepEqual(hooks, {busy: 1, idle: 0});
-    tick(CLICK_CHAIN_WINDOW_MS);
-    assert.deepEqual(hooks, {busy: 1, idle: 1});
+    assert.deepEqual(hooks, {watch: 1, unwatch: 0});
+    detector.activity();
+    assert.deepEqual(hooks, {watch: 1, unwatch: 1});
     click();
-    assert.deepEqual(hooks, {busy: 2, idle: 1});
+    assert.deepEqual(hooks, {watch: 2, unwatch: 1});
+    tick(CLICK_CHAIN_WINDOW_MS);
+    assert.deepEqual(hooks, {watch: 2, unwatch: 2});
 });
 
 test('a request started by the click is a reaction', () => {
@@ -316,39 +314,4 @@ test('flush stops waiting for requests', () => {
     detector.flush();
     detector.error({'exception.message': 'after leaving'});
     assert.deepEqual(names(), []);
-});
-
-test('the span processor reports client spans as requests', () => {
-    /** @type {string[]} */
-    const calls = [];
-    const processor = new RequestSpanProcessor({
-        requestStarted: () => calls.push('start'),
-        requestEnded: () => calls.push('end'),
-    });
-    processor.onStart({kind: SpanKind.CLIENT});
-    processor.onStart({kind: SpanKind.INTERNAL});
-    processor.onEnd({kind: SpanKind.CLIENT});
-    processor.onEnd({kind: SpanKind.INTERNAL});
-    assert.deepEqual(calls, ['start', 'end']);
-});
-
-test('resolveFrustrationConfig', () => {
-    assert.deepEqual(resolveFrustrationConfig(undefined), {});
-    assert.deepEqual(resolveFrustrationConfig(true), {});
-    assert.equal(resolveFrustrationConfig(false), undefined);
-    assert.deepEqual(resolveFrustrationConfig({ignoreSelectors: ['.map']}), {
-        ignoreSelectors: ['.map'],
-    });
-    for (const invalid of [
-        'yes',
-        null,
-        {ignoreSelectors: '.map'},
-        {ignoreSelectors: ['']},
-        {ignoreSelectors: [1]},
-    ]) {
-        assert.deepEqual(
-            resolveFrustrationConfig(/** @type {any} */ (invalid)),
-            {}
-        );
-    }
 });

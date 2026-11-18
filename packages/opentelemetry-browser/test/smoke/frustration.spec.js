@@ -107,6 +107,28 @@ test('reports error clicks with the error', async ({page}) => {
     expect(errorClick?.attributes['exception.message']).toStrictEqual('boom');
 });
 
+test('does not report dead clicks inside web components', async ({page}) => {
+    const collector = await open(page);
+
+    await page.click('#counter button');
+
+    expect(await frustrationLogs(page, collector)).toStrictEqual([]);
+});
+
+test('reports rejections with values that can not be converted to a string', async ({
+    page,
+}) => {
+    const collector = await open(page);
+
+    await page.click('#odd-rejection');
+
+    const logs = await frustrationLogs(page, collector);
+    const errorClick = logs.find((l) => l.eventName === ERROR);
+    expect(errorClick?.attributes['exception.message']).toStrictEqual(
+        '[object Object]'
+    );
+});
+
 test('reports error clicks when a slow request the click started fails', async ({
     page,
 }) => {
