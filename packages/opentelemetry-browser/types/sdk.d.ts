@@ -44,7 +44,7 @@ export type BrowserSdkConfiguration = SdkConfig & EdotConfig;
 export type BrowserSdk = {
     shutdown: () => Promise<void>;
     getSession: import("./session.js").SessionApi["getSession"];
-    addObserver: import("./session.js").SessionApi["addObserver"];
+    observe: import("./session.js").SessionApi["observe"];
     endSession: import("./session.js").SessionApi["endSession"];
 };
 export type DefaultConfigProps = "logLevel" | "serviceName" | "resourceAttributes" | "exportConfig";
