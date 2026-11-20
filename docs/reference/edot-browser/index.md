@@ -7,7 +7,7 @@ applies_to:
   serverless:
     observability:
   product:
-    edot_browser: ga 0.1.0
+    edot_browser: ga 1.0.0
 products:
   - id: cloud-serverless
   - id: observability
