@@ -81,7 +81,7 @@ const EDOT_SCOPE_NAME = '@elastic/opentelemetry-browser';
  * @typedef {Object} BrowserSdk
  * @property {() => Promise<void>} shutdown
  * @property {import('./session.js').SessionApi['getSession']} getSession
- * @property {import('./session.js').SessionApi['addObserver']} addObserver
+ * @property {import('./session.js').SessionApi['observe']} observe
  * @property {import('./session.js').SessionApi['endSession']} endSession
  */
 
