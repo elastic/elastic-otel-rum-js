@@ -56,14 +56,15 @@ test('createSessionApi - forwards observers without internals and their unsubscr
     const started = [];
     /** @type {unknown[]} */
     const ended = [];
-    const off = api.addObserver({
-        onSessionStarted: (s, p) => started.push([s, p]),
-        onSessionEnded: (s) => ended.push(s),
-    });
+    const offStarted = api.observe('session:start', (s, p) =>
+        started.push([s, p])
+    );
+    const offEnded = api.observe('session:end', (s) => ended.push(s));
 
     advance(61_000);
     manager.recordActivity();
-    off();
+    offStarted();
+    offEnded();
     advance(61_000);
     manager.recordActivity();
 
@@ -82,7 +83,8 @@ test('createSessionApi - forwards observers without internals and their unsubscr
 test('createSessionApi - is a no-op without a session manager', () => {
     const api = createSessionApi(undefined);
     assert.strictEqual(api.getSession(), undefined);
-    assert.doesNotThrow(() => api.addObserver({})());
+    assert.doesNotThrow(() => api.observe('session:start', () => {})());
+    assert.doesNotThrow(() => api.observe('session:end', () => {})());
     assert.doesNotThrow(() => api.endSession());
 });
 
