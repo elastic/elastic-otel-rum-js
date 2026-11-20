@@ -4,7 +4,6 @@ import HtmlWebpackPlugin from 'html-webpack-plugin';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-
 const INSTR_IMPORT = '@opentelemetry/browser-instrumentation/experimental/XXX';
 const instrNames = [
     'document-load',
@@ -16,13 +15,16 @@ const instrNames = [
     'resource-timing',
     'user-action',
     'xhr',
-    'web-vitals'
+    'web-vitals',
 ];
 const instrAlias = instrNames.reduce((alias, name) => {
     const key = INSTR_IMPORT.replace('XXX', name);
-    const val = INSTR_IMPORT.replace('experimental/XXX', `dist/${name}/index.js`);
+    const val = INSTR_IMPORT.replace(
+        'experimental/XXX',
+        `dist/${name}/index.js`
+    );
     // @ts-ignore
-    alias[key] = val
+    alias[key] = val;
     return alias;
 }, {});
 
@@ -55,44 +57,48 @@ function packageImportsResolvePlugin() {
     return {
         apply(resolver) {
             const target = resolver.ensureHook('resolve');
-            resolver.getHook('described-resolve').tapAsync(
-                'OtelPackageImportsPlugin',
-                (request, resolveContext, callback) => {
-                    const innerRequest = request.request;
-                    if (!innerRequest || !innerRequest.startsWith('#')) {
-                        return callback();
-                    }
-                    const {descriptionFileData, descriptionFileRoot} = request;
-                    if (!descriptionFileData?.imports?.[innerRequest]) {
-                        return callback();
-                    }
-                    // Always use the `require` branch (browser .cjs). Webpack 4 cannot mix
-                    // the OpenTelemetry .mjs graph with CJS entrypoints without parse errors.
-                    const mapped = pickBrowserPlatformTarget(
-                        descriptionFileData.imports[innerRequest],
-                        true
-                    );
-                    if (!mapped) {
-                        return callback();
-                    }
-                    const obj = Object.assign({}, request, {
-                        path: descriptionFileRoot,
-                        request: mapped,
-                        relativePath: descriptionFileRoot,
-                    });
-                    resolver.doResolve(
-                        target,
-                        obj,
-                        `package imports: ${innerRequest} -> ${mapped}`,
-                        resolveContext,
-                        (err, result) => {
-                            if (err) return callback(err);
-                            if (result === undefined) return callback(null, null);
-                            callback(null, result);
+            resolver
+                .getHook('described-resolve')
+                .tapAsync(
+                    'OtelPackageImportsPlugin',
+                    (request, resolveContext, callback) => {
+                        const innerRequest = request.request;
+                        if (!innerRequest || !innerRequest.startsWith('#')) {
+                            return callback();
                         }
-                    );
-                }
-            );
+                        const {descriptionFileData, descriptionFileRoot} =
+                            request;
+                        if (!descriptionFileData?.imports?.[innerRequest]) {
+                            return callback();
+                        }
+                        // Always use the `require` branch (browser .cjs). Webpack 4 cannot mix
+                        // the OpenTelemetry .mjs graph with CJS entrypoints without parse errors.
+                        const mapped = pickBrowserPlatformTarget(
+                            descriptionFileData.imports[innerRequest],
+                            true
+                        );
+                        if (!mapped) {
+                            return callback();
+                        }
+                        const obj = Object.assign({}, request, {
+                            path: descriptionFileRoot,
+                            request: mapped,
+                            relativePath: descriptionFileRoot,
+                        });
+                        resolver.doResolve(
+                            target,
+                            obj,
+                            `package imports: ${innerRequest} -> ${mapped}`,
+                            resolveContext,
+                            (err, result) => {
+                                if (err) return callback(err);
+                                if (result === undefined)
+                                    return callback(null, null);
+                                callback(null, result);
+                            }
+                        );
+                    }
+                );
         },
     };
 }
@@ -112,9 +118,12 @@ export default {
             '@opentelemetry/otlp-exporter-base/browser-http':
                 '@opentelemetry/otlp-exporter-base/dist/platform/browser/index.cjs',
             // Also from upstream Browser SDK
-            '@opentelemetry/browser-api': '@opentelemetry/browser-api/dist/index.js',
-            '@opentelemetry/browser-sdk/logs': '@opentelemetry/browser-sdk/dist/logs/index.js',
-            '@opentelemetry/browser-sdk/traces': '@opentelemetry/browser-sdk/dist/traces/index.js',
+            '@opentelemetry/browser-api':
+                '@opentelemetry/browser-api/dist/index.js',
+            '@opentelemetry/browser-sdk/logs':
+                '@opentelemetry/browser-sdk/dist/logs/index.js',
+            '@opentelemetry/browser-sdk/traces':
+                '@opentelemetry/browser-sdk/dist/traces/index.js',
             // And Browser Instrumentations
             ...instrAlias,
         },
