@@ -330,12 +330,12 @@ test('should stop tracking the session on shutdown', async ({page}) => {
         // @ts-expect-error - test globals
         globalThis.sessionEvents = [];
         // @ts-expect-error - set by the injected snippet
-        globalThis.edotBrowser.observe('session:start', (s, p) =>
+        globalThis.edotBrowser.observe('session:start', () =>
             // @ts-expect-error - set by the injected snippet
             globalThis.sessionEvents.push('started')
         );
         // @ts-expect-error - set by the injected snippet
-        globalThis.edotBrowser.observe('session:end', (s) =>
+        globalThis.edotBrowser.observe('session:end', () =>
             // @ts-expect-error - set by the injected snippet
             globalThis.sessionEvents.push('ended')
         );
@@ -361,7 +361,7 @@ test('should expose a no-op session API when the SDK does not start', async ({
     const result = await page.evaluate(() => {
         // @ts-expect-error - set by the injected snippet
         const sdk = globalThis.edotBrowser;
-        const unsubscribe = sdk.observe('session:start', {});
+        const unsubscribe = sdk.observe('session:start', () => {});
         unsubscribe();
         sdk.endSession();
         return {

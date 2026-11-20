@@ -88,6 +88,16 @@ test('createSessionApi - is a no-op without a session manager', () => {
     assert.doesNotThrow(() => api.endSession());
 });
 
+test('createSessionApi - rejects non-function handlers and unknown events', () => {
+    const api = createSessionApi(undefined);
+    assert.doesNotThrow(() =>
+        api.observe('session:start', /** @type {any} */ ({}))()
+    );
+    assert.doesNotThrow(() =>
+        api.observe(/** @type {any} */ ('session:unknown'), () => {})()
+    );
+});
+
 test('createSessionApi - ends the session', () => {
     const {createStarted} = setup();
     const manager = createStarted();
