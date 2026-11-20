@@ -1,4 +1,10 @@
-import { EuiHeader, EuiHeaderSection, EuiHeaderSectionItem, EuiButtonEmpty } from '@elastic/eui';
+import {
+  EuiButtonEmpty,
+  EuiHeader,
+  EuiHeaderSection,
+  EuiHeaderSectionItem,
+  EuiIcon,
+} from '@elastic/eui';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext.jsx';
 
@@ -16,7 +22,8 @@ export function Header() {
       <EuiHeaderSection grow={false}>
         <EuiHeaderSectionItem>
           <EuiButtonEmpty onClick={() => navigate('/pics')} flush="both">
-            <strong>Elastic</strong>
+            <EuiIcon type="logoElasticsearch" size="xl" />
+            <strong style={{ marginLeft: 8 }}>Elastic</strong>
           </EuiButtonEmpty>
         </EuiHeaderSectionItem>
       </EuiHeaderSection>

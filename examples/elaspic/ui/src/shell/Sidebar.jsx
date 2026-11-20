@@ -1,4 +1,4 @@
-import { EuiSideNav } from '@elastic/eui';
+import { EuiIcon, EuiSideNav } from '@elastic/eui';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 export function Sidebar() {
@@ -9,14 +9,14 @@ export function Sidebar() {
     {
       id: 'pics',
       name: 'My pictures',
-      icon: 'image',
+      icon: <EuiIcon type="image" />,
       isSelected: location.pathname.startsWith('/pics'),
       onClick: () => navigate('/pics'),
     },
     {
       id: 'users',
       name: 'Users',
-      icon: 'users',
+      icon: <EuiIcon type="users" />,
       isSelected: location.pathname.startsWith('/users'),
       onClick: () => navigate('/users'),
     },

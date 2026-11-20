@@ -4,6 +4,8 @@ import { BrowserRouter } from 'react-router-dom';
 import { EuiProvider } from '@elastic/eui';
 import '@elastic/eui/dist/eui_theme_light.css';
 import './app.css';
+// Side-effect: register EUI icons for Vite (see icons.js / eui#5463)
+import './icons.js';
 import { AuthProvider } from './auth/AuthContext.jsx';
 import { App } from './App.jsx';
 
