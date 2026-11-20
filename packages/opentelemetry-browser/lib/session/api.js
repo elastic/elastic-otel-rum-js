@@ -11,22 +11,20 @@ import {toSessionInfo} from './state.js';
 /** @typedef {import('./state.js').SessionInfo} SessionInfo */
 
 /**
- * @callback ObserveSessionStartFn
- * @param {'session:start'} eventName
- * @param {(current: SessionInfo, previous?: SessionInfo) => void} sessionStartHandler
- * @returns {() => void}
+ * @typedef {{
+ *   'session:start': (current: SessionInfo, previous?: SessionInfo) => void;
+ *   'session:end': (session: SessionInfo) => void;
+ * }} SessionEvents
  */
+
 /**
- * @callback ObserveSessionEndFn
- * @param {'session:end'} eventName
- * @param {(session: SessionInfo) => void} sessionEndHandler
- * @returns {() => void}
+ * @typedef {<K extends keyof SessionEvents>(eventName: K, handler: SessionEvents[K]) => () => void} ObserveFn
  */
 
 /**
  * @typedef {Object} SessionApi
  * @property {() => SessionInfo | undefined} getSession
- * @property {ObserveSessionStartFn & ObserveSessionEndFn} observe
+ * @property {ObserveFn} observe
  * @property {() => void} endSession
  */
 
@@ -47,14 +45,23 @@ export function createSessionApi(manager) {
          * @param {any} handler
          */
         observe(eventName, handler) {
-            if (manager) {
-                if (eventName === 'session:start') {
-                    return manager.addObserver({onSessionStarted: handler});
-                } else if (eventName === 'session:end') {
-                    return manager.addObserver({onSessionEnded: handler});
-                }
-                diag.debug(`Cannot observe unknown event "${eventName}".`);
+            if (typeof handler !== 'function') {
+                diag.debug(
+                    `Cannot observe "${eventName}" with a non-function handler.`
+                );
+                return () => {};
             }
+            if (eventName === 'session:start') {
+                return manager
+                    ? manager.addObserver({onSessionStarted: handler})
+                    : () => {};
+            }
+            if (eventName === 'session:end') {
+                return manager
+                    ? manager.addObserver({onSessionEnded: handler})
+                    : () => {};
+            }
+            diag.debug(`Cannot observe unknown event "${eventName}".`);
             return () => {};
         },
         endSession() {
