@@ -9,7 +9,7 @@ import { appendIconComponentCache } from '@elastic/eui/es/components/icon/icon';
 import { icon as arrowLeft } from '@elastic/eui/es/components/icon/assets/arrow_left';
 import { icon as image } from '@elastic/eui/es/components/icon/assets/image';
 import { icon as lock } from '@elastic/eui/es/components/icon/assets/lock';
-import { icon as logoElasticsearch } from '@elastic/eui/es/components/icon/assets/logo_elasticsearch';
+import { icon as logoElastic } from '@elastic/eui/es/components/icon/assets/logo_elastic';
 import { icon as plusInCircle } from '@elastic/eui/es/components/icon/assets/plus_in_circle';
 import { icon as search } from '@elastic/eui/es/components/icon/assets/search';
 import { icon as trash } from '@elastic/eui/es/components/icon/assets/trash';
@@ -20,7 +20,7 @@ appendIconComponentCache({
   arrowLeft,
   image,
   lock,
-  logoElasticsearch,
+  logoElastic,
   plusInCircle,
   search,
   trash,

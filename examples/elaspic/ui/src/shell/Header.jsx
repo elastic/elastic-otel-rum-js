@@ -22,7 +22,7 @@ export function Header() {
       <EuiHeaderSection grow={false}>
         <EuiHeaderSectionItem>
           <EuiButtonEmpty onClick={() => navigate('/pics')} flush="both">
-            <EuiIcon type="logoElasticsearch" size="xl" />
+            <EuiIcon type="logoElastic" size="xl" />
             <strong style={{ marginLeft: 8 }}>Elastic</strong>
           </EuiButtonEmpty>
         </EuiHeaderSectionItem>
