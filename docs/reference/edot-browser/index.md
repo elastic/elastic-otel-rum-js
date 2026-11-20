@@ -7,7 +7,7 @@ applies_to:
   serverless:
     observability:
   product:
-    edot_browser: preview 0.1.0
+    edot_browser: ga 0.1.0
 products:
   - id: cloud-serverless
   - id: observability
@@ -17,10 +17,6 @@ products:
 # {{edot}} Browser
 
 EDOT Browser is Elastic’s distribution of the OpenTelemetry Browser SDK. It provides a bundled, opinionated setup for collecting traces and logs from real user interactions in web applications and exporting that data to {{product.observability}} using the OpenTelemetry Protocol (OTLP). Optional browser metrics require a separate OpenTelemetry metrics pipeline.
-
-:::{important}
-EDOT Browser is released as a tech preview. The stack and serverless products referred to in this doc are GA and compatible with EDOT Browser.
-:::
 
 EDOT Browser is intended for Real User Monitoring (RUM) use cases, where telemetry is collected directly from users’ browsers to understand frontend performance, user interactions, and end-to-end request flows between frontend and backend services. It is based on OpenTelemetry standards and aims to align with contrib OpenTelemetry behavior.
 
