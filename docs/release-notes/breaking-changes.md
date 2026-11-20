@@ -26,6 +26,20 @@ Breaking changes can impact your applications, potentially disrupting normal ope
 % ::::
 % TEMPLATE END
 
+## 1.0.0 [edot-browser-1.0.0-breaking-changes]
+
+::::{dropdown} `addObserver` replaced by `observe`
+The SDK returned by `startBrowserSdk` no longer exposes `addObserver`. Use `observe(eventName, handler)` to register session lifecycle callbacks. Event names are `'session:start'` and `'session:end'`. Each call returns its own unsubscribe function.
+**Impact**<br>
+- TypeScript users see a compilation error if they still call `sdk.addObserver()`.
+- At runtime, `addObserver` is `undefined` on the returned SDK object.
+- One registration per event replaces a single object with `onSessionStarted` and `onSessionEnded`. You need separate `observe` calls (and separate unsubscribe calls) if you listen to both events.
+**Action**<br>
+- Replace `sdk.addObserver({ onSessionStarted, onSessionEnded })` with `sdk.observe('session:start', onSessionStarted)` and `sdk.observe('session:end', onSessionEnded)` as needed.
+- Store and call both unsubscribe functions returned by `observe` when you tear down listeners.
+- Refer to [Session configuration](../reference/edot-browser/configuration.md#otel_browser_session-details) for behavior and examples.
+::::
+
 ## 0.5.0 [edot-browser-0.5.0-breaking-changes]
 
 ::::{dropdown} Removal of the metrics signal
