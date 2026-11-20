@@ -10,6 +10,11 @@ test('should export resource timing related logs', async ({page}) => {
     const collector = createCollector(page);
     await page.goto('/fixtures/use-fetch.html');
 
+    // Resource timing logs might take a bit to be reported and could
+    // land in a second batch export. Perform some activity to give it
+    // time
+    await page.click('body > h1');
+
     // Check resource logs at load time
     let logs = await collector.getLogs();
     let resourceLogs = logs.filter(
@@ -43,6 +48,7 @@ test('should export resource timing related to fetch requests', async ({
     // Get the 1st batch fo logs from the navigation
     let logs = await collector.getLogs();
     expect(logs.length).toBeGreaterThan(0);
+    collector.clear();
 
     // Now do the fetch and check
     await page.click('#same-origin');
@@ -80,6 +86,7 @@ test('should export resource timing related to XHR requests', async ({
     // Get the 1st batch fo logs from the navigation
     let logs = await collector.getLogs();
     expect(logs.length).toBeGreaterThan(0);
+    collector.clear();
 
     // Now do the fetch and check
     await page.click('#same-origin');
@@ -117,6 +124,7 @@ test('should not export resource timing related to export requests', async ({
     // Get the 1st batch fo logs from the navigation
     let logs = await collector.getLogs();
     expect(logs.length).toBeGreaterThan(0);
+    collector.clear();
 
     // Now do the fetch and check
     await page.click('#same-origin');

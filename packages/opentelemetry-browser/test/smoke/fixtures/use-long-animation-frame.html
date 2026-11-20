@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>Long Animation Frame Instrumentation Test</title>
+        <!-- EDOT_PLACEHOLDER (DO NOT REMOVE)-->
+    </head>
+    <body>
+        <h1>Long Animation Frame Instrumentation Test</h1>
+
+        <button id="block">Block main thread</button>
+        <p id="status"></p>
+
+        <script>
+            const status = document.getElementById('status');
+            const blockMs = 120;
+
+            document.getElementById('block').addEventListener('click', () => {
+                status.innerText = 'blocking';
+                const end = performance.now() + blockMs;
+                while (performance.now() < end) {
+                    // busy-wait to produce a long animation frame
+                }
+                status.innerText = 'done';
+            });
+        </script>
+    </body>
+</html>

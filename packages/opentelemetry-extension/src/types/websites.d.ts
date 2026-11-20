@@ -1,0 +1,48 @@
+/** Last known outcome of injecting EDOT on a matching tab. */
+export type InjectionStatus = 'unknown' | 'active' | 'failed';
+
+/**
+ * A website entry stored by the extension for EDOT injection.
+ */
+export type MonitoredWebsite = {
+  /** Stable id for updates and deletes. */
+  id: string;
+  /** Host part of the URL used to match tabs (e.g. `example.com`). */
+  host: string;
+  /** npm version of `@elastic/opentelemetry-browser` without the package name. */
+  version: string;
+  /** Id of the collector that supplies export URLs and API key. */
+  collector_id: string;
+  /** Service name in Kibana (`service.name`). */
+  service_name: string;
+  /** Service version in Kibana (`service.version`). */
+  service_version: string;
+  /** Whether the last injection attempt on a matching tab succeeded. */
+  injection_status?: InjectionStatus;
+  /** Human-readable detail when `injection_status` is `failed`, or success note. */
+  injection_message?: string;
+  /** ISO timestamp of the last injection status update. */
+  injection_checked_at?: string;
+};
+
+export type WebsitesStorage = {
+  websites: MonitoredWebsite[];
+};
+
+/** OTLP export settings passed to EDOT `startBrowserSdk` `exportConfig`. */
+export type EdotInjectExportConfig = {
+  url?: string;
+  tracesUrl?: string;
+  logsUrl?: string;
+  headers?: Record<string, string>;
+};
+
+/** Serializable config passed into the page for injection. */
+export type EdotInjectConfig = Pick<
+  MonitoredWebsite,
+  'host' | 'version' | 'service_name' | 'service_version'
+> & {
+  websiteId: string;
+  /** Resolved from the linked collector. */
+  exportConfig: EdotInjectExportConfig;
+};

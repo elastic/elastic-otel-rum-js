@@ -3,9 +3,9 @@ navigation_title: EDOT Browser
 description: Overview of the Elastic Distribution of OpenTelemetry Browser (EDOT Browser).
 type: overview
 applies_to:
-  stack: ga
+  stack:
   serverless:
-    observability: ga
+    observability:
   product:
     edot_browser: preview 0.1.0
 products:
@@ -43,7 +43,7 @@ In addition to the features provided by OpenTelemetry Browser, EDOT Browser incl
 
 ## How it works [how-it-works]
 
-EDOT Browser runs in the user's browser as part of your web application. When initialized, it instruments the page and captures telemetry such as document load, user interactions, network requests, and Core Web Vitals. For a full list of what is collected, refer to [Supported technologies](supported-technologies.md).
+EDOT Browser runs in the user's browser as part of your web application. When initialized, it instruments the page and captures telemetry such as page and resource load timing, user actions, navigation, network requests, and Core Web Vitals. For a full list of what EDOT Browser collects, refer to [Supported technologies](supported-technologies.md).
 
 Data is exported using the OpenTelemetry Protocol (OTLP) over HTTP to an endpoint you configure. Because the SDK runs in the browser, it is recommended to avoid holding credentials there. The recommended approach is to place a reverse proxy that adds API keys or other auth headers before sending data to {{product.observability}} or an OpenTelemetry Collector. For details, refer to [Proxy and CORS configuration](proxy-cors.md).
 

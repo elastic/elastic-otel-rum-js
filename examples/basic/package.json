@@ -1,0 +1,22 @@
+{
+  "name": "elastic-otel-rum-js-examples",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "server.js",
+  "license": "Apache-2.0",
+  "private": true,
+  "scripts": {
+    "setup": "npm ci && cd ../../packages/opentelemetry-browser && npm ci",
+    "edot:update": "cd ../../packages/opentelemetry-browser && npm run build && cp build/* ../../examples/basic/public/assets",
+    "//start:todo": "instrument the server?",
+    "start": "npm run edot:update && OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-otel-browser-example-server} node --import @elastic/opentelemetry-node ./server.js"
+  },
+  "dependencies": {
+    "@elastic/opentelemetry-node": "^1.18.0",
+    "@opentelemetry/api": "^1.9.1",
+    "mime": "^4.1.0"
+  },
+  "allowScripts": {
+    "protobufjs@7.6.6": true
+  }
+}

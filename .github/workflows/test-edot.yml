@@ -37,7 +37,9 @@ jobs:
     - uses: actions/setup-node@v7
       with:
         node-version-file: '.nvmrc'
-    - name: Install dependencies
+    - name: Install root dependencies
+      run: npm ci
+    - name: Install EDOT dependencies
       run: npm ci
       working-directory: packages/opentelemetry-browser
     - name: Install Playwright Browsers

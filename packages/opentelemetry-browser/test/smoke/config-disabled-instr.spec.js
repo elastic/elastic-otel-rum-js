@@ -6,15 +6,13 @@
 import {test, expect} from '@playwright/test';
 import {createCollector} from './test-utils';
 
-test('should not enable a instrumentation if set to disabled via configuration', async ({
+test('should not enable an instrumentation if set to disabled via disableInstrumentations', async ({
     page,
 }) => {
     const collector = createCollector(page);
     const config = encodeURIComponent(
         JSON.stringify({
-            instrumentations: {
-                'resource-timing': {enabled: false},
-            },
+            disableInstrumentations: ['resource-timing'],
         })
     );
     await page.goto(`/fixtures/use-navigation-timing.html?config=${config}`);

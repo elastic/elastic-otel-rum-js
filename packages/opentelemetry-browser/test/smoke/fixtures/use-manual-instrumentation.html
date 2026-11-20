@@ -14,17 +14,17 @@
             <p id="status"></p>
             <script>
                 const statusElem = document.querySelector('#status');
+                // TODO: check when update the major version
                 const API_MAJOR = 1; // TODO: check when update the major version
+                const otelApiSymbol = Symbol.for(`opentelemetry.js.api.${API_MAJOR}`);
                 function getTracer(name) {
-                    // TODO: check when update the major version
-                    const otelApiSymbol = Symbol.for(`opentelemetry.js.api.${API_MAJOR}`);
                     // It's odd that the `trace` API is actually the tracer provider
                     const tracerProvider = globalThis[otelApiSymbol].trace;
                     return tracerProvider.getTracer(name);
                 }
                 function getLogger(name) {
-                    const otelApiSymbol = Symbol.for('io.opentelemetry.js.api.logs');
-                    const loggerProvider = globalThis[otelApiSymbol]?.(API_MAJOR);
+                    // It's odd that the `logs` API is actually the logger provider
+                    const loggerProvider = globalThis[otelApiSymbol].logs;
                     return loggerProvider?.getLogger(name);
                 }
                 window.addEventListener('load', () => {
@@ -38,7 +38,7 @@
                         });
                     });
                     document.querySelector('#log').addEventListener('click', () => {
-                        getLogger('custom').emit({ eventName: 'manual Log'});
+                        getLogger('custom').emit({ eventName: 'manual Log' });
                     });
                 });
             </script>
