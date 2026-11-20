@@ -6,7 +6,7 @@ applies_to:
   serverless:
     observability:
   product:
-    edot_browser: preview
+    edot_browser: ga
 products:
   - id: cloud-serverless
   - id: observability

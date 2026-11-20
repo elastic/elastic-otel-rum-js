@@ -26,7 +26,7 @@ Breaking changes can impact your applications, potentially disrupting normal ope
 % ::::
 % TEMPLATE END
 
-## X.X.X [edot-browser-X.X.X-breaking-changes]
+## 1.0.0 [edot-browser-1.0.0-breaking-changes]
 
 ::::{dropdown} `addObserver` replaced by `observe`
 The SDK returned by `startBrowserSdk` no longer exposes `addObserver`. Use `observe(eventName, handler)` to register session lifecycle callbacks. Event names are `'session:start'` and `'session:end'`. Each call returns its own unsubscribe function.

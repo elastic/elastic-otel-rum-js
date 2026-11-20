@@ -6,7 +6,7 @@ applies_to:
   serverless:
     observability:
   product:
-    edot_browser: preview
+    edot_browser: ga
 products:
   - id: cloud-serverless
   - id: observability
@@ -51,13 +51,16 @@ This mechanism ensures that when these asynchronous operations execute, they do 
 
 EDOT Browser initializes tracing and registers instrumentations that produce spans:
 
+- The initial HTML document load is captured as a `documentLoad` span from the `document-load` instrumentation.
 - Each outgoing request using `fetch` or `XMLHttpRequest` is captured as an `external.http` span with attributes such as URL, HTTP method, and status code. These spans represent the client-side portion of the request.
+
+Your application can also create spans with the OpenTelemetry Traces API; those spans follow the same export and session sampling rules as automatic instrumentation.
 
 :::{note}
 Long tasks no longer produce spans. EDOT Browser no longer includes the `@opentelemetry/instrumentation-long-task` instrumentation. Long main-thread jank is reported on the logs signal as `browser.long_animation_frame` records from the `long-animation-frame` instrumentation (Chromium-based browsers). Refer to [Logs](#logs).
 :::
 
-In 0.4 and later, page and resource load timing, user actions (clicks), and navigation are exported on the logs signal instead of as spans. Refer to [Logs](#logs) for details on each record type. If you're upgrading, refer to [EDOT Browser breaking changes](../../release-notes/breaking-changes.md) for the affected instrumentation keys and migration steps.
+In 0.4 and later, navigation timing, resource timing, user actions (clicks), and in-page navigation are exported on the logs signal instead of as those former span types. A `documentLoad` span still covers the initial document load on the traces signal. Refer to [Logs](#logs) for details on each record type. If you're upgrading, refer to [EDOT Browser breaking changes](../../release-notes/breaking-changes.md) for the affected instrumentation keys and migration steps.
 
 When your backend is instrumented with OpenTelemetry and trace context (trace ID, span ID) is propagated in HTTP headers, the browser’s `external.http` span and the backend spans appear in the same trace, giving you end-to-end visibility in Discover and Service Maps. Refer to [What to expect in {{kib}}](setup.md#what-to-expect-in-kibana) for how these traces appear in the Observability app.
 
@@ -66,7 +69,7 @@ When your backend is instrumented with OpenTelemetry and trace context (trace ID
 - Frontend-to-backend trace continuity depends on your backend and HTTP client propagating the W3C Trace Context headers. If propagation is not configured, browser and backend spans appear as separate traces.
 - Only requests that go through the instrumented `fetch` and `XMLHttpRequest` APIs are captured. Requests made by other mechanisms (for example some third-party scripts, WebSockets, or non-instrumented clients) do not produce spans unless you add custom instrumentation.
 - User actions no longer produce spans, so subsequent `fetch` and `XMLHttpRequest` spans are no longer grouped under a parent click span in the trace view. To correlate network activity with a user action, use the `browser.user_action.click` log records described in [Logs](#logs).
-- Session-level sampling is applied in the browser via `session.sampleRate`. Entire sessions are either recorded or not; unsampled sessions do not produce automatic instrumentation spans. High traffic can still lead to large trace volume for sampled sessions, so configure `session.sampleRate` appropriately. Refer to [session sampling](configuration.md#otel_browser_session-sampling).
+- Session-level sampling is applied in the browser via `session.sampleRate`. Entire sessions are either recorded or not; unsampled sessions do not export spans, including spans from the OpenTelemetry Traces API. High traffic can still lead to large trace volume for sampled sessions, so configure `session.sampleRate` appropriately. Refer to [session sampling](configuration.md#otel_browser_session-sampling).
 - Traces are tied to the page. Cross-tab or cross-origin flows might not form a single trace unless you implement custom context propagation.
 
 
@@ -86,7 +89,8 @@ Automatic log records include:
 
 - **User actions**: Click events are captured as `browser.user_action.click` log records. This replaces the former user interaction spans.
 - **Navigation**: Initial page loads and in-page (SPA) navigations are captured as `browser.navigation` log records.
-- **Page and resource timing**: Navigation timing and resource timing are captured as log records. This replaces the former document load spans.
+- **Page and resource timing**: Navigation timing and resource timing are captured as log records, alongside the `documentLoad` span described in [Traces](#traces).
+- **Long animation frames**: Long main-thread jank is captured as `browser.long_animation_frame` log records from the `long-animation-frame` instrumentation (Chromium-based browsers).
 - **Core Web Vitals**: Core Web Vitals (for example LCP, CLS, and INP) are captured as log records, with the measurements in `browser.web_vital.*` attributes. The values are aggregated in {{product.observability}} rather than in the browser.
 - **Errors**: Uncaught errors and unhandled promise rejections are captured as `exception` log records.
 
@@ -97,7 +101,7 @@ In addition, your application can emit its own records:
 
 ### Known limitations of browser-side logs [logs-limitations]
 
-- Logs are buffered in the browser and sent on the export cycle. High log volume can increase memory use and export payload size, and might affect page performance. Automatic log records from instrumentations follow the session sampling decision configured with `session.sampleRate`. Prefer lowering the session sample rate or severity filtering for noisy logs.
+- Logs are buffered in the browser and sent on the export cycle. High log volume can increase memory use and export payload size, and might affect page performance. All exported log records—including automatic instrumentation and logs from the OpenTelemetry Logs API—follow the session sampling decision configured with `session.sampleRate`. Prefer lowering the session sample rate or severity filtering for noisy logs.
 - As with metrics, logs reflect a single client session. You do not get centralized log aggregation in the browser, that happens in {{product.observability}} after export.
 - Logs that are not exported before the user navigates away or closes the tab might be lost unless the SDK supports a reliable flush (for example on `beforeunload`). Be aware that some log data might not reach the backend in edge cases.
 
@@ -107,7 +111,7 @@ Automatic capture of `console` methods (for example `console.log`, `console.erro
 
 ## Sessions [sessions]
 
-EDOT Browser groups telemetry from the same user into sessions. For **sampled** sessions, spans and log records from automatic instrumentations include these attributes:
+EDOT Browser groups telemetry from the same user into sessions. For **sampled** sessions, exported spans and log records include these attributes (whether from automatic instrumentation or your application code):
 
 - `session.id`: a random UUID shared by all tabs and windows of the application. It survives page reloads.
 - `session.previous_id`: the `session.id` of the session that ended right before the current one, when it started less than 24 hours ago.
@@ -130,10 +134,10 @@ Session attributes are not added to metrics. If you configure metrics separately
 - After a session expires or is ended by the application, telemetry carries `browser.tab.id` but no `session.id` until the next user interaction starts a new session. The same happens when `localStorage` is cleared, and the new session has no `session.previous_id`.
 - Loading a page counts as activity. A page that reloads itself with no user present, such as a wall dashboard, keeps its session until the maximum duration.
 - If the device clock moves back by more than 5 minutes, the stored session is treated as expired.
-- Sampled-out sessions do not export automatic instrumentation data. Metrics emitted through the OpenTelemetry API in application code are not gated by session sampling.
+- Sampled-out sessions do not export traces or logs. Metrics emitted through the OpenTelemetry API in application code are not gated by session sampling.
 
 ## Next steps [next-steps]
 
 - Refer to [Set up EDOT Browser](setup.md), [Install the agent](install-agent.md), and [Proxy and CORS](proxy-cors.md) for installation and export configuration.
 - Refer to [What to expect in {{kib}}](setup.md#what-to-expect-in-kibana) for how traces appear in the Observability app.
-- Refer to [Supported technologies](supported-technologies.md) for included instrumentations and [Configure EDOT Browser](configuration.md) for turning signals and instrumentations on or off.
+- Refer to [Supported technologies](supported-technologies.md) for included instrumentations and [Configure EDOT Browser](configuration.md) for instrumentations, session sampling, and related options.

@@ -32,9 +32,13 @@ You must provide either a **Base OTLP URL** or **both** Logs and Traces URLs.
 | --- | --- |
 | **Collector** | Which saved collector supplies export URLs and API key for this site. |
 | **Host** | Host part of the URL used for matching (e.g. `localhost`, `staging.example.com`). Subdomains of the configured host also match (e.g. `app.example.com` matches `example.com`). |
-| **EDOT version** | npm version of `@elastic/opentelemetry-browser` without the package name (e.g. `0.4.0` or `0.4.0-canary-abcde123`). The bundle is loaded from unpkg. |
+| **EDOT version** | npm version of `@elastic/opentelemetry-browser` without the package name (e.g. `1.0.0`). The bundle is loaded from [unpkg](https://unpkg.com). Use **`1.0.0`** for the stable production release. Pre-release builds use canary tags (e.g. `1.0.0-canary-abcde123`). |
 | **Service name** | `service.name` in Kibana / resource attributes. |
 | **Service version** | `service.version` in Kibana / resource attributes. |
+
+### Recommended EDOT version
+
+Set **EDOT version** to **`1.0.0`** unless you are validating a specific release. That version matches the first production `@elastic/opentelemetry-browser` on npm and aligns with [EDOT Browser reference documentation](https://www.elastic.co/docs/reference/opentelemetry/edot-sdks/browser). The extension loads `https://unpkg.com/@elastic/opentelemetry-browser@<version>/build/elastic-otel-browser.min.js` into matching tabs.
 
 ## Prerequisites
 
@@ -92,7 +96,7 @@ The entry appears under **Saved collectors**. You can edit it anytime; websites 
 2. Fill in the form:
    - **Collector** — choose a saved collector.
    - **Host** — only the hostname, no scheme or path (e.g. `localhost` for `http://localhost:3000`).
-   - **EDOT version** — match a published version on npm for `@elastic/opentelemetry-browser`.
+   - **EDOT version** — enter a published npm version for `@elastic/opentelemetry-browser`. For day-to-day testing, use **`1.0.0`** (first stable release). Pin an older version only when reproducing a specific release.
    - **Service name** / **Service version** — labels you will see in Kibana.
 3. Click **Save website**.
 
@@ -128,7 +132,7 @@ Several websites can use the same collector (for example the same ECH deployment
 | Symptom | Things to check |
 | --- | --- |
 | No `window.edotBrowser` | Host in the form must match `location.hostname` exactly or as a parent domain; page must be `http`/`https`; reload after saving; check **`chrome://extensions`** for errors on the extension’s service worker. |
-| EDOT script fails to load | EDOT version string must exist on unpkg; try a known release from npm. |
+| EDOT script fails to load | EDOT version string must exist on unpkg; try **`1.0.0`** or check [@elastic/opentelemetry-browser on npm](https://www.npmjs.com/package/@elastic/opentelemetry-browser). |
 | OTLP requests blocked or failing | CORS and export URLs on the website’s linked collector; API key and project/deployment URL; browser DevTools Network tab. |
 | Duplicate or stale telemetry | Avoid running this extension together with another in-app RUM/APM agent on the same page. |
 

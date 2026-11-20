@@ -21,9 +21,9 @@ To check for security updates, go to [Security announcements for the Elastic sta
 
 % Release notes include only features, enhancements, and fixes. Add breaking changes, deprecations, and known issues to the applicable release notes sections.
 %
-## X.X.X [edot-browser-X.X.X-release-notes]
+## 1.0.0 [edot-browser-1.0.0-release-notes]
 
-### Features and enhancements [edot-browser-X.X.X-features-enhancements]
+### Features and enhancements [edot-browser-1.0.0-features-enhancements]
 
 * Enable the `long-animation-frame` instrumentation by default. It emits `browser.long_animation_frame` log records from the browser [Long Animation Frames API](https://developer.mozilla.org/en-US/docs/Web/API/PerformanceLongAnimationFrameTiming). The API is available in Chromium-based browsers; other browsers skip reporting. Turn it off with `disableInstrumentations: ['long-animation-frame']`. Refer to [Configure EDOT Browser](../reference/edot-browser/configuration.md#otel_browser_instrumentations-details).
   Ref: https://github.com/elastic/elastic-otel-rum-js/issues/77
