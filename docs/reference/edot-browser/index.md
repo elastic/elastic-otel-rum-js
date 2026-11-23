@@ -43,7 +43,7 @@ EDOT Browser runs in the user's browser as part of your web application. When in
 
 Data is exported using the OpenTelemetry Protocol (OTLP) over HTTP to an endpoint you configure. Because the SDK runs in the browser, it is recommended to avoid holding credentials there. The recommended approach is to place a reverse proxy that adds API keys or other auth headers before sending data to {{product.observability}} or an OpenTelemetry Collector. For details, refer to [Proxy and CORS configuration](proxy-cors.md).
 
-In {{product.observability}}, you see `external.http` spans for browser fetch and XHR requests and end-to-end traces from the browser to your backend in Discover and Service Maps. User actions (clicks), navigation, page and resource timing, and errors are exported as log records rather than spans. For details, refer to [What to expect in {{kib}}](setup.md#what-to-expect-in-kibana) in the setup guide.
+In {{product.observability}}, you see `external.http` spans for browser fetch and XHR requests, a `documentLoad` span for the initial page load, and end-to-end traces from the browser to your backend in Discover and Service Maps. User actions (clicks), navigation, page and resource timing, and errors are exported as log records rather than spans. For details, refer to [What to expect in {{kib}}](setup.md#what-to-expect-in-kibana) in the setup guide.
 
 :::{note}
 Avoid using EDOT Browser alongside any other {{product.apm}} or RUM agent (including classic Elastic {{product.apm}} browser agents). Running multiple agents can cause conflicting instrumentation, duplicate telemetry, or unexpected behavior. Refer to [Limitations](#limitations).
