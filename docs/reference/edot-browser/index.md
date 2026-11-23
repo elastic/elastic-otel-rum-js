@@ -24,7 +24,7 @@ EDOT Browser collects the following signals:
 
 - **Traces**: For distributed tracing and frontend-to-backend correlation
 - **Logs**: Automatic log records for user actions, navigation, page and resource timing, Core Web Vitals, long animation frames, and errors, plus application logs using the OpenTelemetry Logs API
-- **Metrics**: EDOT Browser does not export metrics over OTLP (as of 0.5.0). You can add browser-side metrics with the OpenTelemetry Metrics SDK separately; built-in RUM measurements are on the logs signal instead
+- **Metrics**: EDOT Browser doesn't export metrics over OTLP. To collect browser-side metrics, add the OpenTelemetry Metrics SDK separately. Built-in RUM measurements are on the logs signal instead.
 
 For what each signal includes, known limitations, and what is not yet supported, refer to [Metrics, traces, and logs](telemetry.md).
 
