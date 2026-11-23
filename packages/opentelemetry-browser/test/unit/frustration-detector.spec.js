@@ -12,9 +12,9 @@ import {
     MAX_ERROR_WINDOW_MS,
 } from '../../lib/frustration/detector.js';
 
-const RAGE = 'browser.frustration.rage_click';
-const DEAD = 'browser.frustration.dead_click';
-const ERROR = 'browser.frustration.error_click';
+const RAGE = 'elastic.frustration.rage_click';
+const DEAD = 'elastic.frustration.dead_click';
+const ERROR = 'elastic.frustration.error_click';
 
 beforeEach(() => {
     mock.timers.enable({apis: ['setTimeout', 'Date'], now: 1_000_000});
@@ -104,7 +104,7 @@ test('3 clicks within 1s are one rage click with the click count', () => {
             eventName: RAGE,
             attributes: {
                 'browser.css_selector': '#buy',
-                'browser.frustration.click_count': 5,
+                'elastic.frustration.click_count': 5,
             },
             timestamp: start,
         },
@@ -142,7 +142,7 @@ test('a long chain is rage once 3 of its clicks fall within 1s', () => {
     assert.deepEqual(
         emitted.map((e) => [
             e.eventName,
-            e.attributes['browser.frustration.click_count'],
+            e.attributes['elastic.frustration.click_count'],
         ]),
         [[RAGE, 12]]
     );

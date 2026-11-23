@@ -89,7 +89,7 @@ Automatic log records include:
 - **Page and resource timing**: Navigation timing and resource timing are captured as log records. This replaces the former document load spans.
 - **Core Web Vitals**: Core Web Vitals (for example LCP, CLS, and INP) are captured as log records, with the measurements in `browser.web_vital.*` attributes. The values are aggregated in {{product.observability}} rather than in the browser.
 - **Errors**: Uncaught errors and unhandled promise rejections are captured as `exception` log records.
-- **Frustration signals**: Rage, dead, and error clicks are captured as `browser.frustration.*` log records. Refer to [Frustration signals](#frustration-signals).
+- **Frustration signals**: Rage, dead, and error clicks are captured as `elastic.frustration.*` log records. Refer to [Frustration signals](#frustration-signals).
 
 In addition, your application can emit its own records:
 
@@ -223,9 +223,9 @@ EDOT Browser detects clicks that show a user is struggling with the page and rep
 
 | Event | When |
 |---|---|
-| `browser.frustration.rage_click` | The user clicked the same element 3 or more times within 1 second. Reported once per burst. |
-| `browser.frustration.dead_click` | The user clicked an element that looks clickable and the page did not react within 1 second. |
-| `browser.frustration.error_click` | An uncaught error or unhandled promise rejection happened within 1 second of a click, or within 1 second of the response to a request the click started, up to 10 seconds after the click. |
+| `elastic.frustration.rage_click` | The user clicked the same element 3 or more times within 1 second. Reported once per burst. |
+| `elastic.frustration.dead_click` | The user clicked an element that looks clickable and the page did not react within 1 second. |
+| `elastic.frustration.error_click` | An uncaught error or unhandled promise rejection happened within 1 second of a click, or within 1 second of the response to a request the click started, up to 10 seconds after the click. |
 
 A burst of clicks can produce more than one of these events, for example a rage click on a button that also does nothing. Each log record has these attributes, plus the usual session, user, and page route attributes:
 
@@ -233,7 +233,7 @@ A burst of clicks can produce more than one of these events, for example a rage 
 - `browser.tag_name`: the tag of the clicked element, such as `BUTTON`.
 - `browser.page.x`, `browser.page.y`: where the first click happened.
 - `url.full`: the page URL when the user clicked.
-- `browser.frustration.click_count`: on rage clicks, the number of clicks in the burst.
+- `elastic.frustration.click_count`: on rage clicks, the number of clicks in the burst.
 - `exception.type`, `exception.message`: on error clicks, the first error after the click.
 
 The timestamp of the log record is the time of the first click, so it points to the start of the problem in a session replay.
@@ -256,7 +256,7 @@ Use `frustration.ignoreSelectors` to ignore elements that react to repeated clic
 - Clicks on elements that react without changing the DOM, such as a button that only plays a sound or copies to the clipboard, are reported as dead. Add them to `frustration.ignoreSelectors`.
 - Clicks inside web components (custom elements or shadow DOM) don't produce dead clicks, since changes inside them can't be observed. Clicks inside iframes are not detected.
 - When the page is hidden or closed during a burst, rage and error clicks are reported right away, and dead clicks are not reported.
-- Frustration signals are not part of the OpenTelemetry semantic conventions yet. EDOT Browser uses these names until the Browser SIG defines them.
+- Frustration signals are not part of the OpenTelemetry semantic conventions yet, so their names use the `elastic.` prefix. They might change once the Browser SIG defines them.
 
 ## Next steps [next-steps]
 

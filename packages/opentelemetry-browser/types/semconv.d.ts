@@ -139,29 +139,29 @@ export const ATTR_ELASTIC_USER_ATTRIBUTES_PREFIX: "elastic.user.attributes.";
 /**
  * The user clicked the same element 3 or more times in quick succession.
  *
- * @note Not defined in semantic conventions. EDOT specific until the Browser SIG defines frustration signals.
+ * @note Not defined in semantic conventions. EDOT specific so it cannot clash with the names the Browser SIG settles on.
  */
-export const EVENT_FRUSTRATION_RAGE_CLICK: "browser.frustration.rage_click";
+export const EVENT_FRUSTRATION_RAGE_CLICK: "elastic.frustration.rage_click";
 /**
  * The user clicked an element that looks clickable and the page did not react.
  *
- * @note Not defined in semantic conventions. EDOT specific until the Browser SIG defines frustration signals.
+ * @note Not defined in semantic conventions. EDOT specific so it cannot clash with the names the Browser SIG settles on.
  */
-export const EVENT_FRUSTRATION_DEAD_CLICK: "browser.frustration.dead_click";
+export const EVENT_FRUSTRATION_DEAD_CLICK: "elastic.frustration.dead_click";
 /**
  * A click was followed by an uncaught error.
  *
- * @note Not defined in semantic conventions. EDOT specific until the Browser SIG defines frustration signals.
+ * @note Not defined in semantic conventions. EDOT specific so it cannot clash with the names the Browser SIG settles on.
  */
-export const EVENT_FRUSTRATION_ERROR_CLICK: "browser.frustration.error_click";
+export const EVENT_FRUSTRATION_ERROR_CLICK: "elastic.frustration.error_click";
 /**
  * Number of clicks in a rage click.
  *
  * @example 5
  *
- * @note Not defined in semantic conventions. EDOT specific until the Browser SIG defines frustration signals.
+ * @note Not defined in semantic conventions. EDOT specific so it cannot clash with the names the Browser SIG settles on.
  */
-export const ATTR_FRUSTRATION_CLICK_COUNT: "browser.frustration.click_count";
+export const ATTR_FRUSTRATION_CLICK_COUNT: "elastic.frustration.click_count";
 /**
  * CSS selector of an element, same format as the `user-action` instrumentation.
  *

@@ -1,7 +1,8 @@
 /**
  * Tells the detector about requests through the spans of the fetch and XHR
- * instrumentations: a request start is a reaction, so a slow response is not
- * a dead click, and an error once it responds is an error click.
+ * instrumentations, or manual ones: a request start is a reaction, so a slow
+ * response is not a dead click, and an error once it responds is an error
+ * click.
  */
 export class RequestSpanProcessor {
     /**

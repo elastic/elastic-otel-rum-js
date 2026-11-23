@@ -7,9 +7,9 @@ import {test, expect} from '@playwright/test';
 import {createCollector} from './test-utils';
 
 const FIXTURE = '/fixtures/use-frustration.html';
-const RAGE = 'browser.frustration.rage_click';
-const DEAD = 'browser.frustration.dead_click';
-const ERROR = 'browser.frustration.error_click';
+const RAGE = 'elastic.frustration.rage_click';
+const DEAD = 'elastic.frustration.dead_click';
+const ERROR = 'elastic.frustration.error_click';
 
 /**
  * @param {import('@playwright/test').Page} page
@@ -35,7 +35,7 @@ async function open(page, config = {}) {
 async function frustrationLogs(page, collector) {
     await page.waitForTimeout(1500);
     const logs = await collector.getLogs();
-    return logs.filter((l) => l.eventName.startsWith('browser.frustration.'));
+    return logs.filter((l) => l.eventName.startsWith('elastic.frustration.'));
 }
 
 test('reports dead clicks only on clickable elements that do not react', async ({
@@ -78,7 +78,7 @@ test('reports a rage click once per burst, with the click count', async ({
 
     const logs = await frustrationLogs(page, collector);
     expect(logs.map((l) => l.eventName)).toStrictEqual([RAGE]);
-    expect(logs[0].attributes['browser.frustration.click_count']).toStrictEqual(
+    expect(logs[0].attributes['elastic.frustration.click_count']).toStrictEqual(
         4
     );
 });
