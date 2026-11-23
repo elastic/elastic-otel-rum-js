@@ -239,7 +239,7 @@ When web storage is unavailable or after `sdk.shutdown()`, `getSession()` return
 
 ### `ignoreFetchUrls` details [otel_browser_ignorefetchurls-details]
 
-`ignoreFetchUrls` lists URLs that EDOT Browser should not instrument. The SDK always ignores OTLP export URLs (traces, logs, and metrics) to prevent self-instrumentation. When you set `instrumentations`, per-instrumentation `ignoreUrls` values are merged with this list for fetch, XMLHttpRequest, and resource timing.
+`ignoreFetchUrls` lists URLs that EDOT Browser should not instrument. The SDK always ignores OTLP export URLs for traces and logs to prevent self-instrumentation. When you set `instrumentations`, per-instrumentation `ignoreUrls` values are merged with this list for fetch, XMLHttpRequest, and resource timing.
 
 **Matching rules**
 

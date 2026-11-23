@@ -95,17 +95,16 @@ To turn off an instrumentation, pass `disableInstrumentations` with the instrume
 
 ## Version compatibility [version-compatibility]
 
+EDOT Browser depends on the following OpenTelemetry packages (direct dependencies from `package.json`):
+
 | Component | Version |
 |----------|---------|
-| OpenTelemetry JS API (`@opentelemetry/api`) | ^1.9.0 |
-| OpenTelemetry Browser SDK (`@opentelemetry/browser-sdk`) | ^0.3.0 |
-| OpenTelemetry Browser Instrumentation (`@opentelemetry/browser-instrumentation`) | ^0.8.0 |
-| OpenTelemetry JS Trace SDK (`@opentelemetry/sdk-trace`) | ^2.12.0 |
-| OpenTelemetry JS Metrics SDK (`@opentelemetry/sdk-metrics`) | ^2.2.0 |
-| OpenTelemetry JS Logs SDK (`@opentelemetry/sdk-logs`) | ^0.223.0 |
-| OpenTelemetry JS Logs API (`@opentelemetry/api-logs`) | ^0.221.0 |
+| OpenTelemetry JS API (`@opentelemetry/api`) | ^1.10.0 |
+| OpenTelemetry Browser SDK (`@opentelemetry/browser-sdk`) | ^0.9.1 |
+| OpenTelemetry Browser Instrumentation (`@opentelemetry/browser-instrumentation`) | ^0.12.1 |
+| OpenTelemetry JS Core (`@opentelemetry/core`) | ^3.1.1 |
 
-<!-- TODO: document compatibility matrix once versioning strategy is defined -->
+EDOT Browser does not depend on `@opentelemetry/sdk-metrics`. Trace and log SDK packages are pulled in transitively through `@opentelemetry/browser-sdk`.
 
 ## Known limitations [known-limitations]
 
