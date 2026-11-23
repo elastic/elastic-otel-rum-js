@@ -137,6 +137,15 @@ export const ATTR_ELASTIC_USER_ACCOUNT: "elastic.user.account";
  */
 export const ATTR_ELASTIC_USER_ATTRIBUTES_PREFIX: "elastic.user.attributes.";
 /**
+ * Monotonic counter of the spans and log records of a session, starting at 1.
+ * Shared by all tabs of the session and reset when the session rotates.
+ *
+ * @example 42
+ *
+ * @note Not defined in semantic conventions. Elastic extension.
+ */
+export const ATTR_SESSION_SEQUENCE: "session.sequence";
+/**
  * The value of the sampling rate for sessions. Necessary to calculate metrics
  *
  * @example 0.1234

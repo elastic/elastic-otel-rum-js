@@ -95,6 +95,16 @@ export class SessionManager {
      * @returns {boolean}
      */
     exportsWithoutSession(): boolean;
+    /**
+     * Hands out the next `session.sequence` of the session. The counter lives
+     * in the shared session storage, so tabs continue from each other's last
+     * value. Storage cannot be updated atomically, so two tabs writing at the
+     * same instant can repeat a value; within a tab it only grows.
+     * @param {string} sessionId session the telemetry belongs to
+     * @returns {number | undefined} `undefined` when that session is no longer
+     * the stored one
+     */
+    nextSequence(sessionId: string): number | undefined;
     /** @returns {import('@opentelemetry/api').Attributes} */
     getAttributes(): import("@opentelemetry/api").Attributes;
     /**

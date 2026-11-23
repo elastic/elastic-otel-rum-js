@@ -15,6 +15,7 @@
  * @property {boolean} sampled
  * @property {number} samplingRate
  * @property {boolean} [ended] set when the application ended the session
+ * @property {number} [sequence] last `session.sequence` handed out, unset until the first one
  */
 /**
  * @param {SessionState} session
@@ -50,4 +51,8 @@ export type SessionState = {
      * set when the application ended the session
      */
     ended?: boolean | undefined;
+    /**
+     * last `session.sequence` handed out, unset until the first one
+     */
+    sequence?: number | undefined;
 };
