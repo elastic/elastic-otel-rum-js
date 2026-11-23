@@ -195,7 +195,7 @@ Incorrect values for `inactivityTimeout` and `maxDuration` fall back to the defa
 
 Session sampling controls whether EDOT Browser **exports** traces and logs for a given user session. That includes automatic instrumentation and telemetry your application emits through the OpenTelemetry Traces and Logs APIs. The sampling rate is configured with `session.sampleRate`, not a top-level `sampleRate` option.
 
-When a session is **sampled in**, OTLP export proceeds for that session until it ends or rotates. When a session is **sampled out**, the SDK does not export spans or log records for that session (instrumentation may still run, but export is dropped at the trace sampler and logger).
+When a session is **sampled in**, EDOT Browser exports its spans and log records until the session ends or rotates. When a session is **sampled out**, EDOT Browser doesn't export spans or log records for that session. Instrumentations might still run in the browser.
 
 When an active session is available, traces and logs use that session's sampling decision. If the session manager cannot return an active session—for example after a session expires and before user activity starts a new one—there is no per-session decision to apply. When `session.sampleRate` is `1` (the default), the trace sampler still **samples spans in** and log records continue to be exported. For any rate below `1`, spans and logs are not exported until a new session starts.
 
