@@ -12,7 +12,7 @@
     "start": "npm run edot:update && OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-otel-browser-example-server} node --import @elastic/opentelemetry-node ./server.js"
   },
   "dependencies": {
-    "@elastic/opentelemetry-node": "^1.18.0",
+    "@elastic/opentelemetry-node": "^1.20.1",
     "@opentelemetry/api": "^1.10.0",
     "mime": "^4.1.2"
   },
