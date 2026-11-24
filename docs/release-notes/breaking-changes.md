@@ -26,7 +26,17 @@ Breaking changes can impact your applications, potentially disrupting normal ope
 % ::::
 % TEMPLATE END
 
-## X.X.X [edot-browser-X.X.X-breaking-changes]
+## 1.0.0 [edot-browser-1.0.0-breaking-changes]
+
+::::{dropdown} Webpack 4 is not officially supported
+EDOT Browser no longer officially supports Webpack 4. Bundling with Webpack 4 may still work in some setups, but it is not tested or documented as a supported bundler.
+**Impact**<br>
+- Applications that depend on the former Webpack 4 sample configuration or official support guidance no longer have a maintained reference.
+- Webpack 4 does not fully support modern package features used by EDOT Browser and its OpenTelemetry dependencies (for example `package.json` `exports` and `imports`), so builds may require custom workarounds that are outside the supported path.
+**Action**<br>
+- Upgrade to Webpack 5 or another [supported bundler](../reference/edot-browser/supported-technologies.md#bundlers) such as Rollup or esbuild.
+- If you must stay on Webpack 4, treat any required configuration as unsupported and untested.
+::::
 
 ::::{dropdown} `addObserver` replaced by `observe`
 The SDK returned by `startBrowserSdk` no longer exposes `addObserver`. Use `observe(eventName, handler)` to register session lifecycle callbacks. Event names are `'session:start'` and `'session:end'`. Each call returns its own unsubscribe function.
@@ -65,6 +75,19 @@ With the update to `@opentelemetry/browser-instrumentation` 0.11.0, per-instrume
 - Use `instrumentations` only for upstream passthrough options, not to enable or disable defaults. Refer to [Configure EDOT Browser](../reference/edot-browser/configuration.md#otel_browser_disableinstrumentations-details).
 ::::
 
+::::{dropdown} Session sampling applies to all traces and logs
+When a session is sampled out (`session.sampleRate`), EDOT Browser does not export traces or logs for that session. The decision applies to automatic instrumentation and to spans and log records your application creates with the OpenTelemetry Traces and Logs APIs. Built-in instrumentations may still run in the browser; export is dropped at the trace sampler and logger.
+**Impact**<br>
+- Manual spans and log records are no longer exported for sampled-out sessions.
+- In 0.4, session sampling was documented as disabling automatic instrumentations for unsampled sessions. From 0.5.0, sampling gates export of all traces and logs for the session instead.
+- Metrics you configure separately with the OpenTelemetry Metrics SDK are not gated by session sampling.
+**Action**<br>
+- Treat `session.sampleRate` as applying to every trace and log your app sends through EDOT Browser, not only built-in RUM instrumentations.
+- If you need manual telemetry when automatic RUM is sampled out, emit it outside the EDOT Browser SDK pipeline or raise `session.sampleRate`.
+- Refer to [Session sampling](../reference/edot-browser/configuration.md#otel_browser_session-sampling) and [Sessions](../reference/edot-browser/telemetry.md#sessions).
+Refer to [PR #147](https://github.com/elastic/elastic-otel-rum-js/pull/147).
+::::
+
 ## 0.4.0 [edot-browser-0-4-0-breaking-changes]
 
 ::::{dropdown} Session sampling replaces root `sampleRate`
@@ -93,7 +116,7 @@ Refer to [PR #102](https://github.com/elastic/elastic-otel-rum-js/pull/102).
 ::::
 
 :::{note}
-Starting with the next release, the `document-load` instrumentation emits a `documentLoad` span again (root span, no resource child spans). Load timing details stay on the `navigation-timing` log records.
+In 1.0.0, the `document-load` instrumentation emits a `documentLoad` span again (root span, no resource child spans). Load timing details stay on the `navigation-timing` log records. Refer to the [1.0.0 release notes](index.md#edot-browser-1.0.0-features-enhancements).
 :::
 
 ::::{dropdown} Switch to new user action instrumentation

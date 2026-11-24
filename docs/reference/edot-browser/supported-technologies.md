@@ -6,7 +6,7 @@ applies_to:
   serverless:
     observability:
   product:
-    edot_browser: preview
+    edot_browser: ga
 products:
   - id: cloud-serverless
   - id: observability
@@ -49,10 +49,13 @@ When you install EDOT Browser as a package (refer to [Install the agent](install
 
 | Bundler   | Notes |
 |-----------|-------|
-| Webpack 4 | Supported. Refer to this [sample configuration](https://github.com/elastic/elastic-otel-rum-js/blob/main/packages/opentelemetry-browser/test/bundle/webpack4/webpack.config.mjs) and adapt it to your setup. |
 | Webpack 5 | Supported. Refer to this [sample configuration](https://github.com/elastic/elastic-otel-rum-js/blob/main/packages/opentelemetry-browser/test/bundle/webpack5/webpack.config.mjs) and adapt it to your setup. |
 | Rollup    | Supported. Refer to this [sample configuration](https://github.com/elastic/elastic-otel-rum-js/blob/main/packages/opentelemetry-browser/test/bundle/rollup/rollup.config.js) and adapt it to your setup. |
 | esbuild   | Supported. No plugins are required. Refer to the [example configuration](https://github.com/elastic/elastic-otel-rum-js/blob/55f0dec911286208a104e8282aa16665c0de68e4/packages/opentelemetry-browser/package.json#L42). |
+
+:::{note}
+Webpack 4 is not officially supported. Upgrade to Webpack 5 or another supported bundler. Refer to [Breaking changes](../../release-notes/breaking-changes.md#edot-browser-1.0.0-breaking-changes).
+:::
 
 
 ## TypeScript versions
@@ -96,17 +99,16 @@ To turn off an instrumentation, pass `disableInstrumentations` with the instrume
 
 ## Version compatibility [version-compatibility]
 
+EDOT Browser depends on the following OpenTelemetry packages (direct dependencies from `package.json`):
+
 | Component | Version |
 |----------|---------|
-| OpenTelemetry JS API (`@opentelemetry/api`) | ^1.9.0 |
-| OpenTelemetry Browser SDK (`@opentelemetry/browser-sdk`) | ^0.3.0 |
-| OpenTelemetry Browser Instrumentation (`@opentelemetry/browser-instrumentation`) | ^0.8.0 |
-| OpenTelemetry JS Trace SDK (`@opentelemetry/sdk-trace`) | ^2.12.0 |
-| OpenTelemetry JS Metrics SDK (`@opentelemetry/sdk-metrics`) | ^2.2.0 |
-| OpenTelemetry JS Logs SDK (`@opentelemetry/sdk-logs`) | ^0.223.0 |
-| OpenTelemetry JS Logs API (`@opentelemetry/api-logs`) | ^0.221.0 |
+| OpenTelemetry JS API (`@opentelemetry/api`) | ^1.10.0 |
+| OpenTelemetry Browser SDK (`@opentelemetry/browser-sdk`) | ^0.9.1 |
+| OpenTelemetry Browser Instrumentation (`@opentelemetry/browser-instrumentation`) | ^0.12.1 |
+| OpenTelemetry JS Core (`@opentelemetry/core`) | ^3.1.1 |
 
-<!-- TODO: document compatibility matrix once versioning strategy is defined -->
+EDOT Browser does not depend on `@opentelemetry/sdk-metrics`. Trace and log SDK packages are pulled in transitively through `@opentelemetry/browser-sdk`.
 
 ## Known limitations [known-limitations]
 

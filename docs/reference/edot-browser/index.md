@@ -7,7 +7,7 @@ applies_to:
   serverless:
     observability:
   product:
-    edot_browser: preview 0.1.0
+    edot_browser: ga 1.0.0
 products:
   - id: cloud-serverless
   - id: observability
@@ -18,16 +18,12 @@ products:
 
 EDOT Browser is Elastic’s distribution of the OpenTelemetry Browser SDK. It collects traces and logs from real user interactions in web applications and exports that data to {{product.observability}} with the OpenTelemetry Protocol (OTLP).
 
-:::{important}
-EDOT Browser is released as a tech preview. The stack and serverless products referred to in this doc are GA and compatible with EDOT Browser.
-:::
-
 EDOT Browser is intended for Real User Monitoring (RUM) use cases, where telemetry is collected directly from users’ browsers to understand frontend performance, user interactions, and end-to-end request flows between frontend and backend services. It is based on OpenTelemetry standards and aims to align with contrib OpenTelemetry behavior.
 
 EDOT Browser collects the following signals:
 
 - **Traces**: Distributed tracing, including the initial `documentLoad` span and frontend-to-backend request spans
-- **Logs**: Automatic log records for user actions, navigation, page and resource timing, and errors, plus application logs that use the OpenTelemetry Logs API
+- **Logs**: Automatic log records for user actions, navigation, page and resource timing, Core Web Vitals, long animation frames, and errors, plus application logs that use the OpenTelemetry Logs API
 
 EDOT Browser does not export an OpenTelemetry metrics signal. If you need counters or histograms, configure the OpenTelemetry Metrics SDK separately. For what each signal includes and for known limitations, refer to [Metrics, traces, and logs](telemetry.md).
 
@@ -49,7 +45,7 @@ Data is exported using the OpenTelemetry Protocol (OTLP) over HTTP to an endpoin
 In {{product.observability}}, you see a `documentLoad` span for the initial page load and `external.http` spans for browser fetch and XMLHttpRequest requests. End-to-end traces from the browser to your backend appear in Discover and Service Maps. User actions (clicks), navigation, page and resource timing, and errors are log records. For details, refer to [What to expect in {{kib}}](setup.md#what-to-expect-in-kibana) in the setup guide.
 
 :::{note}
-Avoid using EDOT Browser alongside any other {{product.apm}} or RUM agent (including classic Elastic {{product.apm}} browser agents). Running multiple agents can cause conflicting instrumentation, duplicate telemetry, or unexpected behavior.
+Avoid using EDOT Browser alongside any other {{product.apm}} or RUM agent (including classic Elastic {{product.apm}} browser agents). Running multiple agents can cause conflicting instrumentation, duplicate telemetry, or unexpected behavior. Refer to [Limitations](#limitations).
 :::
 
 ## Browser telemetry and authentication [browser-telemetry-and-authentication]
@@ -64,12 +60,14 @@ For reverse proxy and CORS configuration, refer to [Proxy and CORS](proxy-cors.m
 
 ## Limitations [limitations]
 
-The following capabilities are not available in EDOT Browser:
+The following gaps and differences matter for production planning and when comparing EDOT Browser to classic Elastic {{product.apm}} browser agents:
 
-- Full feature parity with classic Elastic {{product.apm}} browser agents
-- Automated migration tooling from classic agents
+- **No built-in OTLP metrics export**: EDOT Browser exports **traces and logs** only. It does not configure a MeterProvider or send telemetry to the `/v1/metrics` path (metrics export was removed in 0.5.0). Performance and UX data such as Core Web Vitals are emitted as **log records**. If you need counters, histograms, or other instruments, set up the OpenTelemetry Metrics SDK and OTLP metrics export yourself, and ensure your reverse proxy accepts `/v1/metrics`. Metrics you add this way are not gated by `session.sampleRate`. Refer to [Metrics](telemetry.md#metrics).
+- **{{kib}} User Experience app and dashboards**: The **User Experience** app shows data from classic {{product.apm}} browser agents only; it does **not** display EDOT Browser telemetry today. For RUM-style views compatible with OpenTelemetry browser data, install the [RUM OpenTelemetry Assets](https://github.com/elastic/integrations/tree/main/packages/otel_rum_dashboards) integration from the {{kib}} Integrations catalog. That integration is in **preview**, requires {{kib}} 9.5.3 or later, and appears only when **Display beta integrations** is enabled on the Integrations page. Refer to [What to expect in {{kib}}](setup.md#what-to-expect-in-kibana).
+- **Classic agent parity and migration**: Full feature parity with classic Elastic {{product.apm}} browser agents (for example, certain automatic instrumentations or span types) is not available. There is **no** automated migration tooling from classic browser agents; plan a manual instrumentation and configuration cutover. For the steps and the configuration, API, and data model mappings, refer to [Migrate to EDOT Browser](migration.md).
+- **One RUM agent per application**: Do not run EDOT Browser together with another {{product.apm}} or RUM agent in the same page or bundle. Multiple agents can conflict on instrumentation, duplicate telemetry, or produce inconsistent traces and logs.
 
-To move from the classic RUM agent yourself, refer to [Migrate to EDOT Browser](migration.md).
+For per-signal behavior, session sampling, and other constraints, refer to [Metrics, traces, and logs](telemetry.md).
 
 ## Next steps [next-steps]
 

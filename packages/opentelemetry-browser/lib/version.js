@@ -3,5 +3,5 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-export const EDOT_VERSION = '0.5.0';
+export const EDOT_VERSION = '1.0.0';
 export const OTEL_BROWSER_INSTRUMENTATION_VERSION = '0.12.1';

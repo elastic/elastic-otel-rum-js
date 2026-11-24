@@ -10,7 +10,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {
-    "@types/chrome": "^0.0.304",
+    "@types/chrome": "^0.3.7",
     "typescript": "^6.0.3"
   }
 }
