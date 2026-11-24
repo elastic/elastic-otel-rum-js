@@ -27,8 +27,6 @@ Moving to EDOT Browser changes more than the package name. There are several key
 
 ## Before you begin [before-you-begin]
 
-EDOT Browser is a technical preview. For production real user monitoring, keep the classic RUM agent.
-
 There is no automated migration tooling. You replace the agent, the initialization code, and the queries that read classic RUM data.
 
 Confirm the following before you replace the agent:
