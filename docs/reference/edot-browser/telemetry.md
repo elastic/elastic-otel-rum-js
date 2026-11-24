@@ -51,13 +51,14 @@ This mechanism ensures that when these asynchronous operations execute, they do 
 
 EDOT Browser initializes tracing and registers instrumentations that produce spans:
 
+- The initial page load is a `documentLoad` span from the `document-load` instrumentation. The span starts a new trace. It does not continue a trace from the document that served the page.
 - Each outgoing request using `fetch` or `XMLHttpRequest` is captured as an `external.http` span with attributes such as URL, HTTP method, and status code. These spans represent the client-side portion of the request.
 
 :::{note}
 Long tasks no longer produce spans. EDOT Browser no longer includes the `@opentelemetry/instrumentation-long-task` instrumentation. Long main-thread jank is reported on the logs signal as `browser.long_animation_frame` records from the `long-animation-frame` instrumentation (Chromium-based browsers). Refer to [Logs](#logs).
 :::
 
-In 0.4 and later, page and resource load timing, user actions (clicks), and navigation are exported on the logs signal instead of as spans. Refer to [Logs](#logs) for details on each record type. If you're upgrading, refer to [EDOT Browser breaking changes](../../release-notes/breaking-changes.md) for the affected instrumentation keys and migration steps.
+User actions (clicks), navigation, and page and resource timing are also log records. The initial page load emits a `browser.navigation` log record in addition to the `documentLoad` span. Refer to [Logs](#logs) for each record type. If you upgrade, refer to [EDOT Browser breaking changes](../../release-notes/breaking-changes.md) for the affected instrumentation keys.
 
 When your backend is instrumented with OpenTelemetry and trace context (trace ID, span ID) is propagated in HTTP headers, the browser’s `external.http` span and the backend spans appear in the same trace, giving you end-to-end visibility in Discover and Service Maps. Refer to [What to expect in {{kib}}](setup.md#what-to-expect-in-kibana) for how these traces appear in the Observability app.
 
@@ -66,7 +67,7 @@ When your backend is instrumented with OpenTelemetry and trace context (trace ID
 - Frontend-to-backend trace continuity depends on your backend and HTTP client propagating the W3C Trace Context headers. If propagation is not configured, browser and backend spans appear as separate traces.
 - Only requests that go through the instrumented `fetch` and `XMLHttpRequest` APIs are captured. Requests made by other mechanisms (for example some third-party scripts, WebSockets, or non-instrumented clients) do not produce spans unless you add custom instrumentation.
 - User actions no longer produce spans, so subsequent `fetch` and `XMLHttpRequest` spans are no longer grouped under a parent click span in the trace view. To correlate network activity with a user action, use the `browser.user_action.click` log records described in [Logs](#logs).
-- Session-level sampling is applied in the browser via `session.sampleRate`. Entire sessions are either recorded or not; unsampled sessions do not produce automatic instrumentation spans. High traffic can still lead to large trace volume for sampled sessions, so configure `session.sampleRate` appropriately. Refer to [session sampling](configuration.md#otel_browser_session-sampling).
+- Session sampling (`session.sampleRate`) applies to automatic traces and logs. Unsampled sessions do not produce automatic instrumentation spans or log records. Metrics that your application emits through the OpenTelemetry API are still exported. High traffic can still lead to a large trace volume for sampled sessions, so set `session.sampleRate` to match the volume you want. Refer to [session sampling](configuration.md#otel_browser_session-sampling).
 - Traces are tied to the page. Cross-tab or cross-origin flows might not form a single trace unless you implement custom context propagation.
 
 
@@ -86,8 +87,8 @@ Automatic log records include:
 
 - **User actions**: Click events are captured as `browser.user_action.click` log records. This replaces the former user interaction spans.
 - **Navigation**: Initial page loads and in-page (SPA) navigations are captured as `browser.navigation` log records.
-- **Page and resource timing**: Navigation timing and resource timing are captured as log records. This replaces the former document load spans.
-- **Core Web Vitals**: Core Web Vitals (for example LCP, CLS, and INP) are captured as log records, with the measurements in `browser.web_vital.*` attributes. The values are aggregated in {{product.observability}} rather than in the browser.
+- **Page and resource timing**: Navigation timing and resource timing are log records. The initial document load is also a `documentLoad` span. Refer to [Traces](#traces).
+- **Core Web Vitals**: Core Web Vitals (for example, largest contentful paint (LCP), cumulative layout shift (CLS), and interaction to next paint (INP)) are log records, with the measurements in `browser.web_vital.*` attributes. The values are aggregated in {{product.observability}} rather than in the browser.
 - **Errors**: Uncaught errors and unhandled promise rejections are captured as `exception` log records.
 
 In addition, your application can emit its own records:

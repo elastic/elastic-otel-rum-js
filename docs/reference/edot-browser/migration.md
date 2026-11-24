@@ -1,12 +1,13 @@
 ---
 navigation_title: Migration
-description: Migrate from the Elastic APM Real User Monitoring (RUM) JavaScript agent to the Elastic Distribution of OpenTelemetry Browser (EDOT Browser).
+description: Migrate from the Elastic Application Performance Monitoring (APM) Real User Monitoring (RUM) JavaScript agent to EDOT Browser.
+type: how-to
 applies_to:
   stack:
   serverless:
     observability:
   product:
-    edot_browser: ga
+    edot_browser: preview
 products:
   - id: cloud-serverless
   - id: observability
@@ -16,7 +17,7 @@ products:
 
 # Migrate to EDOT Browser from the Elastic {{product.apm}} RUM JavaScript agent
 
-This guide shows you how to replace the Elastic {{product.apm}} Real User Monitoring (RUM) JavaScript agent (the classic RUM agent, `@elastic/apm-rum`) with EDOT Browser (`@elastic/opentelemetry-browser`).
+EDOT Browser collects browser telemetry with OpenTelemetry and exports it on the same ingest path as the rest of your OpenTelemetry data. Replacing the classic Real User Monitoring (RUM) agent (`@elastic/apm-rum`) with EDOT Browser (`@elastic/opentelemetry-browser`) puts frontend traces and logs on that path.
 
 Moving to EDOT Browser changes more than the package name. There are several key differences:
 
@@ -24,7 +25,18 @@ Moving to EDOT Browser changes more than the package name. There are several key
 - **Data model**: The classic RUM agent reports transactions, spans, and errors. EDOT Browser reports spans and log records that follow the OpenTelemetry semantic conventions.
 - **Configuration and API**: EDOT Browser has its own configuration options, and you create custom spans and log records with the OpenTelemetry API instead of the classic agent API.
 
-Currently, there is no automated migration tooling. Before you start, review the [limitations](#limitations) to confirm that EDOT Browser covers the features you use.
+## Before you begin [before-you-begin]
+
+EDOT Browser is a technical preview. For production real user monitoring, keep the classic RUM agent.
+
+There is no automated migration tooling. You replace the agent, the initialization code, and the queries that read classic RUM data.
+
+Confirm the following before you replace the agent:
+
+- You have an OTLP ingest endpoint. Refer to the [prerequisites](setup.md#prerequisites) for the supported options.
+- You can run a reverse proxy in front of that endpoint. The proxy adds the API key so the key stays off the browser. Refer to [Proxy and CORS configuration](proxy-cors.md).
+- The browsers your application supports are on the [supported browsers](supported-technologies.md#supported-browsers) list. EDOT Browser targets ECMAScript 2022.
+- EDOT Browser covers the classic RUM agent features you use. Refer to [Limitations](#limitations).
 
 ## Migration steps [migration-steps]
 
@@ -34,11 +46,13 @@ Follow these steps to migrate from the classic RUM agent to EDOT Browser.
 
 ::::::{step} Set up the OTLP ingest path
 
-The classic RUM agent sends data to the {{product.apm-server}} RUM endpoint. EDOT Browser exports traces and logs to a reverse proxy that you run. The proxy forwards the data to the {{motlp}} or to {{product.elastic-agent}} configured as an OTel Collector, and adds the API key so that it's never exposed in the browser.
+The classic RUM agent sends data to the {{product.apm-server}} RUM endpoint. EDOT Browser exports traces and logs to a reverse proxy that you run. The proxy forwards the data to the {{motlp}} or to {{product.elastic-agent}} configured as an OpenTelemetry Collector. The proxy adds the API key, so the key stays off the browser.
 
 1. Make sure you have an OTLP ingest endpoint. Refer to the [prerequisites](setup.md#prerequisites) for the supported options.
 2. Set up the reverse proxy and its Cross-Origin Resource Sharing (CORS) headers. Refer to [Proxy and CORS configuration](proxy-cors.md) for the requirements and an NGINX example.
 3. If your site uses a Content Security Policy, replace the {{product.apm-server}} URL in the `connect-src` directive with the URL of the reverse proxy.
+
+Confirm that the browser can reach the proxy URL before you replace the agent.
 ::::::
 
 ::::::{step} Replace the agent
@@ -56,7 +70,7 @@ npm uninstall @elastic/apm-rum
 npm install @elastic/opentelemetry-browser
 ```
 
-If you use a framework integration (`@elastic/apm-rum-react`, `@elastic/apm-rum-angular`, or `@elastic/apm-rum-vue`), remove that package too. EDOT Browser has no framework integrations. Refer to [Framework integrations](#framework-integrations) to see what changes.
+If you use a framework integration (`@elastic/apm-rum-react`, `@elastic/apm-rum-angular`, or `@elastic/apm-rum-vue`), remove that package too. EDOT Browser has no framework integrations. Refer to [Framework integrations](#framework-integrations) for what changes.
 ::::
 
 ::::{tab-item} Script tag
@@ -118,14 +132,14 @@ const sdk = startBrowserSdk({
 ```
 
 1. The URL of your reverse proxy, not the {{product.apm-server}} URL.
-2. Sampling applies to whole user sessions, not to individual transactions.
+2. Sampling applies to whole user sessions, not to individual transactions. It gates automatic traces and logs. Metrics that your application emits through the OpenTelemetry API are still exported.
 
 Refer to the [configuration mapping](#configuration-mapping) for the equivalent of each classic RUM agent option.
 ::::::
 
 ::::::{step} Migrate manual instrumentation
 
-If you use the classic agent API, for example `apm.startTransaction()`, `apm.startSpan()`, or `apm.captureError()`, replace those calls with the OpenTelemetry API. Refer to the [API mapping](#api-mapping) for the equivalent of each method.
+If you use the classic agent API, for example, `apm.startTransaction()`, `apm.startSpan()`, or `apm.captureError()`, replace those calls with the OpenTelemetry API. Refer to the [API mapping](#api-mapping) for the equivalent of each method.
 ::::::
 
 ::::::{step} Update dashboards, alerts, and queries
@@ -135,7 +149,7 @@ EDOT Browser data uses different field names and data streams than classic RUM d
 
 ::::::{step} Verify the migration
 
-Load your application and confirm that there are no errors from EDOT Browser in the browser console and that export requests reach your reverse proxy. Then open {{kib}} and check that your service, traces, and logs appear. Refer to [What to expect in {{kib}}](setup.md#what-to-expect-in-kibana) for where EDOT Browser data shows up.
+Load your application. Confirm that the browser console shows no errors from EDOT Browser, and that export requests reach your reverse proxy. Then open {{kib}} and check that your service, traces, and logs appear. Refer to [What to expect in {{kib}}](setup.md#what-to-expect-in-kibana) for where EDOT Browser data shows up.
 ::::::
 
 :::::::
@@ -146,7 +160,7 @@ This section lists the classic RUM agent configuration options and their equival
 
 ### `serviceName` [migration-service-name]
 
-The classic RUM agent [`serviceName`](apm-agent-rum-js://reference/configuration.md#service-name) option corresponds to the EDOT Browser `serviceName` option. If you don't set it, EDOT Browser uses `unknown_service:web`.
+The classic RUM agent [`serviceName`](apm-agent-rum-js://reference/configuration.md#service-name) option corresponds to the EDOT Browser `serviceName` option. Set it to a name that contains only letters, numbers, spaces, dashes, and underscores. If you don't set it, EDOT Browser uses `unknown_service:web`. That default includes a colon, which [`service.name`](opentelemetry://reference/compatibility/limitations.md#allowed-characters-in-service-names) in {{product.apm}} does not allow.
 
 ### `serviceVersion` [migration-service-version]
 
@@ -189,11 +203,11 @@ The classic RUM agent [`logLevel`](apm-agent-rum-js://reference/configuration.md
 
 ### `transactionSampleRate` [migration-transaction-sample-rate]
 
-The classic RUM agent [`transactionSampleRate`](apm-agent-rum-js://reference/configuration.md#transaction-sample-rate) option corresponds to the EDOT Browser `session.sampleRate` option. Both accept a value between `0` and `1`, but the sampling unit is different: the classic RUM agent samples each transaction, and EDOT Browser samples whole user sessions. All telemetry from a sampled session is exported, and nothing is exported from a session that isn't sampled. Refer to [Session sampling](configuration.md#otel_browser_session-sampling) for more details.
+The classic RUM agent [`transactionSampleRate`](apm-agent-rum-js://reference/configuration.md#transaction-sample-rate) option corresponds to the EDOT Browser `session.sampleRate` option. Both accept a value between `0` and `1`, but the sampling unit is different. The classic RUM agent samples each transaction, and EDOT Browser samples whole user sessions. EDOT Browser exports automatic traces and logs from a sampled session, and exports none of that telemetry from a session that is not sampled. Metrics that your application emits through the OpenTelemetry API are still exported. Refer to [Session sampling](configuration.md#otel_browser_session-sampling) for more details.
 
 ### `distributedTracingOrigins` [migration-distributed-tracing-origins]
 
-Like the classic RUM agent, EDOT Browser adds trace context headers to same-origin requests only. To add them to cross-origin requests, the classic RUM agent uses [`distributedTracingOrigins`](apm-agent-rum-js://reference/configuration.md#distributed-tracing-origins). EDOT Browser has no stable option for this yet. You can set `propagateTraceHeaderCorsUrls` for the `fetch` and `xhr` instrumentations through the `instrumentations` option:
+Like the classic RUM agent, EDOT Browser adds trace context headers to same-origin requests only. To add them to cross-origin requests, the classic RUM agent uses [`distributedTracingOrigins`](apm-agent-rum-js://reference/configuration.md#distributed-tracing-origins). EDOT Browser has no stable option for this. You can set `propagateTraceHeaderCorsUrls` for the `fetch` and `xhr` instrumentations through the `instrumentations` option:
 
 ```js
 startBrowserSdk({
@@ -231,11 +245,11 @@ The following classic RUM agent options have no equivalent in EDOT Browser:
 |---|---|
 | `instrument` | To turn off automatic instrumentation, list every instrumentation key in `disableInstrumentations`. |
 | `apiVersion` | Not applicable. EDOT Browser exports data using OTLP. |
-| `breakdownMetrics` | EDOT Browser doesn't export metrics. |
+| `breakdownMetrics` | EDOT Browser does not export an OpenTelemetry metrics signal. Refer to [Metrics](telemetry.md#metrics). |
 | `flushInterval`, `eventsLimit` | EDOT Browser batches telemetry before export and doesn't expose batching or throttling options. |
 | `pageLoadTraceId`, `pageLoadParentId`, `pageLoadSpanId`, `pageLoadSampled` | The `documentLoad` span always starts a new trace. Refer to [Page load trace correlation](#page-load-trace-correlation). |
 | `pageLoadTransactionName` | The page load is reported as a span named `documentLoad`. |
-| `distributedTracing` | EDOT Browser has no option to turn off trace context propagation. To exclude specific URLs, use `ignoreFetchUrls`. |
+| `distributedTracing` | EDOT Browser has no option to turn off trace context propagation. To stop collecting fetch, XMLHttpRequest, and resource-timing data for specific URLs, use `ignoreFetchUrls`. Those requests are not instrumented, so EDOT Browser does not add trace headers to them either. |
 | `propagateTracestate` | Not needed. EDOT Browser uses W3C Trace Context propagation. |
 | `centralConfig` | Central configuration isn't available for EDOT Browser. |
 | `sendCredentials` | No equivalent option. |
@@ -245,7 +259,7 @@ The following classic RUM agent options have no equivalent in EDOT Browser:
 
 EDOT Browser doesn't have its own tracing API. To create custom spans and log records, use the OpenTelemetry API.
 
-If you install EDOT Browser as a package, add `@opentelemetry/api` to your application's dependencies and use it as you would with any OpenTelemetry SDK:
+If you install EDOT Browser as a package, add `@opentelemetry/api` to your application's dependencies and use it as you do with any OpenTelemetry SDK:
 
 ```js
 import { trace } from '@opentelemetry/api';
@@ -268,7 +282,7 @@ The following table lists the classic RUM agent API methods and their equivalent
 | Classic RUM agent API | EDOT Browser equivalent |
 |---|---|
 | [`apm.init()`](apm-agent-rum-js://reference/agent-api.md#apm-init) | `startBrowserSdk()` |
-| [`apm.startTransaction()`](apm-agent-rum-js://reference/agent-api.md#apm-start-transaction), [`apm.startSpan()`](apm-agent-rum-js://reference/agent-api.md#apm-start-span) | Create spans with the OpenTelemetry Traces API, for example `tracer.startActiveSpan()`. OpenTelemetry has no separate transaction concept. |
+| [`apm.startTransaction()`](apm-agent-rum-js://reference/agent-api.md#apm-start-transaction), [`apm.startSpan()`](apm-agent-rum-js://reference/agent-api.md#apm-start-span) | Create spans with the OpenTelemetry Traces API, for example, `tracer.startActiveSpan()`. OpenTelemetry has no separate transaction concept. |
 | [`apm.getCurrentTransaction()`](apm-agent-rum-js://reference/agent-api.md#get-current-transaction) | `trace.getActiveSpan()` from the OpenTelemetry API. |
 | [`apm.captureError()`](apm-agent-rum-js://reference/agent-api.md#capture-error) | Uncaught errors and unhandled promise rejections are captured automatically. For errors that your code handles, call `span.recordException()` on a span you created, or emit a log record with the OpenTelemetry Logs API. |
 | [`apm.addLabels()`](apm-agent-rum-js://reference/agent-api.md#apm-add-labels), [`apm.setCustomContext()`](apm-agent-rum-js://reference/agent-api.md#apm-set-custom-context) | For values that are known when the page loads, use the `resourceAttributes` option. For other values, set attributes on the spans and log records that you create. There's no method to add attributes to all telemetry after EDOT Browser starts. |
@@ -279,16 +293,16 @@ The following table lists the classic RUM agent API methods and their equivalent
 
 ## Data model changes [data-model-changes]
 
-The classic RUM agent groups most telemetry into transactions. EDOT Browser reports a small number of spans and reports most browser events as log records. The following table shows where each type of classic RUM data ends up:
+The classic RUM agent groups most telemetry into transactions. EDOT Browser uses a small number of spans and reports most browser events as log records. The following table shows where each type of classic RUM data ends up:
 
 | Classic RUM agent | EDOT Browser |
 |---|---|
-| `page-load` transaction, with navigation timing and resource spans | A `documentLoad` span for the initial page load. Navigation timing and resource timing are log records. |
+| `page-load` transaction, with navigation timing and resource spans | A `documentLoad` span for the initial page load, and a `browser.navigation` log record. Navigation timing and resource timing are log records. |
 | `route-change` transaction | `browser.navigation` log record |
 | `user-interaction` transaction | `browser.user_action.click` log record |
 | `http-request` transaction and `fetch` or `XMLHttpRequest` spans | One span for each `fetch` or `XMLHttpRequest` request |
 | Errors | `exception` log records |
-| Web vitals (for example LCP, CLS, and INP), reported with the `page-load` transaction | Log records with the measurements in `browser.web_vital.*` attributes |
+| Web vitals (for example, largest contentful paint (LCP), cumulative layout shift (CLS), and interaction to next paint (INP)), reported with the `page-load` transaction | Log records with the measurements in `browser.web_vital.*` attributes |
 | Long task spans | `browser.long_animation_frame` log records (Chromium-based browsers) |
 | User Timing (`performance.measure`) spans | Not captured |
 | Breakdown metrics | Not available |
@@ -296,8 +310,8 @@ The classic RUM agent groups most telemetry into transactions. EDOT Browser repo
 Other differences to plan for:
 
 - **Trace structure**: User actions don't produce spans, so `fetch` and `XMLHttpRequest` spans aren't grouped under a click or a route change in the trace view. Refer to [Traces](telemetry.md#traces) for what EDOT Browser emits.
-- **Field names and data streams**: OTel-native data uses OpenTelemetry field names and is stored in different data streams than classic {{product.apm}} data. For example, labels move from `labels.*` to `attributes.*`. Refer to [Data model impact](docs-content://solutions/observability/get-started/opentelemetry/switch-to-otel.md#switch-to-otel-data-model) for the changes that affect your queries, dashboards, and alerts.
-- **Sessions**: EDOT Browser groups telemetry into user sessions and adds `session.id` and related attributes to spans and log records. Refer to [Sessions](telemetry.md#sessions) for how sessions start, end, and are sampled.
+- **Field names and data streams**: OpenTelemetry-native data uses OpenTelemetry field names and is stored in different data streams than classic {{product.apm}} data. For example, labels move from `labels.*` to `attributes.*`. Refer to [Data model impact](docs-content://solutions/observability/get-started/opentelemetry/switch-to-otel.md#switch-to-otel-data-model) for the changes that affect your queries, dashboards, and alerts.
+- **Sessions**: EDOT Browser groups telemetry into user sessions. For sampled sessions, it adds `session.id` and related attributes to spans and log records from automatic instrumentations. Refer to [Sessions](telemetry.md#sessions) for how sessions start, end, and are sampled.
 
 ## Limitations [limitations]
 
@@ -324,7 +338,7 @@ EDOT Browser has no equivalent of `apm.setUserContext()`, so you can't attach th
 
 ### Page load trace correlation [page-load-trace-correlation]
 
-With the classic RUM agent, you can make the page load part of the trace that your backend started when it rendered the page, by setting `pageLoadTraceId`, `pageLoadSpanId`, and `pageLoadSampled`. In EDOT Browser, the `documentLoad` span always starts a new trace, so the initial page load isn't linked to the backend trace that served the document. Requests that the page makes afterwards with `fetch` or `XMLHttpRequest` are still linked to the backend traces that handle them.
+With the classic RUM agent, you make the page load part of the trace that your backend starts when it renders the page, by setting `pageLoadTraceId`, `pageLoadSpanId`, and `pageLoadSampled`. In EDOT Browser, the `documentLoad` span always starts a new trace, so the initial page load is not linked to the backend trace that serves the document. Requests that the page makes after that load, with `fetch` or `XMLHttpRequest`, stay linked to the backend traces that handle them.
 
 ### Configuration [configuration-limitations]
 
@@ -336,8 +350,10 @@ Classic RUM data includes the location of the user's browser, which is derived f
 
 ### Browser support [browser-support]
 
-EDOT Browser targets ES2022 and supports recent versions of evergreen browsers only. If your application supports older browsers with the classic RUM agent, check the [supported browsers](supported-technologies.md#supported-browsers) before you migrate.
+EDOT Browser targets ECMAScript 2022 and supports recent versions of Chrome, Edge, Firefox, and Safari. If your application supports older browsers with the classic RUM agent, check the [supported browsers](supported-technologies.md#supported-browsers) before you migrate.
 
-## Troubleshooting [troubleshooting]
+## Next steps [next-steps]
 
-If you're encountering issues during migration, refer to [Troubleshooting](troubleshooting.md) for problems that are specific to EDOT Browser.
+- Refer to [Configure EDOT Browser](configuration.md) for each EDOT Browser option.
+- Refer to [Metrics, traces, and logs](telemetry.md) for the events EDOT Browser emits.
+- If you encounter issues during migration, refer to [Troubleshooting](troubleshooting.md) for problems that are specific to EDOT Browser.
