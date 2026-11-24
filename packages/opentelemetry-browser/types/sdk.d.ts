@@ -36,6 +36,7 @@ export type EdotConfig = {
     instrumentations?: Partial<InstrumentationsConfigMap> | undefined;
     session?: import("./session/config.js").SessionConfig | undefined;
     pageRoute?: false | import("./page-route.js").PageRouteResolver | undefined;
+    frustration?: boolean | import("./frustration/config.js").FrustrationConfig | undefined;
     ignoreFetchUrls?: (string | RegExp)[] | undefined;
     disableInstrumentations?: (keyof InstrumentationsConfigMap)[] | undefined;
 };
