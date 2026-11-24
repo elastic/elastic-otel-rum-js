@@ -146,6 +146,66 @@ export const ATTR_ELASTIC_USER_ATTRIBUTES_PREFIX: "elastic.user.attributes.";
  */
 export const ATTR_SESSION_SEQUENCE: "session.sequence";
 /**
+ * The user clicked the same element 3 or more times in quick succession.
+ *
+ * @note Not defined in semantic conventions. EDOT specific so it cannot clash with the names the Browser SIG settles on.
+ */
+export const EVENT_FRUSTRATION_RAGE_CLICK: "elastic.frustration.rage_click";
+/**
+ * The user clicked an element that looks clickable and the page did not react.
+ *
+ * @note Not defined in semantic conventions. EDOT specific so it cannot clash with the names the Browser SIG settles on.
+ */
+export const EVENT_FRUSTRATION_DEAD_CLICK: "elastic.frustration.dead_click";
+/**
+ * A click was followed by an uncaught error.
+ *
+ * @note Not defined in semantic conventions. EDOT specific so it cannot clash with the names the Browser SIG settles on.
+ */
+export const EVENT_FRUSTRATION_ERROR_CLICK: "elastic.frustration.error_click";
+/**
+ * Number of clicks in a rage click.
+ *
+ * @example 5
+ *
+ * @note Not defined in semantic conventions. EDOT specific so it cannot clash with the names the Browser SIG settles on.
+ */
+export const ATTR_FRUSTRATION_CLICK_COUNT: "elastic.frustration.click_count";
+/**
+ * CSS selector of an element, same format as the `user-action` instrumentation.
+ *
+ * @example #main > div:nth-child(2) > button.submit
+ *
+ * @experimental This attribute is experimental and is subject to breaking changes in minor releases of `@opentelemetry/semantic-conventions`.
+ */
+export const ATTR_BROWSER_CSS_SELECTOR: "browser.css_selector";
+/**
+ * @example BUTTON
+ *
+ * @experimental This attribute is experimental and is subject to breaking changes in minor releases of `@opentelemetry/semantic-conventions`.
+ */
+export const ATTR_BROWSER_TAG_NAME: "browser.tag_name";
+/**
+ * @example 10
+ *
+ * @experimental This attribute is experimental and is subject to breaking changes in minor releases of `@opentelemetry/semantic-conventions`.
+ */
+export const ATTR_BROWSER_PAGE_X: "browser.page.x";
+/**
+ * @example 10
+ *
+ * @experimental This attribute is experimental and is subject to breaking changes in minor releases of `@opentelemetry/semantic-conventions`.
+ */
+export const ATTR_BROWSER_PAGE_Y: "browser.page.y";
+/**
+ * @example TypeError
+ */
+export const ATTR_EXCEPTION_TYPE: "exception.type";
+/**
+ * @example Cannot read properties of undefined (reading 'id')
+ */
+export const ATTR_EXCEPTION_MESSAGE: "exception.message";
+/**
  * The value of the sampling rate for sessions. Necessary to calculate metrics
  *
  * @example 0.1234
