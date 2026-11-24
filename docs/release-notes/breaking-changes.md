@@ -28,6 +28,16 @@ Breaking changes can impact your applications, potentially disrupting normal ope
 
 ## 1.0.0 [edot-browser-1.0.0-breaking-changes]
 
+::::{dropdown} Webpack 4 is not officially supported
+EDOT Browser no longer officially supports Webpack 4. Bundling with Webpack 4 may still work in some setups, but it is not tested or documented as a supported bundler.
+**Impact**<br>
+- Applications that depend on the former Webpack 4 sample configuration or official support guidance no longer have a maintained reference.
+- Webpack 4 does not fully support modern package features used by EDOT Browser and its OpenTelemetry dependencies (for example `package.json` `exports` and `imports`), so builds may require custom workarounds that are outside the supported path.
+**Action**<br>
+- Upgrade to Webpack 5 or another [supported bundler](../reference/edot-browser/supported-technologies.md#bundlers) such as Rollup or esbuild.
+- If you must stay on Webpack 4, treat any required configuration as unsupported and untested.
+::::
+
 ::::{dropdown} `addObserver` replaced by `observe`
 The SDK returned by `startBrowserSdk` no longer exposes `addObserver`. Use `observe(eventName, handler)` to register session lifecycle callbacks. Event names are `'session:start'` and `'session:end'`. Each call returns its own unsubscribe function.
 **Impact**<br>

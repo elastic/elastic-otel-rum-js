@@ -49,10 +49,13 @@ When you install EDOT Browser as a package (refer to [Install the agent](install
 
 | Bundler   | Notes |
 |-----------|-------|
-| Webpack 4 | Supported. Refer to this [sample configuration](https://github.com/elastic/elastic-otel-rum-js/blob/main/packages/opentelemetry-browser/test/bundle/webpack4/webpack.config.mjs) and adapt it to your setup. |
 | Webpack 5 | Supported. Refer to this [sample configuration](https://github.com/elastic/elastic-otel-rum-js/blob/main/packages/opentelemetry-browser/test/bundle/webpack5/webpack.config.mjs) and adapt it to your setup. |
 | Rollup    | Supported. Refer to this [sample configuration](https://github.com/elastic/elastic-otel-rum-js/blob/main/packages/opentelemetry-browser/test/bundle/rollup/rollup.config.js) and adapt it to your setup. |
 | esbuild   | Supported. No plugins are required. Refer to the [example configuration](https://github.com/elastic/elastic-otel-rum-js/blob/55f0dec911286208a104e8282aa16665c0de68e4/packages/opentelemetry-browser/package.json#L42). |
+
+:::{note}
+Webpack 4 is not officially supported. Upgrade to Webpack 5 or another supported bundler. Refer to [Breaking changes](../../release-notes/breaking-changes.md#edot-browser-1.0.0-breaking-changes).
+:::
 
 
 ## TypeScript versions
