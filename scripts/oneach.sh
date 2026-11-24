@@ -35,7 +35,7 @@ function fatal {
 # ---- mainline
 
 TOP=$(cd $(dirname $0)/../ >/dev/null; pwd)
-PKGDIRS=$(ls -1 packages/*/package.json examples/package.json ./package.json | sort | xargs dirname)
+PKGDIRS=$(ls -1 packages/*/package.json examples/*/package.json ./package.json | sort | xargs dirname)
 CMD="$@"
 
 finalRetval=0
