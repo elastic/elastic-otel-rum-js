@@ -6,7 +6,7 @@ applies_to:
   serverless:
     observability:
   product:
-    edot_browser: preview
+    edot_browser: ga
 products:
   - id: cloud-serverless
   - id: observability
@@ -144,21 +144,6 @@ startBrowserSdk({
 });
 ```
 
-If your server routes OTLP traffic on paths other than `/v1/traces`, `/v1/logs` and `/v1/metrics`, set `exportConfig.tracesUrl`, `exportConfig.logsUrl` or `exportConfig.metricsUrl`. Each one is a full URL and is used exactly as written. A signal without its own URL still uses `exportConfig.url` plus the default path, and you can omit `exportConfig.url` when all three are set.
-
-```js
-import { startBrowserSdk } from '@elastic/opentelemetry-browser';
-
-startBrowserSdk({
-  serviceName: 'my-web-app',
-  exportConfig: {
-    tracesUrl: 'https://telemetry.example.com/otlp/t',
-    logsUrl: 'https://telemetry.example.com/otlp/l',
-    metricsUrl: 'https://telemetry.example.com/otlp/m',
-  },
-});
-```
-
 For security reasons, Elastic recommends configuring a reverse proxy that forwards OTLP traffic to {{product.observability}}. Refer to [Proxy and CORS configuration](proxy-cors.md) for more details.
 
 Use a service name that identifies your frontend application and doesn't contain special characters, so that data is correctly categorized in {{product.observability}}.
@@ -203,6 +188,8 @@ The following keys are supported:
 
 | Instrumentation   | Key                                              | Scope                                            | Configuration |
 |-------------------|--------------------------------------------------|--------------------------------------------------|---------------|
+| Long Animation Frame | `long-animation-frame`                              | `@opentelemetry/browser-instrumentation/long-animation-frame` | [Reference](https://github.com/open-telemetry/opentelemetry-browser/tree/main/packages/instrumentation#long-animation-frames) |
+| Document load     | `document-load`                                    | `@opentelemetry/browser-instrumentation/document-load`       | [Reference](https://github.com/open-telemetry/opentelemetry-browser/tree/main/packages/instrumentation#document-load) |
 | Navigation timing | `navigation-timing`                              | `@opentelemetry/browser-instrumentation/navigation-timing` | [Reference](https://github.com/open-telemetry/opentelemetry-browser/tree/main/packages/instrumentation#navigation-timing) |
 | Resource timing   | `resource-timing`                              | `@opentelemetry/browser-instrumentation/resource-timing` | [Reference](https://github.com/open-telemetry/opentelemetry-browser/tree/main/packages/instrumentation#resource-timing) |
 | Fetch             | `fetch`                                          | `@opentelemetry/browser-instrumentation/fetch`   | [Reference](https://github.com/open-telemetry/opentelemetry-browser/tree/main/packages/instrumentation#fetch) |
@@ -238,8 +225,8 @@ EDOT Browser adds `session.id`, `session.previous_id` (after a session rotates),
 
 | Option              | Type      | Description |
 |---------------------|-----------|-------------|
-| `sampleRate`        | `number`  | Fraction of sessions to record, in the range 0–1. Defaults to `1` (100%). The decision is made when a session starts and stays fixed until the session rotates. Invalid values log a warning and fall back to the default; out-of-range values are clamped. Values are truncated to four decimal places (minimum step 0.0001). At `0`, automatic RUM instrumentations are disabled for that session and the `session.start` log record is not emitted. |
-| `inactivityTimeout` | `number`  | Seconds without user activity after which the session ends. Defaults to `1800` (30 minutes). Must be between `300` (5 minutes) and `maxDuration`. |
+| `sampleRate`        | `number`  | Fraction of sessions to record, in the range 0–1. Defaults to `1` (100%). The decision is made when a session starts and stays fixed until the session rotates. Invalid values log a warning and fall back to the default; out-of-range values are clamped. Values are truncated to four decimal places (minimum step 0.0001). At `0`, traces and logs—including spans and log records from your application code—are not exported for that session and the `session.start` log record is not emitted. |
+| `inactivityTimeout` | `number`  | Seconds without telemetry after which the session ends. Defaults to `1800` (30 minutes). Must be between `300` (5 minutes) and `maxDuration`. |
 | `maxDuration`       | `number`  | Maximum session length in seconds, regardless of activity. Defaults to `14400` (4 hours). Must be between `1800` (30 minutes) and `86400` (24 hours). |
 | `activityEvents`    | `string[]` | DOM events that count as user activity. Defaults to `["pointerdown", "keydown", "scroll", "wheel"]`. Must be a non-empty list of event names; unknown names are used as given but log a warning, because event names are case sensitive. Events not triggered by the user (for example `dispatchEvent` calls) are ignored. |
 
@@ -247,44 +234,34 @@ Incorrect values for `inactivityTimeout` and `maxDuration` fall back to the defa
 
 #### Session sampling [otel_browser_session-sampling]
 
-Session sampling controls whether EDOT Browser exports automatic RUM telemetry (instrumentation spans and log records) for a given user session. The sampling rate is configured with `session.sampleRate`, not a top-level `sampleRate` option.
+Session sampling controls whether EDOT Browser **exports** traces and logs for a given user session. That includes automatic instrumentation and telemetry your application emits through the OpenTelemetry Traces and Logs APIs. The sampling rate is configured with `session.sampleRate`, not a top-level `sampleRate` option.
 
-When a session is **sampled in**, all configured instrumentations run for that session until it ends or rotates. When a session is **sampled out**, EDOT Browser disables automatic instrumentations for that session so the browser does not collect spans or log records that would be dropped anyway.
+When a session is **sampled in**, EDOT Browser exports its spans and log records until the session ends or rotates. When a session is **sampled out**, EDOT Browser doesn't export spans or log records for that session. Instrumentations might still run in the browser.
 
-When an active session is available, traces and logs use that session's sampling decision. If the session manager cannot return an active session—for example after a session expires and before user activity starts a new one—there is no per-session decision to apply. When `session.sampleRate` is `1` (the default), the trace sampler still **samples spans in** and automatic log records continue to be exported. For any rate below `1`, spans are sampled out until a new session starts.
+When an active session is available, traces and logs use that session's sampling decision. If the session manager cannot return an active session—for example after a session expires and before user activity starts a new one—there is no per-session decision to apply. When `session.sampleRate` is `1` (the default), the trace sampler still **samples spans in** and log records continue to be exported. For any rate below `1`, spans and logs are not exported until a new session starts.
 
-To stop automatic RUM export while keeping session machinery active, set `session.sampleRate` to `0`. With `sampleRate: 0`, session state still exists client-side but automatic export is suppressed.
+To stop trace and log export while keeping session machinery active, set `session.sampleRate` to `0`. With `sampleRate: 0`, session state still exists client-side but OTLP export for traces and logs is suppressed.
 
 Metrics your application emits through the OpenTelemetry API are not gated by session sampling today. Refer to [Sessions](telemetry.md#sessions) for signal-specific behavior.
-
-A tab becoming visible extends an active session but does not start a new one. This is not controlled by `activityEvents`.
-
-#### Observe sessions
-
-The object `startBrowserSdk` returns has methods to read the current session and to react when sessions start or end:
 
 ```js
 import { startBrowserSdk } from '@elastic/opentelemetry-browser';
 
-const sdk = startBrowserSdk({/* ... */});
-
 sdk.getSession(); // { id, previousId, startTimestamp, sampled }, or undefined when no session is active
 
-const unsubscribe = sdk.addObserver({
-  onSessionStarted(session, previous) {
-    console.log('Session started', session.id, 'after', previous?.id);
-  },
-  onSessionEnded(session) {
-    console.log('Session ended', session.id);
-  },
+const offStart = sdk.observe('session:start', (session, previous) => {
+  console.log('Session started', session.id, 'after', previous?.id);
+});
+const offEnd = sdk.observe('session:end', (session) => {
+  console.log('Session ended', session.id);
 });
 ```
 
-Both callbacks are optional and run synchronously. The observer has the same shape as the upstream `@opentelemetry/browser-sdk/session` one.
+Use `sdk.observe(eventName, handler)` to react to session lifecycle events. Supported event names are `'session:start'` and `'session:end'`. Each call returns its own unsubscribe function. Handlers run synchronously. You can register one event without the other.
 
-- `onSessionEnded` is called when the session expires, when the application ends it with `endSession()`, when another tab replaces the session, and when `localStorage` is cleared. Expiry calls it even if the application produces no telemetry.
-- `onSessionStarted` is called when this tab starts a session or adopts one started by another tab. `previous` is set only when this tab sees the preceding session end. Observers added after `startBrowserSdk` returns do not receive the initial session. Use `getSession()` to read it.
-- Browsers throttle timers in background tabs, so `onSessionEnded` can be delayed until the tab is used again.
+- Handlers for `'session:end'` run when the session expires, when the application ends it with `endSession()`, when another tab replaces the session, and when `localStorage` is cleared. Expiry runs the handler even if the application produces no telemetry.
+- Handlers for `'session:start'` run when this tab starts a session or adopts one started by another tab. The `previous` argument is set only when this tab sees the preceding session end. Handlers registered after `startBrowserSdk` returns do not receive the initial session. Use `getSession()` to read it.
+- Browsers throttle timers in background tabs, so `'session:end'` handlers can be delayed until the tab is used again.
 
 #### End a session [otel_browser_session-end]
 
@@ -331,7 +308,7 @@ Start EDOT Browser before your router, so `setPageRoute` is available for the fi
 
 ### `ignoreFetchUrls` details [otel_browser_ignorefetchurls-details]
 
-`ignoreFetchUrls` lists URLs that EDOT Browser should not instrument. The SDK always ignores OTLP export URLs (traces, logs, and metrics) to prevent self-instrumentation. When you set `instrumentations`, per-instrumentation `ignoreUrls` values are merged with this list for fetch, XMLHttpRequest, and resource timing.
+`ignoreFetchUrls` lists URLs that EDOT Browser should not instrument. The SDK always ignores OTLP export URLs for traces and logs to prevent self-instrumentation. When you set `instrumentations`, per-instrumentation `ignoreUrls` values are merged with this list for fetch, XMLHttpRequest, and resource timing.
 
 **Matching rules**
 

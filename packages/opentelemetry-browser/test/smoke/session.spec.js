@@ -269,14 +269,15 @@ test('should notify session observers when the session ends and starts', async (
         // @ts-expect-error - test globals
         globalThis.sessionEvents = [];
         // @ts-expect-error - set by the injected snippet
-        globalThis.edotBrowser.addObserver({
-            onSessionStarted: (/** @type {any} */ s, /** @type {any} */ p) =>
-                // @ts-expect-error - test globals
-                globalThis.sessionEvents.push(['started', s, p]),
-            onSessionEnded: (/** @type {any} */ s) =>
-                // @ts-expect-error - test globals
-                globalThis.sessionEvents.push(['ended', s]),
-        });
+        globalThis.edotBrowser.observe('session:start', (s, p) =>
+            // @ts-expect-error - set by the injected snippet
+            globalThis.sessionEvents.push(['started', s, p])
+        );
+        // @ts-expect-error - set by the injected snippet
+        globalThis.edotBrowser.observe('session:end', (s) =>
+            // @ts-expect-error - set by the injected snippet
+            globalThis.sessionEvents.push(['ended', s])
+        );
     });
 
     // The expiry timer reports the end without any telemetry or interaction
@@ -342,6 +343,7 @@ test('should not export logs/traces for non sampled sessions', async ({
     // - log
     await page.click('#log');
 
+    let span, logs;
     const results = await Promise.allSettled([
         collector.getSpans(),
         collector.getLogs(),
@@ -361,14 +363,15 @@ test('should stop tracking the session on shutdown', async ({page}) => {
         // @ts-expect-error - test globals
         globalThis.sessionEvents = [];
         // @ts-expect-error - set by the injected snippet
-        globalThis.edotBrowser.addObserver({
-            onSessionStarted: () =>
-                // @ts-expect-error - test globals
-                globalThis.sessionEvents.push('started'),
-            onSessionEnded: () =>
-                // @ts-expect-error - test globals
-                globalThis.sessionEvents.push('ended'),
-        });
+        globalThis.edotBrowser.observe('session:start', () =>
+            // @ts-expect-error - set by the injected snippet
+            globalThis.sessionEvents.push('started')
+        );
+        // @ts-expect-error - set by the injected snippet
+        globalThis.edotBrowser.observe('session:end', () =>
+            // @ts-expect-error - set by the injected snippet
+            globalThis.sessionEvents.push('ended')
+        );
         // @ts-expect-error - set by the injected snippet
         await globalThis.edotBrowser.shutdown();
     });
@@ -391,7 +394,7 @@ test('should expose a no-op session API when the SDK does not start', async ({
     const result = await page.evaluate(() => {
         // @ts-expect-error - set by the injected snippet
         const sdk = globalThis.edotBrowser;
-        const unsubscribe = sdk.addObserver({});
+        const unsubscribe = sdk.observe('session:start', () => {});
         unsubscribe();
         sdk.endSession();
         return {
@@ -457,11 +460,9 @@ test('should not notify observers after shutdown when another tab rotates the se
         /** @type {string[]} */
         const seen = [];
         // @ts-expect-error - set by the injected snippet
-        const {addObserver, getSession, shutdown} = globalThis.edotBrowser;
-        addObserver({
-            onSessionStarted: () => seen.push('started'),
-            onSessionEnded: () => seen.push('ended'),
-        });
+        const {observe, getSession, shutdown} = globalThis.edotBrowser;
+        observe('session:start', () => seen.push('started'));
+        observe('session:end', () => seen.push('ended'));
         await shutdown();
 
         // what another tab rotating the session leaves in the shared storage
@@ -559,9 +560,7 @@ test('should end the session from the API until the next user interaction', asyn
         const events = [];
         // @ts-expect-error - set by the injected snippet
         const sdk = globalThis.edotBrowser;
-        sdk.addObserver({
-            onSessionEnded: (/** @type {any} */ s) => events.push(s.id),
-        });
+        sdk.observe('session:end', (/** @type {any} */ s) => events.push(s.id));
         sdk.endSession();
         return fetch('/')
             .then((r) => r.text())

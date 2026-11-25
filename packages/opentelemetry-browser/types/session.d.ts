@@ -4,7 +4,6 @@ export { generateUUID } from "./session/id.js";
 export type SessionConfig = import("./session/config.js").SessionConfig;
 export type SessionInfo = import("./session/state.js").SessionInfo;
 export type SessionState = import("./session/state.js").SessionState;
-export type SessionObserver = import("./session/observers.js").SessionObserver;
 export type SessionApi = import("./session/api.js").SessionApi;
 export type SessionManagerOptions = import("./session/manager.js").SessionManagerOptions;
 export type SamplingResult = import("./session/sampler.js").SamplingResult;

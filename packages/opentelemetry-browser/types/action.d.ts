@@ -1,10 +1,10 @@
 /**
  * Public API returned by `startBrowserSdk`. Without a logger (SDK disabled or
  * failed to start) `addAction` is a no-op.
- * @param {import('@opentelemetry/api-logs').Logger | undefined} logger
+ * @param {import('@opentelemetry/api').Logger | undefined} logger
  * @returns {ActionApi}
  */
-export function createActionApi(logger: import("@opentelemetry/api-logs").Logger | undefined): ActionApi;
+export function createActionApi(logger: import("@opentelemetry/api").Logger | undefined): ActionApi;
 /**
  * @typedef {Object} ActionApi
  * @property {(

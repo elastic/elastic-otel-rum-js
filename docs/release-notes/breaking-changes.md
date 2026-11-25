@@ -26,6 +26,50 @@ Breaking changes can impact your applications, potentially disrupting normal ope
 % ::::
 % TEMPLATE END
 
+## X.X.X [edot-browser-X.X.X-breaking-changes]
+
+::::{dropdown} Browser telemetry uses a dedicated dataset by default
+EDOT Browser now sets `data_stream.dataset` to `browser` on the shared resource for traces, logs, and metrics.
+
+**Impact**<br>
+With the default Elastic OTel-native data stream routing, telemetry that previously used the `generic` dataset now uses these streams:
+
+- `traces-browser.otel-*`
+- `logs-browser.otel-*`
+
+Valid dataset strings set in `resourceAttributes` remain unchanged. If the dataset is absent, `undefined`, or `null`, the SDK uses `browser`. Other ingest routing settings can change the destination. Existing data stays in its original streams.
+
+**Action**<br>
+If your ingest or read permissions cover only the previous streams, add access to the new streams. Check dashboards and retention settings that target only the previous streams. Update them if needed.
+
+To query data from before and after the change, include both datasets. Queries that already cover both datasets need no change.
+
+To retain the previous default dataset, set `resourceAttributes: { 'data_stream.dataset': 'generic' }` when calling `startBrowserSdk`. Refer to [Data stream routing](../reference/edot-browser/configuration.md#data-stream-routing).
+
+## 1.0.0 [edot-browser-1.0.0-breaking-changes]
+
+::::{dropdown} Webpack 4 is not officially supported
+EDOT Browser no longer officially supports Webpack 4. Bundling with Webpack 4 may still work in some setups, but it is not tested or documented as a supported bundler.
+**Impact**<br>
+- Applications that depend on the former Webpack 4 sample configuration or official support guidance no longer have a maintained reference.
+- Webpack 4 does not fully support modern package features used by EDOT Browser and its OpenTelemetry dependencies (for example `package.json` `exports` and `imports`), so builds may require custom workarounds that are outside the supported path.
+**Action**<br>
+- Upgrade to Webpack 5 or another [supported bundler](../reference/edot-browser/supported-technologies.md#bundlers) such as Rollup or esbuild.
+- If you must stay on Webpack 4, treat any required configuration as unsupported and untested.
+::::
+
+::::{dropdown} `addObserver` replaced by `observe`
+The SDK returned by `startBrowserSdk` no longer exposes `addObserver`. Use `observe(eventName, handler)` to register session lifecycle callbacks. Event names are `'session:start'` and `'session:end'`. Each call returns its own unsubscribe function.
+**Impact**<br>
+- TypeScript users see a compilation error if they still call `sdk.addObserver()`.
+- At runtime, `addObserver` is `undefined` on the returned SDK object.
+- One registration per event replaces a single object with `onSessionStarted` and `onSessionEnded`. You need separate `observe` calls (and separate unsubscribe calls) if you listen to both events.
+**Action**<br>
+- Replace `sdk.addObserver({ onSessionStarted, onSessionEnded })` with `sdk.observe('session:start', onSessionStarted)` and `sdk.observe('session:end', onSessionEnded)` as needed.
+- Store and call both unsubscribe functions returned by `observe` when you tear down listeners.
+- Refer to [Session configuration](../reference/edot-browser/configuration.md#otel_browser_session-details) for behavior and examples.
+::::
+
 ## 0.5.0 [edot-browser-0.5.0-breaking-changes]
 
 ::::{dropdown} Removal of the metrics signal
@@ -65,52 +109,6 @@ Refer to [PR #128](https://github.com/elastic/elastic-otel-rum-js/pull/128).
 ::::
 
 
-::::{dropdown} Browser telemetry uses a dedicated dataset by default
-EDOT Browser now sets `data_stream.dataset` to `browser` on the shared resource for traces, logs, and metrics.
-
-**Impact**<br>
-With the default Elastic OTel-native data stream routing, telemetry that previously used the `generic` dataset now uses these streams:
-
-- `traces-browser.otel-*`
-- `logs-browser.otel-*`
-- `metrics-browser.otel-*`
-
-Valid dataset strings set in `resourceAttributes` remain unchanged. If the dataset is absent, `undefined`, or `null`, the SDK uses `browser`. Other ingest routing settings can change the destination. Existing data stays in its original streams.
-
-**Action**<br>
-If your ingest or read permissions cover only the previous streams, add access to the new streams. Check dashboards and retention settings that target only the previous streams. Update them if needed.
-
-To query data from before and after the change, include both datasets. Queries that already cover both datasets need no change.
-
-To retain the previous default dataset, set `resourceAttributes: { 'data_stream.dataset': 'generic' }` when calling `startBrowserSdk`. Refer to [Data stream routing](../reference/edot-browser/configuration.md#data-stream-routing).
-::::
-
-## 0.4.0 [edot-browser-0-4-0-breaking-changes]
-
-::::{dropdown} Session sampling replaces root `sampleRate`
-EDOT Browser now applies sampling at **session** scope. Configure the rate with `session.sampleRate` (0–1). The former top-level `sampleRate` option (trace-ID ratio sampling) is removed.
-**Impact**<br>
-- Top-level `sampleRate` is ignored at runtime. TypeScript types may still list it until updated.
-- Sampling is **per session**, not per trace ID. For a sampled session, automatic spans and log records are collected for the whole session; for an unsampled session, instrumentations are disabled.
-**Action**<br>
-- Move `sampleRate` into `session: { sampleRate: … }`.
-- Revisit dashboards and volume estimates if you relied on trace-ID sampling for partial span volume within a single user session.
-Refer to [PR #128](https://github.com/elastic/elastic-otel-rum-js/pull/128).
-::::
-
-
-::::{dropdown} Session sampling replaces root `sampleRate`
-EDOT Browser now applies sampling at **session** scope. Configure the rate with `session.sampleRate` (0–1). The former top-level `sampleRate` option (trace-ID ratio sampling) is removed.
-**Impact**<br>
-- Top-level `sampleRate` is ignored at runtime. TypeScript types may still list it until updated.
-- Sampling is **per session**, not per trace ID. For a sampled session, automatic spans and log records are collected for the whole session; for an unsampled session, instrumentations are disabled.
-**Action**<br>
-- Move `sampleRate` into `session: { sampleRate: … }`.
-- Revisit dashboards and volume estimates if you relied on trace-ID sampling for partial span volume within a single user session.
-Refer to [PR #128](https://github.com/elastic/elastic-otel-rum-js/pull/128).
-::::
-
-
 ::::{dropdown} Replacement of document load instrumentation for navigation timing
 Document instrumentation (@opentelemetry/instrumentation-document-load) has been replaced by `navigation-timing` from `@opentelemetry/browser-instrumentation`. The new instrumentation emits a log records instead of a trace Span to report the timings.
 **Impact**<br>
@@ -124,6 +122,9 @@ Document instrumentation (@opentelemetry/instrumentation-document-load) has been
 Refer to [PR #102](https://github.com/elastic/elastic-otel-rum-js/pull/102).
 ::::
 
+:::{note}
+In 1.0.0, the `document-load` instrumentation emits a `documentLoad` span again (root span, no resource child spans). Load timing details stay on the `navigation-timing` log records. Refer to the [1.0.0 release notes](index.md#edot-browser-1.0.0-features-enhancements).
+:::
 
 ::::{dropdown} Switch to new user action instrumentation
 User interaction instrumentation (@opentelemetry/instrumentation-user-interaction) has been replaced by `user-action` from `@opentelemetry/browser-instrumentation`. The new instrumentation emits log records (for example browser.user_action.click) instead of trace spans.
