@@ -190,6 +190,28 @@ export class SessionManager {
         return this._sampler.ratio === 1;
     }
 
+    /**
+     * Hands out the next `session.sequence` of the session. The counter lives
+     * in the shared session storage, so tabs continue from each other's last
+     * value. Storage cannot be updated atomically, so two tabs writing at the
+     * same instant can repeat a value; within a tab it only grows.
+     * @param {string} sessionId session the telemetry belongs to
+     * @returns {number | undefined} `undefined` when that session is no longer
+     * the stored one
+     */
+    nextSequence(sessionId) {
+        if (this._stopped) {
+            return undefined;
+        }
+        const stored = this._store.get();
+        if (stored?.id !== sessionId) {
+            return undefined;
+        }
+        stored.sequence = (stored.sequence ?? 0) + 1;
+        this._store.save(stored);
+        return stored.sequence;
+    }
+
     /** @returns {import('@opentelemetry/api').Attributes} */
     getAttributes() {
         return sessionToAttributes(this.getSession(), this._tabId);

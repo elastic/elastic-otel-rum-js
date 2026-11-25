@@ -32,6 +32,13 @@ To check for security updates, go to [Security announcements for the Elastic sta
 % ### Chores [edot-browser-X.X.X-chores]
 % *
 
+## X.X.X [edot-browser-X.X.X-release-notes]
+
+### Features and enhancements [edot-browser-X.X.X-features-enhancements]
+
+* Add a `session.sequence` attribute to spans and log records. It grows monotonically within a session, is shared by all tabs, and resets when the session rotates. Refer to [Sessions](../reference/edot-browser/telemetry.md#sessions).
+  Ref: https://github.com/elastic/elastic-otel-rum-js/issues/183
+
 ## 0.5.0 [edot-browser-0.5.0-release-notes]
 
 ### Features and enhancements [edot-browser-0.5.0-features-enhancements]

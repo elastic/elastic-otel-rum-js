@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import {ATTR_SESSION_SEQUENCE} from '../semconv.js';
 import {sessionToAttributes} from './state.js';
 
 /** @typedef {import('./manager.js').SessionManager} SessionManager */
@@ -27,9 +28,7 @@ export class SessionSpanProcessor {
      */
     onStart(span) {
         const session = this._manager.getSession();
-        span.setAttributes(
-            sessionToAttributes(session, this._manager.getTabId())
-        );
+        span.setAttributes(sessionAttributes(this._manager, session));
     }
     onEnd() {}
     forceFlush() {
@@ -60,9 +59,7 @@ export class SessionLogRecordProcessor {
      */
     onEmit(logRecord) {
         const session = this._manager.getSession();
-        logRecord.setAttributes(
-            sessionToAttributes(session, this._manager.getTabId())
-        );
+        logRecord.setAttributes(sessionAttributes(this._manager, session));
     }
     forceFlush() {
         return Promise.resolve();
@@ -70,4 +67,19 @@ export class SessionLogRecordProcessor {
     shutdown() {
         return Promise.resolve();
     }
+}
+
+/**
+ * @param {SessionManager} manager
+ * @param {import('./state.js').SessionState | undefined} session
+ */
+function sessionAttributes(manager, session) {
+    const attributes = sessionToAttributes(session, manager.getTabId());
+    if (session) {
+        const sequence = manager.nextSequence(session.id);
+        if (sequence !== undefined) {
+            attributes[ATTR_SESSION_SEQUENCE] = sequence;
+        }
+    }
+    return attributes;
 }

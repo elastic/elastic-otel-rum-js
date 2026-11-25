@@ -129,6 +129,9 @@ export function parseStoredSession(raw) {
                 sampled: s.sampled,
                 samplingRate: s.samplingRate,
             };
+            if (Number.isSafeInteger(s.sequence) && s.sequence > 0) {
+                session.sequence = s.sequence;
+            }
             if (s.ended === true) {
                 session.ended = true;
             }

@@ -113,6 +113,7 @@ EDOT Browser groups telemetry from the same user into sessions. For **sampled** 
 - `session.id`: a random UUID shared by all tabs and windows of the application. It survives page reloads.
 - `session.previous_id`: the `session.id` of the session that ended right before the current one, when it started less than 24 hours ago.
 - `session.sampling_rate`: the configured `session.sampleRate` for this session. Use it in backends to weight or correct metrics when sampling is below 100%.
+- `session.sequence`: a counter that grows with every span and log record of the session, starting at 1. Use it to order signals that share a timestamp or arrive out of order, and to spot gaps. It is shared by all tabs of the session and starts over when the session rotates. This attribute is an Elastic extension and is not part of the OpenTelemetry semantic conventions.
 - `browser.tab.id`: a random UUID for the current tab or window. It survives page reloads within the same tab. This attribute is not part of the OpenTelemetry semantic conventions yet.
 
 A `session.start` log record is emitted when a new **sampled** session starts. It is not emitted for sampled-out sessions.
@@ -130,6 +131,7 @@ Session attributes are not added to metrics. If you configure metrics separately
 - Only user activity extends the session (by default `pointerdown`, `keydown`, `scroll`, and `wheel`, plus a tab becoming visible). Telemetry produced while the user is idle, such as background requests, does not.
 - After a session expires or is ended by the application, telemetry carries `browser.tab.id` but no `session.id` until the next user interaction starts a new session. The same happens when `localStorage` is cleared, and the new session has no `session.previous_id`.
 - Loading a page counts as activity. A page that reloads itself with no user present, such as a wall dashboard, keeps its session until the maximum duration.
+- `session.sequence` is kept in `localStorage`, which cannot be updated atomically. Two tabs emitting at the same instant can report the same value, so treat the counter as an ordering aid, not as a unique key.
 - If the device clock moves back by more than 5 minutes, the stored session is treated as expired.
 - Sampled-out sessions do not export automatic instrumentation data. Metrics emitted through the OpenTelemetry API in application code are not gated by session sampling.
 - When `session.sampleRate` is below `1` and there is no active session (it expired and the user has not interacted since), spans and logs are not exported, because there is no sampling decision for them.

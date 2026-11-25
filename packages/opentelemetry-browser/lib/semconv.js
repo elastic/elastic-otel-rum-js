@@ -158,6 +158,16 @@ export const ATTR_ELASTIC_USER_ACCOUNT = 'elastic.user.account';
 export const ATTR_ELASTIC_USER_ATTRIBUTES_PREFIX = 'elastic.user.attributes.';
 
 /**
+ * Monotonic counter of the spans and log records of a session, starting at 1.
+ * Shared by all tabs of the session and reset when the session rotates.
+ *
+ * @example 42
+ *
+ * @note Not defined in semantic conventions. Elastic extension.
+ */
+export const ATTR_SESSION_SEQUENCE = 'session.sequence';
+
+/**
  * The user clicked the same element 3 or more times in quick succession.
  *
  * @note Not defined in semantic conventions. EDOT specific so it cannot clash with the names the Browser SIG settles on.

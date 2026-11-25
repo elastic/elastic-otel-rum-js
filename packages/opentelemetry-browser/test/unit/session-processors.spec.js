@@ -20,10 +20,12 @@ test('SessionSpanProcessor - should add session attributes', () => {
         'session.id': id,
         'session.sampling_rate': 1,
         'browser.tab.id': generateUUID(),
+        'session.sequence': 7,
     };
     const managerMock = {
         getSession: mock.fn(() => session),
         getTabId: mock.fn(() => attrs['browser.tab.id']),
+        nextSequence: mock.fn(() => 7),
     };
     const processor = new SessionSpanProcessor({
         // @ts-expect-error -- using a mock
@@ -41,6 +43,9 @@ test('SessionSpanProcessor - should add session attributes', () => {
     processor.onStart(spanMock, ctx);
     assert.strictEqual(managerMock.getSession.mock.callCount(), 1);
     assert.strictEqual(managerMock.getTabId.mock.callCount(), 1);
+    assert.deepStrictEqual(managerMock.nextSequence.mock.calls[0].arguments, [
+        id,
+    ]);
     assert.strictEqual(spanMock.setAttributes.mock.callCount(), 1);
     assert.deepStrictEqual(spanMock.setAttributes.mock.calls[0].arguments, [
         attrs,
@@ -57,10 +62,12 @@ test('SessionLogRecorsProcessor - should add session attributes', () => {
         'session.id': id,
         'session.sampling_rate': 1,
         'browser.tab.id': generateUUID(),
+        'session.sequence': 7,
     };
     const managerMock = {
         getSession: mock.fn(() => session),
         getTabId: mock.fn(() => attrs['browser.tab.id']),
+        nextSequence: mock.fn(() => 7),
     };
     const processor = new SessionLogRecordProcessor({
         // @ts-expect-error -- using a mock
@@ -75,9 +82,35 @@ test('SessionLogRecorsProcessor - should add session attributes', () => {
     processor.onEmit(logRecordMock, ctx);
     assert.strictEqual(managerMock.getSession.mock.callCount(), 1);
     assert.strictEqual(managerMock.getTabId.mock.callCount(), 1);
+    assert.deepStrictEqual(managerMock.nextSequence.mock.calls[0].arguments, [
+        id,
+    ]);
     assert.deepStrictEqual(
         logRecordMock.setAttributes.mock.calls[0].arguments,
         [attrs]
+    );
+
+    mock.reset();
+});
+
+test('processors - should skip session.sequence without a session', () => {
+    const managerMock = {
+        getSession: mock.fn(() => undefined),
+        getTabId: mock.fn(() => 'tab'),
+        nextSequence: mock.fn(() => 1),
+    };
+    const processor = new SessionLogRecordProcessor({
+        // @ts-expect-error -- using a mock
+        manager: managerMock,
+    });
+    const logRecordMock = {setAttributes: mock.fn(() => undefined)};
+
+    // @ts-expect-error -- we do not need a full log record here
+    processor.onEmit(logRecordMock, {});
+    assert.strictEqual(managerMock.nextSequence.mock.callCount(), 0);
+    assert.deepStrictEqual(
+        logRecordMock.setAttributes.mock.calls[0].arguments,
+        [{'browser.tab.id': 'tab'}]
     );
 
     mock.reset();

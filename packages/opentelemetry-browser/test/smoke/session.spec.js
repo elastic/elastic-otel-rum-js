@@ -63,6 +63,39 @@ test('should keep session and tab ids across reloads and share session between t
     );
 });
 
+test('should stamp a growing session.sequence on spans and logs', async ({
+    page,
+}) => {
+    const collector = createCollector(page);
+    await page.goto(MANUAL_FIXTURE);
+    await page.click('#span');
+    await page.click('#log');
+
+    const logs = await collector.getLogs();
+    const spans = await collector.getSpans();
+    const first = [...logs, ...spans].map(
+        (r) => r.attributes['session.sequence']
+    );
+    expect(logs.length).toBeGreaterThan(0);
+    expect(spans.length).toBeGreaterThan(0);
+    // One counter per session, so values never repeat across signals
+    expect(new Set(first).size).toStrictEqual(first.length);
+    for (const value of first) {
+        expect(Number.isInteger(value)).toBe(true);
+        expect(value).toBeGreaterThan(0);
+    }
+
+    collector.clear();
+    await page.reload();
+    await page.click('#log');
+    const reloaded = (await collector.getLogs()).map(
+        (l) => l.attributes['session.sequence']
+    );
+    // Same session after a reload: the counter continues
+    expect(reloaded.length).toBeGreaterThan(0);
+    expect(Math.min(...reloaded)).toBeGreaterThan(Math.max(...first));
+});
+
 test('should rotate the session after 30 minutes of inactivity', async ({
     page,
 }) => {

@@ -967,3 +967,67 @@ test('SessionManager - endSession does nothing after shutdown', () => {
 
     assert.strictEqual(sessionStorage.getItem(SESSION_STORAGE_KEY), stored);
 });
+
+test('SessionManager - nextSequence increments within a session', () => {
+    const {createStarted} = setup();
+    const manager = createStarted();
+    const id = String(manager.getAttributes()['session.id']);
+
+    assert.deepStrictEqual(
+        [1, 2, 3].map(() => manager.nextSequence(id)),
+        [1, 2, 3]
+    );
+});
+
+test('SessionManager - nextSequence resets when the session rotates', () => {
+    const {createStarted, clock} = setup();
+    const manager = createStarted();
+    const first = String(manager.getAttributes()['session.id']);
+    manager.nextSequence(first);
+    manager.nextSequence(first);
+
+    clock.now += 61_000;
+    manager.recordActivity();
+    const second = String(manager.getAttributes()['session.id']);
+    assert.notStrictEqual(second, first);
+    assert.strictEqual(manager.nextSequence(first), undefined);
+    assert.strictEqual(manager.nextSequence(second), 1);
+});
+
+test('SessionManager - nextSequence continues across tabs and reloads', () => {
+    const {createStarted} = setup();
+    const tabA = createStarted(new MemoryStorage());
+    const tabB = createStarted(new MemoryStorage());
+    const id = String(tabA.getAttributes()['session.id']);
+
+    const values = [
+        tabA.nextSequence(id),
+        tabB.nextSequence(id),
+        tabA.nextSequence(id),
+        tabB.nextSequence(id),
+    ];
+    assert.deepStrictEqual(values, [1, 2, 3, 4]);
+
+    const reloaded = createStarted(new MemoryStorage());
+    assert.strictEqual(reloaded.nextSequence(id), 5);
+});
+
+test('SessionManager - nextSequence keeps counting when storage writes fail', () => {
+    const {createStarted, sessionStorage} = setup();
+    const manager = createStarted();
+    const id = String(manager.getAttributes()['session.id']);
+    sessionStorage.failWrites = true;
+
+    assert.strictEqual(manager.nextSequence(id), 1);
+    assert.strictEqual(manager.nextSequence(id), 2);
+});
+
+test('SessionManager - nextSequence is undefined after shutdown or for an unknown session', () => {
+    const {createStarted} = setup();
+    const manager = createStarted();
+    const id = String(manager.getAttributes()['session.id']);
+
+    assert.strictEqual(manager.nextSequence('other'), undefined);
+    manager.shutdown();
+    assert.strictEqual(manager.nextSequence(id), undefined);
+});
