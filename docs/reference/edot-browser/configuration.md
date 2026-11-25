@@ -226,7 +226,7 @@ EDOT Browser adds `session.id`, `session.previous_id` (after a session rotates),
 | Option              | Type      | Description |
 |---------------------|-----------|-------------|
 | `sampleRate`        | `number`  | Fraction of sessions to record, in the range 0–1. Defaults to `1` (100%). The decision is made when a session starts and stays fixed until the session rotates. Invalid values log a warning and fall back to the default; out-of-range values are clamped. Values are truncated to four decimal places (minimum step 0.0001). At `0`, traces and logs—including spans and log records from your application code—are not exported for that session and the `session.start` log record is not emitted. |
-| `inactivityTimeout` | `number`  | Seconds without telemetry after which the session ends. Defaults to `1800` (30 minutes). Must be between `300` (5 minutes) and `maxDuration`. |
+| `inactivityTimeout` | `number`  | Seconds without user activity after which the session ends. Defaults to `1800` (30 minutes). Must be between `300` (5 minutes) and `maxDuration`. |
 | `maxDuration`       | `number`  | Maximum session length in seconds, regardless of activity. Defaults to `14400` (4 hours). Must be between `1800` (30 minutes) and `86400` (24 hours). |
 | `activityEvents`    | `string[]` | DOM events that count as user activity. Defaults to `["pointerdown", "keydown", "scroll", "wheel"]`. Must be a non-empty list of event names; unknown names are used as given but log a warning, because event names are case sensitive. Events not triggered by the user (for example `dispatchEvent` calls) are ignored. |
 
