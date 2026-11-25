@@ -6,7 +6,7 @@ applies_to:
   serverless:
     observability:
   product:
-    edot_browser: preview
+    edot_browser: ga
 products:
   - id: cloud-serverless
   - id: observability
@@ -60,7 +60,7 @@ After EDOT Browser is sending telemetry to {{product.observability}}, your brows
 - **{{product.apm}} Service Inventory**: Your browser app appears as a service.
 - **{{product.apm}} trace view**: Distributed traces including browser spans are visible.
 - **Service Maps**: Frontend-to-backend service dependencies are shown when your backend services are also instrumented and reporting telemetry to {{product.observability}}.
-- **Discover**: Traces, metrics, and logs are indexed and queryable.
+- **Discover**: Traces and logs are indexed and queryable.
 
   :::{note}
   EDOT Browser emits log records automatically for user actions, navigation, page and resource timing, Core Web Vitals, and errors. Your application can emit additional log records using the OpenTelemetry Logs API. Refer to [Logs](telemetry.md#logs) for details on each record type.

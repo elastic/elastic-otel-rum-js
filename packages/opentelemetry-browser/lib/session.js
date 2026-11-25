@@ -8,7 +8,6 @@
 /** @typedef {import('./session/config.js').SessionConfig} SessionConfig */
 /** @typedef {import('./session/state.js').SessionInfo} SessionInfo */
 /** @typedef {import('./session/state.js').SessionState} SessionState */
-/** @typedef {import('./session/observers.js').SessionObserver} SessionObserver */
 /** @typedef {import('./session/api.js').SessionApi} SessionApi */
 /** @typedef {import('./session/manager.js').SessionManagerOptions} SessionManagerOptions */
 /** @typedef {import('./session/sampler.js').SamplingResult} SamplingResult */

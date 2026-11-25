@@ -49,7 +49,7 @@ const INTERACTIVE_SELECTOR = [
 
 /**
  * Reports rage, dead and error clicks as log events.
- * @param {import('@opentelemetry/api-logs').Logger} logger
+ * @param {import('@opentelemetry/api').Logger} logger
  * @param {FrustrationConfig} config
  * @returns {{
  *  requestStarted: (request: object) => void,

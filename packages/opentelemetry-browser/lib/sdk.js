@@ -3,11 +3,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import {diag, DiagLogLevel, trace} from '@opentelemetry/api';
-import {logs} from '@opentelemetry/api-logs';
+import {diag, DiagLogLevel, logs, trace} from '@opentelemetry/api';
 import {startLogsSdk} from '@opentelemetry/browser-sdk/logs';
 import {startTracesSdk} from '@opentelemetry/browser-sdk/traces';
 
+import {DocumentLoadInstrumentation} from '@opentelemetry/browser-instrumentation/experimental/document-load';
+import {LongAnimationFrameInstrumentation} from '@opentelemetry/browser-instrumentation/experimental/long-animation-frame';
 import {NavigationInstrumentation} from '@opentelemetry/browser-instrumentation/experimental/navigation';
 import {NavigationTimingInstrumentation} from '@opentelemetry/browser-instrumentation/experimental/navigation-timing';
 import {ResourceTimingInstrumentation} from '@opentelemetry/browser-instrumentation/experimental/resource-timing';
@@ -56,6 +57,8 @@ import {EDOT_VERSION, OTEL_BROWSER_INSTRUMENTATION_VERSION} from './version.js';
 
 /**
  * @typedef {{
+ *  "document-load": import('@opentelemetry/browser-instrumentation/experimental/document-load').DocumentLoadInstrumentationConfig;
+ *  "long-animation-frame": import('@opentelemetry/browser-instrumentation/experimental/long-animation-frame').LongAnimationFrameInstrumentationConfig;
  *  "navigation": import('@opentelemetry/browser-instrumentation/experimental/navigation').NavigationInstrumentationConfig;
  *  "navigation-timing": import('@opentelemetry/browser-instrumentation/experimental/navigation-timing').NavigationTimingInstrumentationConfig;
  *  "resource-timing": import('@opentelemetry/browser-instrumentation/experimental/resource-timing').ResourceTimingInstrumentationConfig;
@@ -98,7 +101,7 @@ const EDOT_SCOPE_NAME = '@elastic/opentelemetry-browser';
  * @typedef {Object} BrowserSdk
  * @property {() => Promise<void>} shutdown
  * @property {import('./session.js').SessionApi['getSession']} getSession
- * @property {import('./session.js').SessionApi['addObserver']} addObserver
+ * @property {import('./session.js').SessionApi['observe']} observe
  * @property {import('./session.js').SessionApi['endSession']} endSession
  * @property {import('./action.js').ActionApi['addAction']} addAction
  * @property {(route: string | undefined) => void} setPageRoute Sets the
@@ -389,6 +392,9 @@ export function startBrowserSdk(cfg = {}) {
     // goes to which instrumentation
     /** @type {Record<keyof InstrumentationsConfigMap, (cfg: any) => any>} */
     const instrFactoriesMap = {
+        'document-load': (cfg) => new DocumentLoadInstrumentation(cfg),
+        'long-animation-frame': (cfg) =>
+            new LongAnimationFrameInstrumentation(cfg),
         navigation: (cfg) => new NavigationInstrumentation(cfg),
         'navigation-timing': (cfg) => new NavigationTimingInstrumentation(cfg),
         'resource-timing': (cfg) =>

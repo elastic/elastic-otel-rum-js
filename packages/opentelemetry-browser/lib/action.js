@@ -37,7 +37,7 @@ const RESERVED_PREFIXES = ['session.', 'user.', 'url.', 'elastic.', 'event.'];
 /**
  * Public API returned by `startBrowserSdk`. Without a logger (SDK disabled or
  * failed to start) `addAction` is a no-op.
- * @param {import('@opentelemetry/api-logs').Logger | undefined} logger
+ * @param {import('@opentelemetry/api').Logger | undefined} logger
  * @returns {ActionApi}
  */
 export function createActionApi(logger) {

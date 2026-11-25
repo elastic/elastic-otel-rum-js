@@ -1,8 +1,18 @@
 /** @typedef {import('./manager.js').SessionManager} SessionManager */
+/** @typedef {import('./state.js').SessionInfo} SessionInfo */
+/**
+ * @typedef {{
+ *   'session:start': (current: SessionInfo, previous?: SessionInfo) => void;
+ *   'session:end': (session: SessionInfo) => void;
+ * }} SessionEvents
+ */
+/**
+ * @typedef {<K extends keyof SessionEvents>(eventName: K, handler: SessionEvents[K]) => () => void} ObserveFn
+ */
 /**
  * @typedef {Object} SessionApi
- * @property {() => import('./state.js').SessionInfo | undefined} getSession
- * @property {(observer: import('./observers.js').SessionObserver) => () => void} addObserver
+ * @property {() => SessionInfo | undefined} getSession
+ * @property {ObserveFn} observe
  * @property {() => void} endSession
  */
 /**
@@ -13,8 +23,14 @@
  */
 export function createSessionApi(manager: SessionManager | undefined): SessionApi;
 export type SessionManager = import("./manager.js").SessionManager;
+export type SessionInfo = import("./state.js").SessionInfo;
+export type SessionEvents = {
+    "session:start": (current: SessionInfo, previous?: SessionInfo) => void;
+    "session:end": (session: SessionInfo) => void;
+};
+export type ObserveFn = <K extends keyof SessionEvents>(eventName: K, handler: SessionEvents[K]) => () => void;
 export type SessionApi = {
-    getSession: () => import("./state.js").SessionInfo | undefined;
-    addObserver: (observer: import("./observers.js").SessionObserver) => () => void;
+    getSession: () => SessionInfo | undefined;
+    observe: ObserveFn;
     endSession: () => void;
 };

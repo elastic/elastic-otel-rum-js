@@ -11,8 +11,8 @@ import mime from 'mime';
 import {trace} from '@opentelemetry/api';
 
 const serverPort = process.env.PORT || 3000;
-const otlpEndpoint = process.env.OTEL_EXPORTER_OTLP_ENDPOINT;
-const exportHeaders = process.env.OTEL_EXPORTER_OTLP_HEADERS;
+const otlpEndpoint = process.env.BROWSER_OTLP_ENDPOINT;
+const exportHeaders = process.env.BROWSER_OTLP_HEADERS;
 const envToInject = {};
 let shouldInjectEnv = false;
 
@@ -96,7 +96,7 @@ const server = createServer((req, res) => {
     // then check for static resource
     const filePath = 'public/' + (url.pathname.slice(1) || 'index.html');
     if (existsSync(filePath)) {
-        // inject .env in index.html if available
+        // inject env vars in index.html if available
         if (shouldInjectEnv && filePath.endsWith('public/index.html')) {
             const origHtml = readFileSync(filePath, {encoding: 'utf-8'});
             const serailizedEnv = JSON.stringify(envToInject);
@@ -144,4 +144,4 @@ function handleApiRequest(json, url) {
 }
 
 server.listen(serverPort);
-console.log(`server listening to http://localhost:${server.address().port}`);
+console.log(`server listening to http://localhost:${serverPort}`);

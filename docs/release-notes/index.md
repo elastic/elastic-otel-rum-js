@@ -32,12 +32,27 @@ To check for security updates, go to [Security announcements for the Elastic sta
 % ### Chores [edot-browser-X.X.X-chores]
 % *
 
+## 1.0.0 [edot-browser-1.0.0-release-notes]
+
+### Features and enhancements [edot-browser-1.0.0-features-enhancements]
+
+* Enable the `long-animation-frame` instrumentation by default. It emits `browser.long_animation_frame` log records from the browser [Long Animation Frames API](https://developer.mozilla.org/en-US/docs/Web/API/PerformanceLongAnimationFrameTiming). The API is available in Chromium-based browsers; other browsers skip reporting. Turn it off with `disableInstrumentations: ['long-animation-frame']`. Refer to [Configure EDOT Browser](../reference/edot-browser/configuration.md#otel_browser_instrumentations-details).
+  Ref: https://github.com/elastic/elastic-otel-rum-js/issues/77
+* Enable the `document-load` instrumentation by default. It emits a `documentLoad` trace span for the initial HTML document load (from navigation `fetchStart` to `loadEventEnd`). Upstream ships this instrumentation under `@opentelemetry/browser-instrumentation/experimental/document-load`. Turn it off with `disableInstrumentations: ['document-load']`. Refer to [Configure EDOT Browser](../reference/edot-browser/configuration.md#otel_browser_instrumentations-details).
+  Ref: https://github.com/elastic/elastic-otel-rum-js/issues/76
+
 ## X.X.X [edot-browser-X.X.X-release-notes]
 
 ### Features and enhancements [edot-browser-X.X.X-features-enhancements]
 
 * Add a `session.sequence` attribute to spans and log records. It grows monotonically within a session, is shared by all tabs, and resets when the session rotates. Refer to [Sessions](../reference/edot-browser/telemetry.md#sessions).
   Ref: https://github.com/elastic/elastic-otel-rum-js/issues/183
+* Default the `data_stream.dataset` resource attribute to `browser` for traces, logs, and metrics. Set a valid dataset string in `resourceAttributes` to override the default. Refer to [the migration guidance](breaking-changes.md#edot-browser-X.X.X-breaking-changes).
+* Add page routes. Spans and log records include the route of the current page in the `url.template` attribute. Routes are inferred from URLs by default and can be provided with the `pageRoute` configuration or the `setPageRoute` method of the object returned by `startBrowserSdk`.
+  Ref: https://github.com/elastic/elastic-otel-rum-js/issues/129
+* Add a user identity API. `startBrowserSdk` returns `setUser()` and `clearUser()` to add `user.id`, `user.email`,
+  `user.full_name`, `elastic.user.account` and custom `elastic.user.attributes.*` attributes to spans and log records.
+  Ref: https://github.com/elastic/elastic-otel-rum-js/issues/124
 
 ## 0.5.0 [edot-browser-0.5.0-release-notes]
 
@@ -62,40 +77,6 @@ To check for security updates, go to [Security announcements for the Elastic sta
   Ref: https://github.com/elastic/elastic-otel-rum-js/issues/168
 
 ### Chores [edot-browser-0.5.0-chores]
-
-* Emit a message when `instrumentations` configuration option is used to warn users the upstream configurations are unstable.
-  Ref: https://github.com/elastic/elastic-otel-rum-js/issues/152
-
-## 0.4.0 [edot-browser-0.4.0-release-notes]
-
-### Features and enhancements [edot-browser-0.4.0-features-enhancements]
-
-* Default the `data_stream.dataset` resource attribute to `browser` for traces, logs, and metrics. Set a valid dataset string in `resourceAttributes` to override the default. Refer to [the migration guidance](breaking-changes.md#edot-browser-X.X.X-breaking-changes).
-* Add page routes. Spans and log records include the route of the current page in the `url.template` attribute. Routes are inferred from URLs by default and can be provided with the `pageRoute` configuration or the `setPageRoute` method of the object returned by `startBrowserSdk`.
-  Ref: https://github.com/elastic/elastic-otel-rum-js/issues/129
-* Expire sessions based on user activity. Sessions end after 30 minutes without user interaction, or 4 hours in total. Telemetry sent after that has no `session.id` until the next interaction. Set `session.activityEvents` to define what counts as activity.
-  Ref: https://github.com/elastic/elastic-otel-rum-js/issues/81
-* Add a session API. The SDK returned by `startBrowserSdk` has `sdk.getSession()` and `sdk.addObserver()` for reading the current session and reacting when sessions start and end.
-  Ref: https://github.com/elastic/elastic-otel-rum-js/issues/81
-* Add a user identity API. `startBrowserSdk` returns `setUser()` and `clearUser()` to add `user.id`, `user.email`,
-  `user.full_name`, `elastic.user.account` and custom `elastic.user.attributes.*` attributes to spans and log records.
-  Ref: https://github.com/elastic/elastic-otel-rum-js/issues/124
-* Add `sdk.endSession()` to end the current session, for example on logout. The next session starts on the next user interaction.
-  Ref: https://github.com/elastic/elastic-otel-rum-js/issues/123
-* Add `ignoreFetchUrls` to exclude URLs from fetch, XMLHttpRequest, and resource timing instrumentation. Strings and regular expressions are supported; OTLP export URLs are always ignored.
-  Ref: https://github.com/elastic/elastic-otel-rum-js/issues/151
-* Add `exportConfig.tracesUrl`, `exportConfig.logsUrl` and `exportConfig.metricsUrl` to export a signal to a custom URL. The URL is used as is, without appending `/v1/<signal>`.
-  Ref: https://github.com/elastic/elastic-otel-rum-js/issues/166
-
-* Add `disableInstrumentations` to turn off selected built-in instrumentations by key (for example, `web-vitals` or `resource-timing`). If you set both `disableInstrumentations` and `instrumentations` for the same key, `disableInstrumentations` takes precedence.
-  Ref: https://github.com/elastic/elastic-otel-rum-js/pull/170
-
-### Fixes [edot-browser-X.X.X-fixes]
-
-* Fix export URLs when `exportConfig.url` has no trailing slash. The path separator was missing, so `https://example.com/api` exported to `https://example.com/apiv1/traces`.
-  Ref: https://github.com/elastic/elastic-otel-rum-js/issues/168
-
-### Chores [edot-browser-X.X.X-chores]
 
 * Emit a message when `instrumentations` configuration option is used to warn users the upstream configurations are unstable.
   Ref: https://github.com/elastic/elastic-otel-rum-js/issues/152
