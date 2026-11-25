@@ -71,7 +71,7 @@ Configuration is passed as an object to `startBrowserSdk`. The following options
 
 | Option                | Type                     | Description |
 |-----------------------|--------------------------|-------------|
-| `serviceName`         | `string`                 | Logical name of the frontend service. Defaults to `unknown_service:web` if not set. |
+| `serviceName`         | `string`                 | Logical name of the frontend service. Use only letters, numbers, spaces, dashes, and underscores. If you omit it, EDOT Browser uses `unknown_service:web`. That default includes a colon, so it does not match the [allowed characters for `service.name`](opentelemetry://reference/compatibility/limitations.md#allowed-characters-in-service-names). |
 | `serviceVersion`      | `string`                 | Version of the application. Optional. |
 | `logLevel` | `"none" \| "error" \| "warn" \| "info" \| "debug" \| "verbose" \| "all"` | Diagnostic log level for the SDK internal logger. Defaults to `info`. Values are lowercase; the SDK accepts them case-insensitively. |
 | `resourceAttributes`  | `Record<string, any>`    | Optional resource attributes to attach to telemetry. For example: `{ 'deployment.environment.name': 'production' }`. |

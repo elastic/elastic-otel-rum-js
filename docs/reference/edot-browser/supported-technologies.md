@@ -21,14 +21,14 @@ This page lists supported browser versions, included instrumentations and their 
 
 At a minimum, the runtime environment must support:
 
-- ES2022 (the SDK bundle targets this version)
+- ECMAScript 2022 (the SDK bundle targets this version)
 - The `fetch` API
 - `Promise`
 - The `Performance` and `PerformanceObserver` APIs
 
 ### Supported browsers [supported-browsers]
 
-EDOT Browser is designed to run in modern evergreen browsers that meet these requirements. 
+EDOT Browser supports the browser versions in the following table. 
 
 | Browser | Supported versions |
 |----------|--------------------|
@@ -76,6 +76,7 @@ The following instrumentations are included and turned on by default. You can tu
 | Instrumentation   | NPM package                                | Config key                                 | On by default |
 |-------------------|--------------------------------------------|--------------------------------------------|---------------|
 | Long animation frame | `@opentelemetry/browser-instrumentation` | `long-animation-frame`                     | Yes (Chromium-based browsers only; no records where the Long Animation Frames API is unavailable) |
+| Document load     | `@opentelemetry/browser-instrumentation`   | `document-load`                            | Yes. Emits a `documentLoad` span for the initial page load. |
 | Navigation timing | `@opentelemetry/browser-instrumentation`   | `navigation-timing`                        | Yes |
 | Resource timing   | `@opentelemetry/browser-instrumentation`   | `resource-timing`                          | Yes |
 | Fetch             | `@opentelemetry/browser-instrumentation`   | `fetch`                                    | Yes |

@@ -58,15 +58,15 @@ The browser sends OTLP data to the reverse proxy endpoint that you configure. Th
 After EDOT Browser is sending telemetry to {{product.observability}}, your browser app surfaces in the following {{kib}} experiences:
 
 - **{{product.apm}} Service Inventory**: Your browser app appears as a service.
-- **{{product.apm}} trace view**: Distributed traces including browser spans are visible.
+- **{{product.apm}} trace view**: Distributed traces are visible, including the `documentLoad` span and browser `external.http` spans.
 - **Service Maps**: Frontend-to-backend service dependencies are shown when your backend services are also instrumented and reporting telemetry to {{product.observability}}.
-- **Discover**: Traces and logs are indexed and queryable.
+- **Discover**: Traces and logs are indexed and queryable. Metrics appear only when you configure metrics export separately. Refer to [Metrics](telemetry.md#metrics).
 
   :::{note}
   EDOT Browser emits log records automatically for user actions, navigation, page and resource timing, Core Web Vitals, and errors. Your application can emit additional log records using the OpenTelemetry Logs API. Refer to [Logs](telemetry.md#logs) for details on each record type.
   :::
 
-The **User Experience** app currently shows only data from classic Elastic {{product.apm}} Browser agents and does not display EDOT Browser data. For RUM-style dashboards compatible with EDOT Browser, install the [RUM OpenTelemetry Assets](https://github.com/elastic/integrations/tree/main/packages/otel_rum_dashboards) integration from the {{kib}} Integrations catalog. The integration is currently in preview, requires {{kib}} 9.2.1 or later, and on the Integrations page you must turn on **Display beta integrations** to find it.
+The **User Experience** app shows only data from classic Elastic {{product.apm}} Browser agents and does not display EDOT Browser data. For dashboards that work with EDOT Browser data, install the [RUM OpenTelemetry Assets](https://github.com/elastic/integrations/tree/main/packages/otel_rum_dashboards) integration from the {{kib}} Integrations catalog. The integration is in preview and requires {{kib}} 9.5.3 or later. On the Integrations page, turn on **Display beta integrations** to find it.
 
 ### Spans from browser fetch and XHR [spans-from-fetch-xhr]
 
