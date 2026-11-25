@@ -75,6 +75,7 @@ The following instrumentations are included and turned on by default. You can tu
 
 | Instrumentation   | NPM package                                | Config key                                 | On by default |
 |-------------------|--------------------------------------------|--------------------------------------------|---------------|
+| Document Load     | `@opentelemetry/browser-instrumentation`   | `document-load`                            | Yes |
 | Long animation frame | `@opentelemetry/browser-instrumentation` | `long-animation-frame`                     | Yes (Chromium-based browsers only; no records where the Long Animation Frames API is unavailable) |
 | Navigation timing | `@opentelemetry/browser-instrumentation`   | `navigation-timing`                        | Yes |
 | Resource timing   | `@opentelemetry/browser-instrumentation`   | `resource-timing`                          | Yes |
