@@ -117,7 +117,9 @@ Configuration is passed as an object to `startBrowserSdk`. The following options
 | `resourceAttributes`  | `Record<string, any>`    | Optional resource attributes to attach to telemetry. The dataset defaults to `browser`. Refer to [Data stream routing](#data-stream-routing) for defaults and overrides. |
 | `disabled`            | `boolean`                | If `true`, the SDK does not start. |
 | `instrumentations`    | `Record<string, Object>` | **Not recommended.** Advanced per-instrumentation config passed through to upstream OpenTelemetry Browser instrumentations. EDOT Browser logs a warning when this option is set. Refer to [instrumentations details](#otel_browser_instrumentations-details). |
-| `pageRoute`           | `((url: URL, inferPageRoute: (url: URL \| string) => string \| undefined) => string \| undefined) \| false` | Function that returns the low-cardinality route of a page, added as `url.template` to spans and log 
+| `disableInstrumentations` | `string[]`            | Optional list of instrumentation keys to turn off. Values must match the keys in [instrumentations details](#otel_browser_instrumentations-details). Refer to [`disableInstrumentations` details](#otel_browser_disableinstrumentations-details). |
+| `session`             | `{ sampleRate?: number; inactivityTimeout?: number; maxDuration?: number }` | Session tracking and session-level sampling. Refer to [session details](#otel_browser_session-details) for more information. |
+| `pageRoute`           | `((url: URL, inferPageRoute: (url: URL \| string) => string \| undefined) => string \| undefined) \| false` | Function that returns the low-cardinality route of a page, added as `url.template` to spans and log records. Set to `false` to stop inferring routes. Refer to [`pageRoute` details](#otel_browser_page-route-details). Optional. |
 | `ignoreFetchUrls`     | `(string \| RegExp)[]`   | URLs to exclude from fetch, XMLHttpRequest, and resource timing instrumentation. OTLP export URLs are always ignored. Refer to [`ignoreFetchUrls` details](#otel_browser_ignorefetchurls-details). Optional; defaults to `[]`. |
 | `frustration`         | `boolean \| { ignoreSelectors?: string[] }` | Reports rage, dead, and error clicks. Set to `false` to turn it off. Refer to [`frustration` details](#otel_browser_frustration-details). Optional; defaults to `true`. |
 | `exportConfig`    | `{ url?: string; tracesUrl?: string; logsUrl?: string; headers?: Record<string, string>}` | Configuration for exporters of the different signals. |
@@ -274,9 +276,9 @@ function logout() {
 }
 ```
 
-The session ends in every tab of the application and observers get `onSessionEnded`. As after an expiry, telemetry has no `session.id` until the next user interaction or page load starts a new session, which has the ended session as `session.previous_id`. Calling it when no session is active has no effect.
+The session ends in every tab of the application and handlers registered with `observe('session:end', …)` are called. As after an expiry, telemetry has no `session.id` until the next user interaction or page load starts a new session, which has the ended session as `session.previous_id`. Calling it when no session is active has no effect.
 
-When web storage is unavailable or after `sdk.shutdown()`, `getSession()` returns `undefined`, and `addObserver()` and `endSession()` have no effect.
+When web storage is unavailable or after `sdk.shutdown()`, `getSession()` returns `undefined`, and `observe()` and `endSession()` have no effect.
 
 ### `pageRoute` details [otel_browser_page-route-details]
 
