@@ -137,7 +137,7 @@ Session attributes are not added to metrics. If you configure metrics separately
 - Loading a page counts as activity. A page that reloads itself with no user present, such as a wall dashboard, keeps its session until the maximum duration.
 - `session.sequence` is kept in `localStorage`, which cannot be updated atomically. Two tabs emitting at the same instant can report the same value, so treat the counter as an ordering aid, not as a unique key.
 - If the device clock moves back by more than 5 minutes, the stored session is treated as expired.
-- Sampled-out sessions do not export automatic instrumentation data. Metrics emitted through the OpenTelemetry API in application code are not gated by session sampling.
+- Sampled-out sessions do not export traces or logs. Metrics emitted through the OpenTelemetry API in application code are not gated by session sampling.
 - When `session.sampleRate` is below `1` and there is no active session (it expired and the user has not interacted since), spans and logs are not exported, because there is no sampling decision for them.
 
 ## Page routes [page-routes]
@@ -263,8 +263,6 @@ Use `frustration.ignoreSelectors` to ignore elements that react to repeated clic
 - Clicks inside web components (custom elements or shadow DOM) don't produce dead clicks, since changes inside them can't be observed. Clicks inside iframes are not detected.
 - When the page is hidden or closed during a burst, rage and error clicks are reported right away, and dead clicks are not reported.
 - Frustration signals are not part of the OpenTelemetry semantic conventions yet, so their names use the `elastic.` prefix. They might change once the Browser SIG defines them.
-- If the device clock moves back by more than 5 minutes, the stored session is treated as expired.
-- Sampled-out sessions do not export traces or logs. Metrics emitted through the OpenTelemetry API in application code are not gated by session sampling.
 
 ## Next steps [next-steps]
 
