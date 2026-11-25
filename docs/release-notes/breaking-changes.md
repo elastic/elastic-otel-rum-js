@@ -45,6 +45,7 @@ If your ingest or read permissions cover only the previous streams, add access t
 To query data from before and after the change, include both datasets. Queries that already cover both datasets need no change.
 
 To retain the previous default dataset, set `resourceAttributes: { 'data_stream.dataset': 'generic' }` when calling `startBrowserSdk`. Refer to [Data stream routing](../reference/edot-browser/configuration.md#data-stream-routing).
+::::
 
 ## 1.0.0 [edot-browser-1.0.0-breaking-changes]
 
@@ -93,6 +94,19 @@ With the update to `@opentelemetry/browser-instrumentation` 0.11.0, per-instrume
 **Action**<br>
 - Replace patterns such as `instrumentations: { 'web-vitals': { enabled: false } }` with `disableInstrumentations: ['web-vitals']`.
 - Use `instrumentations` only for upstream passthrough options, not to enable or disable defaults. Refer to [Configure EDOT Browser](../reference/edot-browser/configuration.md#otel_browser_disableinstrumentations-details).
+::::
+
+::::{dropdown} Session sampling applies to all traces and logs
+When a session is sampled out (`session.sampleRate`), EDOT Browser does not export traces or logs for that session. The decision applies to automatic instrumentation and to spans and log records your application creates with the OpenTelemetry Traces and Logs APIs. Built-in instrumentations may still run in the browser; export is dropped at the trace sampler and logger.
+**Impact**<br>
+- Manual spans and log records are no longer exported for sampled-out sessions.
+- In 0.4, session sampling was documented as disabling automatic instrumentations for unsampled sessions. From 0.5.0, sampling gates export of all traces and logs for the session instead.
+- Metrics you configure separately with the OpenTelemetry Metrics SDK are not gated by session sampling.
+**Action**<br>
+- Treat `session.sampleRate` as applying to every trace and log your app sends through EDOT Browser, not only built-in RUM instrumentations.
+- If you need manual telemetry when automatic RUM is sampled out, emit it outside the EDOT Browser SDK pipeline or raise `session.sampleRate`.
+- Refer to [Session sampling](../reference/edot-browser/configuration.md#otel_browser_session-sampling) and [Sessions](../reference/edot-browser/telemetry.md#sessions).
+Refer to [PR #147](https://github.com/elastic/elastic-otel-rum-js/pull/147).
 ::::
 
 ## 0.4.0 [edot-browser-0-4-0-breaking-changes]
